@@ -1,4 +1,12 @@
-import { defineNuxtModule, addPlugin, createResolver, addTemplate, addServerHandler, getLayerDirectories } from "@nuxt/kit";
+import {
+  addPlugin,
+  addServerHandler,
+  addServerTemplate,
+  addTypeTemplate,
+  createResolver,
+  defineNuxtModule,
+  getLayerDirectories,
+} from "@nuxt/kit";
 import { readFileSync } from "node:fs";
 import { findServerFile } from "./utils/server-files";
 import { logger, cyan, reset } from "./utils/logger";
@@ -27,26 +35,19 @@ export default defineNuxtModule<ModuleOptions>({
     const { rootDir, serverDir } = nuxt.options;
     const layerDirs = [...getLayerDirectories(nuxt), { server: serverDir.replace(rootDir, `${rootDir}/playground`) }];
 
-    // Resolve GraphQL schema and alias directly
+    // Alias user-provided GraphQL schema with type declarations
     const schemaPath = findServerFile(layerDirs, "graphql/schema");
     nuxt.options.alias["#graphql/schema"] = schemaPath.replace(/\.(ts|mjs)$/i, "");
+    addTypeTemplate({ filename: "types/graphql-schema.d.ts", src: resolver.resolve("./runtime/types/graphql-schema.d.ts") });
     logger.success(`GraphQL schema found at ${cyan}${schemaPath}${reset}`);
-
-    // Add GraphQL schema types
-    addTemplate({ filename: "types/graphql-schema.d.ts", src: resolver.resolve("./runtime/types/graphql-schema.d.ts") });
 
     // Add GraphQL Yoga server handler
     const endpoint = options.yoga?.endpoint ?? "/api/graphql";
-    addTemplate({
-      filename: "graphql/handler.ts",
-      write: true,
-      getContents: () => {
-        const template = readFileSync(resolver.resolve("./runtime/server/handler.ts"), "utf-8");
-        return template
-          .replace("{{endpoint}}", endpoint);
-      },
+    addServerTemplate({
+      filename: "graphql/yoga-handler",
+      getContents: () => readFileSync(resolver.resolve("./runtime/server/yoga-handler.ts"), "utf-8").replace("{{endpoint}}", endpoint),
     });
-    addServerHandler({ route: endpoint, handler: "#build/graphql/handler.ts" });
+    addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" });
     logger.success(`GraphQL Yoga server handler added at ${cyan}${endpoint}${reset}`);
 
     addPlugin(resolver.resolve("./runtime/plugin"));
