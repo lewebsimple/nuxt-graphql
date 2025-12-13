@@ -39,7 +39,12 @@ export default defineNuxtModule<ModuleOptions>({
     const schemaPath = findServerFile(layerDirs, "graphql/schema");
     nuxt.options.alias["#graphql/schema"] = schemaPath.replace(/\.(ts|mjs)$/i, "");
     addTypeTemplate({ filename: "types/graphql-schema.d.ts", src: resolver.resolve("./runtime/types/graphql-schema.d.ts") });
-    logger.success(`GraphQL schema found at ${cyan}${schemaPath}${reset}`);
+    logger.debug(`GraphQL schema found at ${cyan}${schemaPath}${reset}`);
+
+    // Alias user-provided GraphQL context
+    const contextPath = findServerFile(layerDirs, "graphql/context");
+    nuxt.options.alias["#graphql/context"] = contextPath.replace(/\.(ts|mjs)$/i, "");
+    logger.debug(`GraphQL context found at ${cyan}${contextPath}${reset}`);
 
     // Add GraphQL Yoga server handler
     const endpoint = options.yoga?.endpoint ?? "/api/graphql";
@@ -48,7 +53,9 @@ export default defineNuxtModule<ModuleOptions>({
       getContents: () => readFileSync(resolver.resolve("./runtime/server/yoga-handler.ts"), "utf-8").replace("{{endpoint}}", endpoint),
     });
     addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" });
-    logger.success(`GraphQL Yoga server handler added at ${cyan}${endpoint}${reset}`);
+    nuxt.hook("listen", (_server, { url }) => {
+      logger.success(`GraphQL Yoga available at ${cyan}${url.replace(/\/$/, "") + endpoint}${reset}`);
+    });
 
     addPlugin(resolver.resolve("./runtime/plugin"));
   },
