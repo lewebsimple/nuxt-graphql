@@ -30,33 +30,51 @@ export default defineNuxtModule<ModuleOptions>({
     },
   },
   async setup(options, nuxt) {
-    const resolver = createResolver(import.meta.url);
+    const { resolve } = createResolver(import.meta.url);
 
     const { rootDir, serverDir } = nuxt.options;
     const layerDirs = [...getLayerDirectories(nuxt), { server: serverDir.replace(rootDir, `${rootDir}/playground`) }];
 
-    // Alias user-provided GraphQL schema with type declarations
+    // Find user-provided GraphQL schema and context
     const schemaPath = findServerFile(layerDirs, "graphql/schema");
-    nuxt.options.alias["#graphql/schema"] = schemaPath.replace(/\.(ts|mjs)$/i, "");
-    addTypeTemplate({ filename: "types/graphql-schema.d.ts", src: resolver.resolve("./runtime/types/graphql-schema.d.ts") });
-    logger.debug(`GraphQL schema found at ${cyan}${schemaPath}${reset}`);
-
-    // Alias user-provided GraphQL context
     const contextPath = findServerFile(layerDirs, "graphql/context");
-    nuxt.options.alias["#graphql/context"] = contextPath.replace(/\.(ts|mjs)$/i, "");
-    logger.debug(`GraphQL context found at ${cyan}${contextPath}${reset}`);
+
+    // Configure Nitro aliases for user files
+    nuxt.hook("nitro:config", (nitroConfig) => {
+      nitroConfig.alias ||= {};
+      nitroConfig.alias["#graphql/schema"] = schemaPath;
+      nitroConfig.alias["#graphql/context"] = contextPath;
+      nitroConfig.virtual ||= {};
+      nitroConfig.virtual["#graphql/runtime"] = "export { schema } from \"#graphql/schema\"\nexport { createContext } from \"#graphql/context\";";
+    });
+
+    // Generate type declarations for server context
+    addTypeTemplate({
+      filename: "types/graphql.d.ts",
+      getContents: () => readFileSync(resolve("./runtime/types/graphql.d.ts"), "utf-8")
+        .replace("{{schemaPath}}", schemaPath.replace(/\.ts$/, ""))
+        .replace("{{contextPath}}", contextPath.replace(/\.ts$/, "")),
+    });
+    nuxt.hook("prepare:types", ({ references }) => {
+      references.push({ path: "./types/graphql.d.ts" });
+    });
+    nuxt.hook("nitro:prepare:types", ({ references }) => {
+      references.push({
+        path: resolve(nuxt.options.buildDir, "types/graphql.d.ts"),
+      });
+    });
 
     // Add GraphQL Yoga server handler
     const endpoint = options.yoga?.endpoint ?? "/api/graphql";
     addServerTemplate({
       filename: "graphql/yoga-handler",
-      getContents: () => readFileSync(resolver.resolve("./runtime/server/yoga-handler.ts"), "utf-8").replace("{{endpoint}}", endpoint),
+      getContents: () => readFileSync(resolve("./runtime/server/yoga-handler.ts"), "utf-8").replace("{{endpoint}}", endpoint),
     });
     addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" });
     nuxt.hook("listen", (_server, { url }) => {
       logger.success(`GraphQL Yoga available at ${cyan}${url.replace(/\/$/, "") + endpoint}${reset}`);
     });
 
-    addPlugin(resolver.resolve("./runtime/plugin"));
+    addPlugin(resolve("./runtime/plugin"));
   },
 });
