@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.1.5
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.4...v0.1.5)
+
+### 🚀 Enhancements
+
+- Initial graphql-request client plugin and useGraphQL composable ([2c0b8d7](https://github.com/lewebsimple/nuxt-graphql/commit/2c0b8d7))
+
+### 💅 Refactors
+
+- Copy templates to dist for yoga-handler ([05eef65](https://github.com/lewebsimple/nuxt-graphql/commit/05eef65))
+
+### 🏡 Chore
+
+- **release:** V0.1.4 ([cc0f974](https://github.com/lewebsimple/nuxt-graphql/commit/cc0f974))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.4
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.3...v0.1.4)
