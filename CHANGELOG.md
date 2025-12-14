@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.7
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.6...v0.1.7)
+
+### 🚀 Enhancements
+
+- Type safe composables for auto-imported GraphQL operations ([700cc59](https://github.com/lewebsimple/nuxt-graphql/commit/700cc59))
+
+### 🏡 Chore
+
+- **release:** V0.1.6 ([de36418](https://github.com/lewebsimple/nuxt-graphql/commit/de36418))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.6
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.5...v0.1.6)
