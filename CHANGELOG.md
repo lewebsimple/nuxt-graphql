@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.3
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.2...v0.1.3)
+
+### 💅 Refactors
+
+- Use inline templates instead of readFileSync ([1992294](https://github.com/lewebsimple/nuxt-graphql/commit/1992294))
+
+### 🏡 Chore
+
+- **release:** V0.1.2 ([51efad8](https://github.com/lewebsimple/nuxt-graphql/commit/51efad8))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.2
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.1...v0.1.2)
