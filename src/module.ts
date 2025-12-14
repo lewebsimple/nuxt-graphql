@@ -52,8 +52,8 @@ export default defineNuxtModule<ModuleOptions>({
     addTypeTemplate({
       filename: "types/graphql.d.ts",
       getContents: () => readFileSync(resolve("./runtime/types/graphql.d.ts"), "utf-8")
-        .replace("{{schemaPath}}", schemaPath.replace(/\.ts$/, ""))
-        .replace("{{contextPath}}", contextPath.replace(/\.ts$/, "")),
+        .replaceAll("{{schemaPath}}", schemaPath.replace(/\.ts$/, ""))
+        .replaceAll("{{contextPath}}", contextPath.replace(/\.ts$/, "")),
     });
     nuxt.hook("prepare:types", ({ references }) => {
       references.push({ path: "./types/graphql.d.ts" });
