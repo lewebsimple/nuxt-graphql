@@ -39,8 +39,8 @@ export default defineNuxtModule<ModuleOptions>({
     // Configure Nitro aliases and virtual modules
     nuxt.hook("nitro:config", (nitroConfig) => {
       nitroConfig.alias ||= {};
-      nitroConfig.alias["#graphql/schema"] = findServerFile(layerDirs, "graphql/schema");
-      nitroConfig.alias["#graphql/context"] = findServerFile(layerDirs, "graphql/context");
+      nitroConfig.alias["#graphql/schema"] = findServerFile(layerDirs, "graphql/schema", true);
+      nitroConfig.alias["#graphql/context"] = findServerFile(layerDirs, "graphql/context") || resolve("./runtime/server/default-context.ts");
     });
 
     // Add GraphQL Yoga server handler
