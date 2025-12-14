@@ -5,7 +5,7 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Opinionated Nuxt module for using GraphQL Yoga on the server and urql as a client.
+Opinionated Nuxt module for using GraphQL Yoga with graphql-request / graphql-sse.
 
 - ✨ [Release Notes](/CHANGELOG.md)
 - 🏀 [Online playground](https://stackblitz.com/github/lewebsimple/nuxt-graphql?file=playground%2Fapp.vue)

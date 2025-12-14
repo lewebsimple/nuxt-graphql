@@ -1,13 +1,16 @@
 import {
+  addImportsDir,
   addPlugin,
   addServerHandler,
   addServerTemplate,
+  addTypeTemplate,
   createResolver,
   defineNuxtModule,
   getLayerDirectories,
 } from "@nuxt/kit";
 import { findServerFile } from "./utils/server-files";
 import { logger, cyan, reset } from "./utils/logger";
+import { readFileSync } from "node:fs";
 
 export interface GraphQLYogaConfig {
   endpoint?: string;
@@ -71,6 +74,22 @@ export default defineEventHandler(async (event) => {
       logger.success(`GraphQL Yoga available at ${cyan}${url.replace(/\/$/, "") + endpoint}${reset}`);
     });
 
-    addPlugin(resolve("./runtime/plugin"));
+    // Expose endpoint via runtime config
+    nuxt.options.runtimeConfig.public.graphql = { endpoint };
+
+    // Add GraphQL composables
+    addImportsDir(resolve("./runtime/composables"));
+
+    // Add GraphQL plugin
+    addPlugin(resolve("./runtime/plugins/graphql"));
+
+    // Add client type declarations
+    addTypeTemplate({
+      filename: "types/graphql-client.d.ts",
+      getContents: () => readFileSync(resolve("./runtime/types/graphql-client.d.ts"), "utf-8"),
+    });
+    nuxt.hook("prepare:types", ({ references }) => {
+      references.push({ path: "./types/graphql-client.d.ts" });
+    });
   },
 });

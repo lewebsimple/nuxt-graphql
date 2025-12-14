@@ -1,8 +1,15 @@
 <script setup lang="ts">
+const { request } = useGraphQL();
+
+const data = await request<{ hello: string }>(`
+  query {
+    hello
+  }
+`);
 </script>
 
 <template>
   <div>
-    <h1>@lewebsimple/nuxt-graphql playground</h1>
+    <h1>{{ data?.hello }}</h1>
   </div>
 </template>
