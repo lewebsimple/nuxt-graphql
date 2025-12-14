@@ -1,23 +1,17 @@
-import {
-  addImportsDir,
-  addPlugin,
-  addServerHandler,
-  addServerTemplate,
-  addTypeTemplate,
-  createResolver,
-  defineNuxtModule,
-  getLayerDirectories,
-} from "@nuxt/kit";
-import { readFileSync } from "node:fs";
-import { findServerFile } from "./utils/server-files";
+import { addImportsDir, addPlugin, addServerHandler, addServerTemplate, addTypeTemplate, createResolver, defineNuxtModule, getLayerDirectories } from "@nuxt/kit";
+import { existsSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./utils/file-operations";
+import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./utils/codegen";
 import { logger, cyan, reset } from "./utils/logger";
 
-export interface GraphQLYogaConfig {
-  endpoint?: string;
-}
-
 export interface ModuleOptions {
-  yoga?: GraphQLYogaConfig;
+  endpoint?: string;
+  codegen?: {
+    enabled?: boolean;
+    pattern?: string;
+    schemaOutput?: string;
+  };
 }
 
 export default defineNuxtModule<ModuleOptions>({
@@ -26,44 +20,121 @@ export default defineNuxtModule<ModuleOptions>({
     configKey: "graphql",
   },
   defaults: {
-    yoga: {
-      endpoint: "/api/graphql",
+    endpoint: "/api/graphql",
+    codegen: {
+      enabled: true,
+      pattern: "**/*.gql",
+      schemaOutput: "server/graphql/schema.graphql",
     },
   },
   async setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
+    // Layer directories
     const { rootDir, serverDir } = nuxt.options;
-    const layerDirs = [...getLayerDirectories(nuxt), { server: serverDir.replace(rootDir, `${rootDir}/playground`) }];
+    const layerDirs = [
+      ...getLayerDirectories(nuxt),
+      { root: rootDir, server: serverDir.replace(rootDir, `${rootDir}/playground`) },
+    ];
+    const layerServerDirs = layerDirs.map(({ server }) => server);
+    const layerRootDirs = layerDirs.map(({ root }) => root);
 
-    // Configure Nitro aliases and virtual modules
-    nuxt.hook("nitro:config", (nitroConfig) => {
-      nitroConfig.alias ||= {};
-      nitroConfig.alias["#graphql/schema"] = findServerFile(layerDirs, "graphql/schema", true);
-      nitroConfig.alias["#graphql/context"] = findServerFile(layerDirs, "graphql/context") || resolve("./runtime/server/default-context.ts");
+    // Resolve server files across layers
+    const schemaPath = await findSingleFile(layerServerDirs, "graphql/schema.{ts,mjs}", true);
+    const contextPath = (await findSingleFile(layerServerDirs, "graphql/context.{ts,mjs}")) || resolve("./runtime/server/default-context.ts");
+
+    // Nitro aliases
+    nuxt.hook("nitro:config", (config) => {
+      config.alias ||= {};
+      config.alias["#graphql/schema"] = schemaPath;
+      config.alias["#graphql/context"] = contextPath;
     });
 
-    // Add GraphQL Yoga server handler
-    const endpoint = options.yoga?.endpoint ?? "/api/graphql";
+    // Yoga handler
+    const endpoint = options.endpoint ?? "/api/graphql";
     addServerTemplate({
       filename: "graphql/yoga-handler",
       getContents: () => readFileSync(resolve("./templates/yoga-handler.mjs"), "utf-8").replace("{{endpoint}}", endpoint),
     });
     addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" });
-    nuxt.hook("listen", (_server, { url }) => {
-      logger.success(`GraphQL Yoga available at ${cyan}${url.replace(/\/$/, "") + endpoint}${reset}`);
+    nuxt.hook("listen", (_, { url }) => {
+      logger.success(`GraphQL Yoga ready at ${cyan}${url.replace(/\/$/, "")}${endpoint}${reset}`);
     });
 
-    // Expose endpoint via runtime config
+    // Runtime config
     nuxt.options.runtimeConfig.public.graphql = { endpoint };
 
-    // Add GraphQL composables
+    // GraphQL codegen
+    if (options.codegen?.enabled !== false) {
+      const codegenPattern = options.codegen?.pattern ?? "**/*.gql";
+      const graphqlrcFile = join(rootDir, ".graphqlrc");
+
+      const operationsFile = join(nuxt.options.buildDir, "graphql/operations.ts");
+      const registryFile = join(nuxt.options.buildDir, "graphql/registry.ts");
+
+      const schemaOutput = options.codegen?.schemaOutput ?? "server/graphql/schema.graphql";
+      const schemaFile = join(rootDir, schemaOutput);
+
+      const generate = async () => {
+        const [sdl, documents] = await Promise.all([
+          loadGraphQLSchema(schemaPath),
+          findMultipleFiles(layerRootDirs, codegenPattern),
+        ]);
+
+        // Analyze once, used by logging and registry
+        const docs = documents.map((document) => ({ path: document, content: readFileSync(document, "utf-8") }));
+        const analysis = analyzeGraphQLDocuments(docs);
+
+        // Log detected documents with colored operation/fragment names
+        for (const doc of docs) {
+          const relativePath = doc.path.startsWith(rootDir) ? doc.path.slice(rootDir.length + 1) : doc.path;
+          const defs = analysis.byFile.get(doc.path) ?? [];
+          logger.info(`${cyan}${relativePath}${reset} [${formatDefinitions(defs)}]`);
+        }
+
+        // Generate TypedDocumentNode exports
+        await runCodegen({ sdl, documents, operationsFile });
+
+        // Save GraphQL schema
+        if (writeFileIfChanged(schemaFile, sdl)) {
+          logger.info(`GraphQL schema saved to ${cyan}${schemaOutput}${reset}`);
+        }
+
+        // Save GraphQL config
+        const config = JSON.stringify({ schema: relative(rootDir, schemaFile), documents: codegenPattern }, null, 2);
+        if (writeFileIfChanged(graphqlrcFile, config)) {
+          logger.info(`GraphQL config saved to ${cyan}.graphqlrc${reset}`);
+        }
+
+        // Save GraphQL registry (by operation type)
+        if (writeFileIfChanged(registryFile, generateRegistryByTypeSource(analysis.operationsByType))) {
+          logger.info(`GraphQL registry saved to ${cyan}${relative(rootDir, registryFile)}${reset}`);
+        }
+      };
+
+      // Generate once on prepare
+      nuxt.hook("prepare:types", async ({ references }) => {
+        await generate();
+        if (existsSync(operationsFile)) references.push({ path: operationsFile });
+        if (existsSync(registryFile)) references.push({ path: registryFile });
+      });
+
+      // Watch in dev
+      if (nuxt.options.dev) {
+        nuxt.hook("builder:watch", async (event, path) => {
+          if (path.endsWith(".gql")) {
+            await generate();
+          }
+        });
+      }
+
+      nuxt.options.alias["#graphql/operations"] = operationsFile;
+      nuxt.options.alias["#graphql/registry"] = registryFile;
+    }
+
+    // GraphQL client
     addImportsDir(resolve("./runtime/composables"));
-
-    // Add GraphQL plugin
     addPlugin(resolve("./runtime/plugins/graphql"));
-
-    // Add client type declarations
     addTypeTemplate({
       filename: "types/graphql-client.d.ts",
       getContents: () => readFileSync(resolve("./runtime/types/graphql-client.d.ts"), "utf-8"),

@@ -1,15 +1,11 @@
 <script setup lang="ts">
-const { request } = useGraphQL();
-
-const data = await request<{ hello: string }>(`
-  query {
-    hello
-  }
-`);
+const { data } = await useGraphQLQuery("Hello");
 </script>
 
 <template>
   <div>
-    <h1>{{ data?.hello }}</h1>
+    <h1 v-if="data">
+      {{ data?.hello }}
+    </h1>
   </div>
 </template>

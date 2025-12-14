@@ -12,6 +12,8 @@ Opinionated Nuxt module for using GraphQL Yoga with graphql-request / graphql-ss
 
 ## Features
 - 🧘‍♂️ GraphQL Yoga server handler with user-provided schema / context
+- 📄 Auto-import GraphQL documents from `**/*.gql` (configurable)
+- 🧩 Type-safe composables to call operations by name, i.e. `useGraphQLQuery("Hello")`
 
 ## Quick Setup
 
