@@ -11,3 +11,8 @@ declare module "#graphql/context" {
   function createContext(event: H3Event): Promise<Record<string, unknown>>;
   export { createContext };
 }
+
+declare module "#graphql/runtime" {
+  type GraphQLContext = Record<string, unknown>;
+  export type { GraphQLContext };
+}

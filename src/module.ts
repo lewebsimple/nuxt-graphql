@@ -45,7 +45,7 @@ export default defineNuxtModule<ModuleOptions>({
       nitroConfig.alias["#graphql/schema"] = schemaPath;
       nitroConfig.alias["#graphql/context"] = contextPath;
       nitroConfig.virtual ||= {};
-      nitroConfig.virtual["#graphql/runtime"] = "export { schema } from \"#graphql/schema\"\nexport { createContext } from \"#graphql/context\";";
+      nitroConfig.virtual["#graphql/runtime"] = "export type { GraphQLContext } from \"#build/types/graphql\";";
     });
 
     // Generate type declarations for server context
