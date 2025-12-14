@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.4
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.3...v0.1.4)
+
+### 💅 Refactors
+
+- Export GraphQLContext from user-provided context ([c133d81](https://github.com/lewebsimple/nuxt-graphql/commit/c133d81))
+
+### 🏡 Chore
+
+- **release:** V0.1.3 ([cdef70e](https://github.com/lewebsimple/nuxt-graphql/commit/cdef70e))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.3
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.2...v0.1.3)
