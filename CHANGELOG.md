@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.1.6
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.5...v0.1.6)
+
+### 🚀 Enhancements
+
+- Make context optional ([32c9fe8](https://github.com/lewebsimple/nuxt-graphql/commit/32c9fe8))
+- Lazy GraphQL Yoga initialization ([c7c5cee](https://github.com/lewebsimple/nuxt-graphql/commit/c7c5cee))
+
+### 🩹 Fixes
+
+- Yoga handler template cannot be .ts ([27a1b2a](https://github.com/lewebsimple/nuxt-graphql/commit/27a1b2a))
+
+### 🏡 Chore
+
+- **release:** V0.1.5 ([6c58f71](https://github.com/lewebsimple/nuxt-graphql/commit/6c58f71))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.5
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.4...v0.1.5)
