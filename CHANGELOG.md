@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.1.2
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.1...v0.1.2)
+
+### 🚀 Enhancements
+
+- User provided GraphQL context ([1463a9b](https://github.com/lewebsimple/nuxt-graphql/commit/1463a9b))
+
+### 🏡 Chore
+
+- **release:** V0.1.1 ([3c716de](https://github.com/lewebsimple/nuxt-graphql/commit/3c716de))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.1
 
 
