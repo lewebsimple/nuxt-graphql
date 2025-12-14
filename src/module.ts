@@ -47,7 +47,7 @@ export default defineNuxtModule<ModuleOptions>({
     const endpoint = options.yoga?.endpoint ?? "/api/graphql";
     addServerTemplate({
       filename: "graphql/yoga-handler",
-      getContents: () => readFileSync(resolve("./templates/yoga-handler.ts"), "utf-8").replace("{{endpoint}}", endpoint),
+      getContents: () => readFileSync(resolve("./templates/yoga-handler.mjs"), "utf-8").replace("{{endpoint}}", endpoint),
     });
     addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" });
     nuxt.hook("listen", (_server, { url }) => {

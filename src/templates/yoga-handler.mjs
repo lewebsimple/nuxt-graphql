@@ -1,11 +1,9 @@
 import { createYoga } from "graphql-yoga";
 import { defineEventHandler, toWebRequest, sendWebResponse } from "h3";
-/** @ts-expect-error - No type declarations in module context */
 import { schema } from "#graphql/schema";
-/** @ts-expect-error - No type declarations in module context */
 import { createContext } from "#graphql/context";
 
-let yoga: ReturnType<typeof createYoga> | null = null;
+let yoga = null;
 
 function getYoga() {
   if (!yoga) {
