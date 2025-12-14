@@ -5,14 +5,22 @@ import { schema } from "#graphql/schema";
 /** @ts-expect-error - No type declarations in module context */
 import { createContext } from "#graphql/context";
 
-const yoga = createYoga({
-  schema,
-  graphqlEndpoint: "{{endpoint}}",
-});
+let yoga: ReturnType<typeof createYoga> | null = null;
+
+function getYoga() {
+  if (!yoga) {
+    yoga = createYoga({
+      schema,
+      graphqlEndpoint: "{{endpoint}}",
+      fetchAPI: globalThis,
+    });
+  }
+  return yoga;
+}
 
 export default defineEventHandler(async (event) => {
-  const context = await createContext(event);
   const request = toWebRequest(event);
-  const response = await yoga.handleRequest(request, context);
+  const context = await createContext(event);
+  const response = await getYoga().handleRequest(request, context);
   return sendWebResponse(event, response);
 });
