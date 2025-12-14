@@ -7,7 +7,6 @@ import {
   defineNuxtModule,
   getLayerDirectories,
 } from "@nuxt/kit";
-import { readFileSync } from "node:fs";
 import { findServerFile } from "./utils/server-files";
 import { logger, cyan, reset } from "./utils/logger";
 
@@ -42,13 +41,32 @@ export default defineNuxtModule<ModuleOptions>({
     // Add runtime type declarations for GraphQL schema and context (used in Yoga handler)
     addTypeTemplate({
       filename: "types/graphql-runtime.d.ts",
-      getContents: () => readFileSync(resolve("./runtime/types/graphql-runtime.d.ts"), "utf-8")
-        .replace("{{schemaPath}}", schemaPath.replace(/\.ts$/, ""))
-        .replace("{{contextPath}}", contextPath.replace(/\.ts$/, "")),
+      getContents: () => `
+import type { schema as userSchema } from "${schemaPath}";
+import type { createContext as userCreateContext } from "${contextPath}";
+
+type UserCreateContext = typeof userCreateContext;
+
+export type GraphQLContext = Awaited<ReturnType<UserCreateContext>>;
+
+declare module "#graphql/schema" {
+  export const schema: typeof userSchema;
+}
+
+declare module "#graphql/context" {
+  export const createContext: UserCreateContext;
+}
+
+declare module "#graphql/runtime" {
+  export type { GraphQLContext };
+}
+
+export {};
+`.trim(),
     });
-    nuxt.hook("nitro:prepare:types", ({ references }) => {
-      references.push({ path: resolve(nuxt.options.buildDir, "types/graphql-runtime.d.ts") });
-    });
+    // nuxt.hook("nitro:prepare:types", ({ references }) => {
+    //   references.push({ path: resolve(nuxt.options.buildDir, "types/graphql-runtime.d.ts") });
+    // });
 
     // Configure Nitro aliases and virtual modules
     nuxt.hook("nitro:config", (nitroConfig) => {
@@ -57,14 +75,30 @@ export default defineNuxtModule<ModuleOptions>({
       nitroConfig.alias["#graphql/context"] = contextPath;
       nitroConfig.alias["#graphql/runtime"] = resolve(nuxt.options.buildDir, "types/graphql-runtime.d.ts");
       nitroConfig.virtual ||= {};
-      nitroConfig.virtual["#graphql/runtime"] = () => "export {};";
+      nitroConfig.virtual["#graphql/runtime"] = "export {};";
     });
 
     // Add GraphQL Yoga server handler
     const endpoint = options.yoga?.endpoint ?? "/api/graphql";
     addServerTemplate({
       filename: "graphql/yoga-handler",
-      getContents: () => readFileSync(resolve("./runtime/server/yoga-handler.mjs"), "utf-8").replace("{{endpoint}}", endpoint),
+      getContents: () => `
+import { createYoga } from "graphql-yoga";
+import { defineEventHandler, toWebRequest, sendWebResponse } from "h3";
+import { schema } from "#graphql/schema";
+import { createContext } from "#graphql/context";
+
+const yoga = createYoga({
+  schema,
+  graphqlEndpoint: "${endpoint}",
+});
+
+export default defineEventHandler(async (event) => {
+  const context = await createContext(event);
+  const request = toWebRequest(event);
+  const response = await yoga.handleRequest(request, context);
+  return sendWebResponse(event, response);
+});`.trim(),
     });
     addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" });
     nuxt.hook("listen", (_server, { url }) => {
