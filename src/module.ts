@@ -2,7 +2,6 @@ import {
   addPlugin,
   addServerHandler,
   addServerTemplate,
-  addTypeTemplate,
   createResolver,
   defineNuxtModule,
   getLayerDirectories,
@@ -38,44 +37,11 @@ export default defineNuxtModule<ModuleOptions>({
     const schemaPath = findServerFile(layerDirs, "graphql/schema");
     const contextPath = findServerFile(layerDirs, "graphql/context");
 
-    // Add runtime type declarations for GraphQL schema and context (used in Yoga handler)
-    addTypeTemplate({
-      filename: "types/graphql-runtime.d.ts",
-      getContents: () => `
-import type { schema as userSchema } from "${schemaPath}";
-import type { createContext as userCreateContext } from "${contextPath}";
-
-type UserCreateContext = typeof userCreateContext;
-
-export type GraphQLContext = Awaited<ReturnType<UserCreateContext>>;
-
-declare module "#graphql/schema" {
-  export const schema: typeof userSchema;
-}
-
-declare module "#graphql/context" {
-  export const createContext: UserCreateContext;
-}
-
-declare module "#graphql/runtime" {
-  export type { GraphQLContext };
-}
-
-export {};
-`.trim(),
-    });
-    // nuxt.hook("nitro:prepare:types", ({ references }) => {
-    //   references.push({ path: resolve(nuxt.options.buildDir, "types/graphql-runtime.d.ts") });
-    // });
-
     // Configure Nitro aliases and virtual modules
     nuxt.hook("nitro:config", (nitroConfig) => {
       nitroConfig.alias ||= {};
       nitroConfig.alias["#graphql/schema"] = schemaPath;
       nitroConfig.alias["#graphql/context"] = contextPath;
-      nitroConfig.alias["#graphql/runtime"] = resolve(nuxt.options.buildDir, "types/graphql-runtime.d.ts");
-      nitroConfig.virtual ||= {};
-      nitroConfig.virtual["#graphql/runtime"] = "export {};";
     });
 
     // Add GraphQL Yoga server handler

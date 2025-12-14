@@ -5,3 +5,5 @@ export async function createContext(_event: H3Event) {
     foo: "bar",
   };
 }
+
+export type GraphQLContext = Awaited<ReturnType<typeof createContext>>;

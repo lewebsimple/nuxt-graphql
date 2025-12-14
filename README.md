@@ -25,8 +25,9 @@ Define your GraphQL schema in `server/graphql/schema.ts`:
 
 ```ts
 import { createSchema } from "graphql-yoga";
+import type { GraphQLContext } from "./context";
 
-export const schema = createSchema({
+export const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
       type Query {
         hello: String!
@@ -51,6 +52,7 @@ export async function createContext(_event: H3Event) {
   };
 }
 
+export type GraphQLContext = Awaited<ReturnType<typeof createContext>>;
 ```
 
 That's it! You can now use Nuxt GraphQL in your Nuxt app ✨

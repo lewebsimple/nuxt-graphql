@@ -1,5 +1,5 @@
-import type { GraphQLContext } from "#graphql/runtime";
 import { createSchema } from "graphql-yoga";
+import type { GraphQLContext } from "./context";
 
 export const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
