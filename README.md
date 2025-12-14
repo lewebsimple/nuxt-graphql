@@ -11,7 +11,7 @@ Opinionated Nuxt module for using GraphQL Yoga on the server and urql as a clien
 - 🏀 [Online playground](https://stackblitz.com/github/lewebsimple/nuxt-graphql?file=playground%2Fapp.vue)
 
 ## Features
-- 🧘‍♂️ GraphQL Yoga server handler with user-provided schema
+- 🧘‍♂️ GraphQL Yoga server handler with user-provided schema / context
 
 ## Quick Setup
 
@@ -38,6 +38,19 @@ export const schema = createSchema({
     },
   },
 });
+```
+
+Define your GraphQL context in `server/graphql/context.ts`:
+
+```ts
+import type { H3Event } from "h3";
+
+export async function createContext(_event: H3Event) {
+  return {
+    foo: "bar",
+  };
+}
+
 ```
 
 That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
