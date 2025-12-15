@@ -30,6 +30,13 @@ export default defineNuxtModule<ModuleOptions>({
   async setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
+    // Validate configuration options
+    if (options.endpoint) {
+      if (!options.endpoint.startsWith("/")) {
+        logger.warn("GraphQL endpoint should start with '/' (e.g., '/api/graphql')");
+      }
+    }
+
     // Layer directories
     const { rootDir, serverDir } = nuxt.options;
     const layerDirs = [
@@ -73,6 +80,11 @@ export default defineNuxtModule<ModuleOptions>({
       const registryFile = join(nuxt.options.buildDir, "graphql/registry.ts");
 
       const schemaOutput = options.codegen?.schemaOutput ?? "server/graphql/schema.graphql";
+      if (schemaOutput) {
+        if (!schemaOutput.endsWith(".graphql")) {
+          logger.warn(`Schema output '${schemaOutput}' should have .graphql extension.`);
+        }
+      }
       const schemaFile = join(rootDir, schemaOutput);
 
       const generate = async () => {
