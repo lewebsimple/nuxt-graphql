@@ -11,6 +11,7 @@ function getYoga() {
       schema,
       graphqlEndpoint: "{{endpoint}}",
       fetchAPI: globalThis,
+      graphiql: process.env.NODE_ENV !== "production",
     });
   }
   return yoga;
