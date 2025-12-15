@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.1.8
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.7...v0.1.8)
+
+### 📖 Documentation
+
+- Review playbook for Copilot ([5f0fd90](https://github.com/lewebsimple/nuxt-graphql/commit/5f0fd90))
+
+### 🏡 Chore
+
+- **release:** V0.1.7 ([ef2f98d](https://github.com/lewebsimple/nuxt-graphql/commit/ef2f98d))
+- Hide chore commits from changlog ([1c9aa59](https://github.com/lewebsimple/nuxt-graphql/commit/1c9aa59))
+- Update release script ([660229e](https://github.com/lewebsimple/nuxt-graphql/commit/660229e))
+- Add Nuxt MCP ([e820590](https://github.com/lewebsimple/nuxt-graphql/commit/e820590))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.7
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.6...v0.1.7)
