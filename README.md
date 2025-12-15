@@ -23,6 +23,25 @@ Install the module to your Nuxt application with one command:
 npx nuxi module add @lewebsimple/nuxt-graphql
 ```
 
+Optionnally adjust options in your Nuxt config. The defaults shown below:
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  modules: ["@lewebsimple/nuxt-graphql"],
+  graphql: {
+    // GraphQL HTTP endpoint served by Yoga
+    endpoint: "/api/graphql",
+    // Codegen controls document scanning and outputs
+    codegen: {
+      enabled: true,
+      pattern: "**/*.gql", // scan .gql files across layers
+      schemaOutput: "server/graphql/schema.graphql", // saved SDL
+    },
+  },
+});
+```
+
 Define your GraphQL schema in `server/graphql/schema.ts`:
 
 ```ts
@@ -43,7 +62,7 @@ export const schema = createSchema<GraphQLContext>({
 });
 ```
 
-Define your GraphQL context in `server/graphql/context.ts`:
+Optionnally define your GraphQL context in `server/graphql/context.ts`:
 
 ```ts
 import type { H3Event } from "h3";
@@ -59,6 +78,7 @@ export type GraphQLContext = Awaited<ReturnType<typeof createContext>>;
 
 That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
 
+Yoga GraphiQL is available at `http://localhost:3000/api/graphql` by default.
 
 ## Contribution
 
