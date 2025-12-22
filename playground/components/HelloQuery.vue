@@ -1,7 +1,12 @@
 <script setup lang="ts">
-const { data } = await useGraphQLQuery("Hello");
+const { data, error } = await useGraphQLQuery("Hello");
 </script>
 
 <template>
-  <div>{{ data.hello }}</div>
+  <div v-if="error">
+    <pre>{{ error }}</pre>
+  </div>
+  <div v-else>
+    {{ data.hello }}
+  </div>
 </template>

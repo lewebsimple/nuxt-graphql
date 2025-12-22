@@ -1,5 +1,5 @@
 type Mutation {
-  ping: String!
+  ping(message: String!): String!
 }
 
 type Query {

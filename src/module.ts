@@ -13,7 +13,7 @@ export interface ModuleOptions {
   codegen?: {
     pattern?: string;
     schemaOutput?: string;
-    scalars?: Record<string, string>;
+    scalars?: Record<string, string | { input: string; output: string }>;
   };
 }
 
@@ -85,11 +85,13 @@ export default defineNuxtModule<ModuleOptions>({
     const codegenPattern = options.codegen?.pattern ?? "**/*.gql";
     const graphqlrcFile = join(rootDir, ".graphqlrc");
 
-    // GraphQL operations & registry
+    // GraphQL operations, registry & schemas
     const operationsFile = join(nuxt.options.buildDir, "graphql/operations.ts");
     const registryFile = join(nuxt.options.buildDir, "graphql/registry.ts");
+    const schemasFile = join(nuxt.options.buildDir, "graphql/schemas.ts");
     nuxt.options.alias["#graphql/operations"] = operationsFile;
     nuxt.options.alias["#graphql/registry"] = registryFile;
+    nuxt.options.alias["#graphql/schemas"] = schemasFile;
 
     // GraphQL schema file
     const schemaOutput = options.codegen?.schemaOutput ?? "server/graphql/schema.graphql";
@@ -119,8 +121,14 @@ export default defineNuxtModule<ModuleOptions>({
         logger.info(`${cyan}${relativePath}${reset} [${formatDefinitions(defs)}]`);
       }
 
-      // Generate TypedDocumentNode exports
-      await runCodegen({ sdl, documents, operationsFile, scalars: options.codegen?.scalars });
+      // Generate TypedDocumentNode exports and Zod schemas
+      await runCodegen({
+        sdl,
+        documents,
+        operationsFile,
+        schemasFile,
+        scalars: options.codegen?.scalars,
+      });
 
       // Save GraphQL schema
       if (writeFileIfChanged(schemaFile, sdl)) {
@@ -150,6 +158,7 @@ export default defineNuxtModule<ModuleOptions>({
       await generate();
       if (existsSync(operationsFile)) references.push({ path: operationsFile });
       if (existsSync(registryFile)) references.push({ path: registryFile });
+      if (existsSync(schemasFile)) references.push({ path: schemasFile });
     });
 
     // Watch in dev

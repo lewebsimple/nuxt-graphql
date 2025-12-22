@@ -7,7 +7,7 @@ export const schema = createSchema<GraphQLContext>({
         hello: String!
       }
       type Mutation {
-        ping: String!
+        ping(message: String!): String!
       }
       type Subscription {
         time: String!
@@ -18,7 +18,7 @@ export const schema = createSchema<GraphQLContext>({
       hello: () => "Hello from @lewebsimple/nuxt-graphql playground!",
     },
     Mutation: {
-      ping: () => "pong",
+      ping: (_parent, args) => `pong: ${args.message}`,
     },
     Subscription: {
       time: {

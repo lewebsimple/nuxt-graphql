@@ -1,4 +1,4 @@
-import { generate } from "@graphql-codegen/cli";
+import { generate, type CodegenConfig } from "@graphql-codegen/cli";
 import type { GraphQLSchema } from "graphql";
 import { parse, Kind } from "graphql";
 import { logger, reset, blue, magenta, yellow, green, dim } from "./logger";
@@ -187,11 +187,14 @@ export function formatDefinitions(defs: Definition[]): string {
   return defs.map((def) => `${colorOf(def)}${def.name}${reset}`).join(`${dim} / ${reset}`);
 }
 
+export type ScalarConfig = string | { input: string; output: string };
+
 export interface CodegenOptions {
   sdl: string;
   documents: string[];
   operationsFile: string;
-  scalars?: Record<string, string>;
+  schemasFile?: string;
+  scalars?: Record<string, ScalarConfig>;
 }
 
 /**
@@ -200,36 +203,72 @@ export interface CodegenOptions {
  * @param options Codegen options
  */
 export async function runCodegen(options: CodegenOptions): Promise<void> {
-  const { sdl, documents, operationsFile, scalars } = options;
+  const { sdl, documents, operationsFile, schemasFile, scalars } = options;
   if (documents.length === 0) {
     logger.warn("No GraphQL documents found");
     return;
   }
+
+  // Build Zod scalar mappings (for coercion)
+  const zodScalars: Record<string, string> = {};
+  if (scalars) {
+    for (const [name, config] of Object.entries(scalars)) {
+      const inputType = typeof config === "string" ? config : config.input;
+      // Map TypeScript types to Zod with coercion
+      switch (inputType) {
+        case "Date":
+          zodScalars[name] = "z.coerce.date()";
+          break;
+        case "number":
+          zodScalars[name] = "z.coerce.number()";
+          break;
+        case "boolean":
+          zodScalars[name] = "z.coerce.boolean()";
+          break;
+        default:
+          zodScalars[name] = "z.string()";
+      }
+    }
+  }
+
   try {
-    await generate(
-      {
-        schema: sdl,
-        documents,
-        generates: {
-          [operationsFile]: {
-            plugins: ["typescript", "typescript-operations", "typed-document-node"],
-            config: {
-              useTypeImports: true,
-              enumsAsTypes: true,
-              skipTypename: true,
-              documentVariableSuffix: "Document",
-              documentMode: "documentNode",
-              strictScalars: true,
-              defaultScalarType: "never",
-              scalars,
+    const generates: CodegenConfig["generates"] = {
+      [operationsFile]: {
+        plugins: ["typescript", "typescript-operations", "typed-document-node"],
+        config: {
+          useTypeImports: true,
+          enumsAsTypes: true,
+          skipTypename: true,
+          documentVariableSuffix: "Document",
+          documentMode: "documentNode",
+          strictScalars: true,
+          defaultScalarType: "never",
+          scalars,
+        },
+      },
+    };
+
+    // Add Zod schema generation if schemasFile is provided
+    if (schemasFile) {
+      generates[schemasFile] = {
+        plugins: ["typescript-validation-schema"],
+        config: {
+          schema: "zodv4",
+          importFrom: "#graphql/operations",
+          useTypeImports: true,
+          directives: {
+            constraint: {
+              minLength: "min",
+              maxLength: "max",
+              pattern: "regex",
             },
           },
+          scalarSchemas: zodScalars,
         },
-        silent: true,
-        errorsOnly: true,
-      },
-      true,
-    );
+      };
+    }
+
+    await generate({ schema: sdl, documents, generates, silent: true, errorsOnly: true }, true);
     logger.success(`Generated types for ${documents.length} document(s)`);
   }
   catch (error) {
