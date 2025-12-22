@@ -12,7 +12,7 @@
 - **Auto‑imported Composables**:
 	- `useGraphQL()` → wraps `$graphql.request` for `TypedDocumentNode`. See [src/runtime/composables/useGraphQL.ts](src/runtime/composables/useGraphQL.ts).
 	- `useGraphQLQuery(name, variables?, opts?)` → `useAsyncData` over registry entry. See [src/runtime/composables/useGraphQLQuery.ts](src/runtime/composables/useGraphQLQuery.ts).
-	- `useGraphQLMutation(name)` → returns `{ mutate, data, error, pending }`. See [src/runtime/composables/useGraphQLMutation.ts](src/runtime/composables/useGraphQLMutation.ts).
+	- `useGraphQLMutation(name)` → returns `{ mutate, pending }`; `mutate(variables?)` resolves to `{ data, error }`. See [src/runtime/composables/useGraphQLMutation.ts](src/runtime/composables/useGraphQLMutation.ts).
 - **Server Route**: GraphQL Yoga handler registered at `endpoint` (default `"/api/graphql"`). Added via `addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" })` in [src/module.ts](src/module.ts). Template at [src/templates/yoga-handler.mjs](src/templates/yoga-handler.mjs).
 - **Schema/Context Resolution**:
 	- Nitro aliases via `nitro:config` in [src/module.ts](src/module.ts):

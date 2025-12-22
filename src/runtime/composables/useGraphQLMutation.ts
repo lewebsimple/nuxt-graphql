@@ -1,38 +1,33 @@
-import { ref, type Ref } from "vue";
+import { ref } from "vue";
 
 import { useGraphQL } from "./useGraphQL";
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
-
-type IsEmptyObject<T> = T extends Record<string, never> ? true : keyof T extends never ? true : false;
+import type { IsEmptyObject } from "../utils/helpers";
 
 export function useGraphQLMutation<N extends MutationName>(operationName: N) {
   const document = mutations[operationName];
   const { request } = useGraphQL();
 
-  const data = ref<MutationResult<N> | null>(null) as Ref<MutationResult<N> | null>;
-  const error = ref<Error | null>(null);
   const pending = ref(false);
 
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
       ? [variables?: MutationVariables<N>]
       : [variables: MutationVariables<N>]
-  ): Promise<MutationResult<N>> {
+  ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
     pending.value = true;
-    error.value = null;
     try {
       const result = await request(document, args[0] as Record<string, unknown>) as MutationResult<N>;
-      data.value = result;
-      return result;
+      return { data: result, error: null };
     }
     catch (e) {
-      error.value = e instanceof Error ? e : new Error(String(e));
-      throw e;
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { data: null, error };
     }
     finally {
       pending.value = false;
     }
   }
 
-  return { mutate, data, error, pending };
+  return { mutate, pending };
 }

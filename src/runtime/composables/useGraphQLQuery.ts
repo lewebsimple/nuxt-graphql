@@ -4,8 +4,7 @@ import { hash } from "ohash";
 
 import { useGraphQL } from "./useGraphQL";
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
-
-type IsEmptyObject<T> = T extends Record<string, never> ? true : keyof T extends never ? true : false;
+import type { IsEmptyObject } from "../utils/helpers";
 
 export function useGraphQLQuery<N extends QueryName>(
   operationName: N,
@@ -17,7 +16,7 @@ export function useGraphQLQuery<N extends QueryName>(
   const [variables, opts] = args;
   const { request } = useGraphQL();
 
-  const key = `gql:q:${operationName}:${hash(variables ?? {})}`;
+  const key = `graphql:query:${operationName}:${hash(variables ?? {})}`;
 
   return useAsyncData(key, () => request(document, variables) as Promise<QueryResult<N>>, opts) as AsyncData<QueryResult<N>, Error | null>;
 }
