@@ -1,20 +1,27 @@
-import { ref, shallowRef, onScopeDispose, toValue, type MaybeRefOrGetter } from "vue";
+import { ref, onScopeDispose, toValue, type MaybeRefOrGetter, type Ref } from "vue";
 import { print } from "graphql";
 import { useNuxtApp } from "#imports";
 
 import { subscriptions, type SubscriptionName, type SubscriptionResult, type SubscriptionVariables } from "#graphql/registry";
 import type { IsEmptyObject } from "../utils/helpers";
 
+export type UseGraphQLSubscriptionReturn<N extends SubscriptionName> = {
+  data: Ref<SubscriptionResult<N> | null>;
+  error: Ref<Error | null>;
+  start: () => void;
+  stop: () => void;
+};
+
 export function useGraphQLSubscription<N extends SubscriptionName>(
   operationName: N,
   ...args: IsEmptyObject<SubscriptionVariables<N>> extends true
     ? [variables?: MaybeRefOrGetter<SubscriptionVariables<N>>]
     : [variables: MaybeRefOrGetter<SubscriptionVariables<N>>]
-) {
+): UseGraphQLSubscriptionReturn<N> {
   const { $graphqlSSE } = useNuxtApp();
   const [variables] = args;
 
-  const data = shallowRef<SubscriptionResult<N> | null>(null);
+  const data = ref<SubscriptionResult<N> | null>(null);
   const error = ref<Error | null>(null);
 
   let unsubscribe: (() => void) | null = null;
@@ -33,7 +40,7 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
             error.value = new Error(result.errors.map((e) => e.message).join(", "));
           }
           else if (result.data) {
-            data.value = result.data;
+            data.value = result.data as SubscriptionResult<N>;
           }
         },
         error: (e) => {
@@ -57,5 +64,5 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
 
   onScopeDispose(stop);
 
-  return { data, error, start, stop };
+  return { data, error, start, stop } as UseGraphQLSubscriptionReturn<N>;
 }

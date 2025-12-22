@@ -4,7 +4,7 @@ import type { Client as SSEClient } from "graphql-sse";
 declare module "#app" {
   interface NuxtApp {
     $graphql: () => GraphQLClient;
-    $sseGraphql: () => SSEClient;
+    $graphqlSSE: () => SSEClient;
   }
 }
 
