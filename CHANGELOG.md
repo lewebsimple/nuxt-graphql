@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.1.10
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.9...v0.1.10)
+
+### 🚀 Enhancements
+
+- UseGraphQLSubscription using graphql-sse ([21ac620](https://github.com/lewebsimple/nuxt-graphql/commit/21ac620))
+- Use request fetch ([31f1e27](https://github.com/lewebsimple/nuxt-graphql/commit/31f1e27))
+- Re-use server graphql client per request ([d73a2ea](https://github.com/lewebsimple/nuxt-graphql/commit/d73a2ea))
+- Accept extra headers ([a1b655b](https://github.com/lewebsimple/nuxt-graphql/commit/a1b655b))
+
+### 🩹 Fixes
+
+- Type annotation ([a2b66a6](https://github.com/lewebsimple/nuxt-graphql/commit/a2b66a6))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.9
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.8...v0.1.9)
