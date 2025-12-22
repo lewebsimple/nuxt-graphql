@@ -18,6 +18,7 @@ declare module "nuxt/schema" {
     graphql: {
       endpoint: string;
       headers: Record<string, string>;
+      cache: GraphQLCacheConfig;
     };
   }
 }

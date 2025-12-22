@@ -4,10 +4,12 @@ import { join, relative } from "node:path";
 import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./utils/file-operations";
 import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./utils/codegen";
 import { logger, cyan, reset } from "./utils/logger";
+import type { GraphQLCacheConfig } from "./runtime/utils/graphql-cache";
 
 export interface ModuleOptions {
   endpoint?: string;
   headers?: Record<string, string>;
+  cache?: Partial<GraphQLCacheConfig>;
   codegen?: {
     pattern?: string;
     schemaOutput?: string;
@@ -71,6 +73,11 @@ export default defineNuxtModule<ModuleOptions>({
     nuxt.options.runtimeConfig.public.graphql = {
       endpoint,
       headers: options.headers || {},
+      cache: {
+        enabled: options.cache?.enabled ?? false,
+        ttl: options.cache?.ttl ?? 60000,
+        storage: options.cache?.storage ?? "memory",
+      },
     };
 
     // GraphQL codegen / config
