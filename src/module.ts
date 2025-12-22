@@ -1,4 +1,4 @@
-import { addImportsDir, addPlugin, addServerHandler, addServerTemplate, addTypeTemplate, createResolver, defineNuxtModule, getLayerDirectories } from "@nuxt/kit";
+import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addServerTemplate, addTypeTemplate, createResolver, defineNuxtModule, getLayerDirectories } from "@nuxt/kit";
 import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./utils/file-operations";
@@ -46,7 +46,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Resolve server files across layers
     const schemaPath = await findSingleFile(layerServerDirs, "graphql/schema.{ts,mjs}", true);
-    const contextPath = (await findSingleFile(layerServerDirs, "graphql/context.{ts,mjs}")) || resolve("./runtime/server/default-context.ts");
+    const contextPath = (await findSingleFile(layerServerDirs, "graphql/context.{ts,mjs}")) || resolve("./runtime/server/graphql/default-context.ts");
 
     // Nitro aliases
     nuxt.hook("nitro:config", (config) => {
@@ -145,6 +145,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     // GraphQL client
     addImportsDir(resolve("./runtime/composables"));
+    addServerImportsDir(resolve("./runtime/server/utils"));
     addPlugin(resolve("./runtime/plugins/graphql"));
     addTypeTemplate({
       filename: "types/graphql-client.d.ts",

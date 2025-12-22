@@ -1,12 +1,11 @@
 import { ref } from "vue";
-
-import { useGraphQL } from "./useGraphQL";
+import { useNuxtApp } from "#imports";
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
 import type { IsEmptyObject } from "../utils/helpers";
 
 export function useGraphQLMutation<N extends MutationName>(operationName: N) {
   const document = mutations[operationName];
-  const { request } = useGraphQL();
+  const { $graphql } = useNuxtApp();
 
   const pending = ref(false);
 
@@ -17,7 +16,8 @@ export function useGraphQLMutation<N extends MutationName>(operationName: N) {
   ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
     pending.value = true;
     try {
-      const result = await request(document, args[0] as Record<string, unknown>) as MutationResult<N>;
+      const [variables] = args;
+      const result = await $graphql().request({ document, variables }) as MutationResult<N>;
       return { data: result, error: null };
     }
     catch (e) {

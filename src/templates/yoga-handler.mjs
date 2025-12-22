@@ -13,6 +13,7 @@ function getYoga() {
       graphqlEndpoint: "{{endpoint}}",
       fetchAPI: globalThis,
       graphiql: process.env.NODE_ENV !== "production",
+      subscriptions: { protocol: "SSE" },
     });
   }
   return yoga;

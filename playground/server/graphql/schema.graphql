@@ -1,3 +1,11 @@
+type Mutation {
+  ping: String!
+}
+
 type Query {
   hello: String!
+}
+
+type Subscription {
+  time: String!
 }
