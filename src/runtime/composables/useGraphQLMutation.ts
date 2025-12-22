@@ -2,6 +2,7 @@ import { ref } from "vue";
 import { useNuxtApp } from "#imports";
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
 import type { IsEmptyObject } from "../utils/helpers";
+import { wrapError } from "../utils/graphql-error";
 
 export function useGraphQLMutation<N extends MutationName>(operationName: N) {
   const document = mutations[operationName];
@@ -18,9 +19,8 @@ export function useGraphQLMutation<N extends MutationName>(operationName: N) {
       const result = await $graphql().request(document, variables, headers) as MutationResult<N>;
       return { data: result, error: null };
     }
-    catch (e) {
-      const error = e instanceof Error ? e : new Error(String(e));
-      return { data: null, error };
+    catch (error) {
+      return { data: null, error: wrapError(error) };
     }
     finally {
       pending.value = false;

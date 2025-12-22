@@ -3,11 +3,12 @@ import { print } from "graphql";
 import { useNuxtApp } from "#imports";
 
 import { subscriptions, type SubscriptionName, type SubscriptionResult, type SubscriptionVariables } from "#graphql/registry";
+import { wrapError, type GraphQLClientError } from "../utils/graphql-error";
 import type { IsEmptyObject } from "../utils/helpers";
 
 export type UseGraphQLSubscriptionReturn<N extends SubscriptionName> = {
   data: Ref<SubscriptionResult<N> | null>;
-  error: Ref<Error | null>;
+  error: Ref<GraphQLClientError | null>;
   start: () => void;
   stop: () => void;
 };
@@ -22,7 +23,7 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
   const [variables] = args;
 
   const data = ref<SubscriptionResult<N> | null>(null);
-  const error = ref<Error | null>(null);
+  const error = ref<GraphQLClientError | null>(null);
 
   let unsubscribe: (() => void) | null = null;
 
@@ -37,14 +38,14 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
       {
         next: (result) => {
           if (result.errors?.length) {
-            error.value = new Error(result.errors.map((e) => e.message).join(", "));
+            error.value = wrapError({ errors: result.errors });
           }
           else if (result.data) {
             data.value = result.data as SubscriptionResult<N>;
           }
         },
         error: (e) => {
-          error.value = e instanceof Error ? e : new Error(String(e));
+          error.value = wrapError(e);
         },
         complete: () => {
           unsubscribe = null;

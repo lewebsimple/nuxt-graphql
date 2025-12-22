@@ -1,6 +1,7 @@
 import { GraphQLClient } from "graphql-request";
 import { createClient, type Client as SSEClient } from "graphql-sse";
 import { defineNuxtPlugin, useRequestHeaders, useRequestURL, useRuntimeConfig } from "#imports";
+import { wrapError } from "../utils/graphql-error";
 
 export default defineNuxtPlugin((nuxtApp) => {
   const { public: { graphql: { endpoint, headers: staticHeaders } } } = useRuntimeConfig();
@@ -20,6 +21,12 @@ export default defineNuxtPlugin((nuxtApp) => {
             ...request,
             headers: { ...request.headers, ...headers },
           };
+        },
+        responseMiddleware: (response) => {
+          if (response instanceof Error) {
+            const error = wrapError(response);
+            nuxtApp.callHook("graphql:error", error);
+          }
         },
       });
     }
