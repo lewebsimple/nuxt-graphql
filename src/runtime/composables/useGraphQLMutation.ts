@@ -9,13 +9,13 @@ export function useGraphQLMutation<N extends MutationName>(operationName: N) {
   const pending = ref(false);
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
-      ? [variables?: MutationVariables<N>]
-      : [variables: MutationVariables<N>]
+      ? [variables?: MutationVariables<N>, headers?: HeadersInit]
+      : [variables: MutationVariables<N>, headers?: HeadersInit]
   ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
     pending.value = true;
     try {
-      const [variables] = args;
-      const result = await $graphql().request({ document, variables }) as MutationResult<N>;
+      const [variables, headers] = args;
+      const result = await $graphql().request(document, variables, headers) as MutationResult<N>;
       return { data: result, error: null };
     }
     catch (e) {

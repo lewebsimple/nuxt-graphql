@@ -10,12 +10,12 @@ export async function useGraphQLMutation<N extends MutationName>(
   const client = getGraphQLClient(event);
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
-      ? [variables?: MutationVariables<N>]
-      : [variables: MutationVariables<N>]
+      ? [variables?: MutationVariables<N>, headers?: HeadersInit]
+      : [variables: MutationVariables<N>, headers?: HeadersInit]
   ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
     try {
-      const [variables] = args;
-      const result = await client.request(mutations[operationName], variables) as MutationResult<N>;
+      const [variables, headers] = args;
+      const result = await client.request(mutations[operationName], variables, headers) as MutationResult<N>;
       return { data: result, error: null };
     }
     catch (e) {

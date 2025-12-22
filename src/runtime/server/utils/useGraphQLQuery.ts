@@ -7,10 +7,10 @@ export async function useGraphQLQuery<N extends QueryName>(
   event: H3Event,
   operationName: N,
   ...args: IsEmptyObject<QueryVariables<N>> extends true
-    ? [variables?: QueryVariables<N>]
-    : [variables: QueryVariables<N>]
+    ? [variables?: QueryVariables<N>, headers?: HeadersInit]
+    : [variables: QueryVariables<N>, headers?: HeadersInit]
 ): Promise<QueryResult<N>> {
   const client = getGraphQLClient(event);
-  const [variables] = args;
-  return client.request(queries[operationName], variables) as Promise<QueryResult<N>>;
+  const [variables, headers] = args;
+  return client.request(queries[operationName], variables, headers) as Promise<QueryResult<N>>;
 }
