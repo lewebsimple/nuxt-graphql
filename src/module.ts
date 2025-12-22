@@ -7,6 +7,7 @@ import { logger, cyan, reset } from "./utils/logger";
 
 export interface ModuleOptions {
   endpoint?: string;
+  headers?: Record<string, string>;
   codegen?: {
     pattern?: string;
     schemaOutput?: string;
@@ -67,7 +68,10 @@ export default defineNuxtModule<ModuleOptions>({
     });
 
     // Runtime config
-    nuxt.options.runtimeConfig.public.graphql = { endpoint };
+    nuxt.options.runtimeConfig.public.graphql = {
+      endpoint,
+      headers: options.headers || {},
+    };
 
     // GraphQL codegen / config
     const codegenPattern = options.codegen?.pattern ?? "**/*.gql";

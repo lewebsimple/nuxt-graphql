@@ -6,12 +6,16 @@ declare module "#app" {
     $graphql: () => GraphQLClient;
     $graphqlSSE: () => SSEClient;
   }
+  interface RuntimeNuxtHooks {
+    "graphql:headers": (headers: Record<string, string>) => void | Promise<void>;
+  }
 }
 
 declare module "nuxt/schema" {
   interface PublicRuntimeConfig {
     graphql: {
       endpoint: string;
+      headers: Record<string, string>;
     };
   }
 }
