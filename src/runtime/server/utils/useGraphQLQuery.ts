@@ -1,5 +1,5 @@
 import type { H3Event } from "h3";
-import { createGraphQLClient } from "./graphql-client";
+import { getGraphQLClient } from "./graphql-client";
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
 import type { IsEmptyObject } from "../../utils/helpers";
 
@@ -10,7 +10,7 @@ export async function useGraphQLQuery<N extends QueryName>(
     ? [variables?: QueryVariables<N>]
     : [variables: QueryVariables<N>]
 ): Promise<QueryResult<N>> {
-  const client = createGraphQLClient(event);
+  const client = getGraphQLClient(event);
   const [variables] = args;
   return client.request(queries[operationName], variables) as Promise<QueryResult<N>>;
 }

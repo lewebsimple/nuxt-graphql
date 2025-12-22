@@ -1,5 +1,5 @@
 import type { H3Event } from "h3";
-import { createGraphQLClient } from "./graphql-client";
+import { getGraphQLClient } from "./graphql-client";
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
 import type { IsEmptyObject } from "../../utils/helpers";
 
@@ -7,7 +7,7 @@ export async function useGraphQLMutation<N extends MutationName>(
   event: H3Event,
   operationName: N,
 ) {
-  const client = createGraphQLClient(event);
+  const client = getGraphQLClient(event);
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
       ? [variables?: MutationVariables<N>]
