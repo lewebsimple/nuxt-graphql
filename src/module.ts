@@ -8,7 +8,6 @@ import { logger, cyan, reset } from "./utils/logger";
 export interface ModuleOptions {
   endpoint?: string;
   codegen?: {
-    enabled?: boolean;
     pattern?: string;
     schemaOutput?: string;
   };
@@ -22,7 +21,6 @@ export default defineNuxtModule<ModuleOptions>({
   defaults: {
     endpoint: "/api/graphql",
     codegen: {
-      enabled: true,
       pattern: "**/*.gql",
       schemaOutput: "server/graphql/schema.graphql",
     },
@@ -71,77 +69,78 @@ export default defineNuxtModule<ModuleOptions>({
     // Runtime config
     nuxt.options.runtimeConfig.public.graphql = { endpoint };
 
-    // GraphQL codegen
-    if (options.codegen?.enabled !== false) {
-      const codegenPattern = options.codegen?.pattern ?? "**/*.gql";
-      const graphqlrcFile = join(rootDir, ".graphqlrc");
+    // GraphQL codegen / config
+    const codegenPattern = options.codegen?.pattern ?? "**/*.gql";
+    const graphqlrcFile = join(rootDir, ".graphqlrc");
 
-      const operationsFile = join(nuxt.options.buildDir, "graphql/operations.ts");
-      const registryFile = join(nuxt.options.buildDir, "graphql/registry.ts");
+    // GraphQL operations & registry
+    const operationsFile = join(nuxt.options.buildDir, "graphql/operations.ts");
+    const registryFile = join(nuxt.options.buildDir, "graphql/registry.ts");
+    nuxt.options.alias["#graphql/operations"] = operationsFile;
+    nuxt.options.alias["#graphql/registry"] = registryFile;
 
-      const schemaOutput = options.codegen?.schemaOutput ?? "server/graphql/schema.graphql";
-      if (schemaOutput) {
-        if (!schemaOutput.endsWith(".graphql")) {
-          logger.warn(`Schema output '${schemaOutput}' should have .graphql extension.`);
-        }
+    // GraphQL schema file
+    const schemaOutput = options.codegen?.schemaOutput ?? "server/graphql/schema.graphql";
+    if (schemaOutput) {
+      if (!schemaOutput.endsWith(".graphql")) {
+        logger.warn(`Schema output '${schemaOutput}' should have .graphql extension.`);
       }
-      const schemaFile = join(rootDir, schemaOutput);
+    }
+    const schemaFile = join(rootDir, schemaOutput);
 
-      const generate = async () => {
-        const [sdl, documents] = await Promise.all([
-          loadGraphQLSchema(schemaPath),
-          findMultipleFiles(layerRootDirs, codegenPattern),
-        ]);
+    // GraphQL codegen wrapper
+    const generate = async () => {
+      // Load GraphQL schema and documents
+      const [sdl, documents] = await Promise.all([
+        loadGraphQLSchema(schemaPath),
+        findMultipleFiles(layerRootDirs, codegenPattern),
+      ]);
 
-        // Analyze once, used by logging and registry
-        const docs = documents.map((document) => ({ path: document, content: readFileSync(document, "utf-8") }));
-        const analysis = analyzeGraphQLDocuments(docs);
+      // Analyze once, used by logging and registry
+      const docs = documents.map((document) => ({ path: document, content: readFileSync(document, "utf-8") }));
+      const analysis = analyzeGraphQLDocuments(docs);
 
-        // Log detected documents with colored operation/fragment names
-        for (const doc of docs) {
-          const relativePath = doc.path.startsWith(rootDir) ? doc.path.slice(rootDir.length + 1) : doc.path;
-          const defs = analysis.byFile.get(doc.path) ?? [];
-          logger.info(`${cyan}${relativePath}${reset} [${formatDefinitions(defs)}]`);
+      // Log detected documents with colored operation/fragment names
+      for (const doc of docs) {
+        const relativePath = doc.path.startsWith(rootDir) ? doc.path.slice(rootDir.length + 1) : doc.path;
+        const defs = analysis.byFile.get(doc.path) ?? [];
+        logger.info(`${cyan}${relativePath}${reset} [${formatDefinitions(defs)}]`);
+      }
+
+      // Generate TypedDocumentNode exports
+      await runCodegen({ sdl, documents, operationsFile });
+
+      // Save GraphQL schema
+      if (writeFileIfChanged(schemaFile, sdl)) {
+        logger.info(`GraphQL schema saved to ${cyan}${schemaOutput}${reset}`);
+      }
+
+      // Save GraphQL config
+      const config = JSON.stringify({ schema: relative(rootDir, schemaFile), documents: codegenPattern }, null, 2);
+      if (writeFileIfChanged(graphqlrcFile, config)) {
+        logger.info(`GraphQL config saved to ${cyan}.graphqlrc${reset}`);
+      }
+
+      // Save GraphQL registry (by operation type)
+      if (writeFileIfChanged(registryFile, generateRegistryByTypeSource(analysis.operationsByType))) {
+        logger.info(`GraphQL registry saved to ${cyan}${relative(rootDir, registryFile)}${reset}`);
+      }
+    };
+
+    // Generate once on prepare
+    nuxt.hook("prepare:types", async ({ references }) => {
+      await generate();
+      if (existsSync(operationsFile)) references.push({ path: operationsFile });
+      if (existsSync(registryFile)) references.push({ path: registryFile });
+    });
+
+    // Watch in dev
+    if (nuxt.options.dev) {
+      nuxt.hook("builder:watch", async (event, path) => {
+        if (path.endsWith(".gql")) {
+          await generate();
         }
-
-        // Generate TypedDocumentNode exports
-        await runCodegen({ sdl, documents, operationsFile });
-
-        // Save GraphQL schema
-        if (writeFileIfChanged(schemaFile, sdl)) {
-          logger.info(`GraphQL schema saved to ${cyan}${schemaOutput}${reset}`);
-        }
-
-        // Save GraphQL config
-        const config = JSON.stringify({ schema: relative(rootDir, schemaFile), documents: codegenPattern }, null, 2);
-        if (writeFileIfChanged(graphqlrcFile, config)) {
-          logger.info(`GraphQL config saved to ${cyan}.graphqlrc${reset}`);
-        }
-
-        // Save GraphQL registry (by operation type)
-        if (writeFileIfChanged(registryFile, generateRegistryByTypeSource(analysis.operationsByType))) {
-          logger.info(`GraphQL registry saved to ${cyan}${relative(rootDir, registryFile)}${reset}`);
-        }
-      };
-
-      // Generate once on prepare
-      nuxt.hook("prepare:types", async ({ references }) => {
-        await generate();
-        if (existsSync(operationsFile)) references.push({ path: operationsFile });
-        if (existsSync(registryFile)) references.push({ path: registryFile });
       });
-
-      // Watch in dev
-      if (nuxt.options.dev) {
-        nuxt.hook("builder:watch", async (event, path) => {
-          if (path.endsWith(".gql")) {
-            await generate();
-          }
-        });
-      }
-
-      nuxt.options.alias["#graphql/operations"] = operationsFile;
-      nuxt.options.alias["#graphql/registry"] = registryFile;
     }
 
     // GraphQL client

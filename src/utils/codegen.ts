@@ -1,4 +1,5 @@
 import { generate } from "@graphql-codegen/cli";
+import type { GraphQLSchema } from "graphql";
 import { parse, Kind } from "graphql";
 import { logger, reset, blue, magenta, yellow, green, dim } from "./logger";
 
@@ -7,13 +8,30 @@ export type ExecutableOp = { kind: "operation"; type: OperationType; name: strin
 export type FragmentDef = { kind: "fragment"; name: string };
 export type Definition = ExecutableOp | FragmentDef;
 
+/**
+ * Load GraphQL schema from TypeScript file exporting `const schema`
+ * @param schemaPath Path to schema file
+ *
+ * @returns SDL string
+ */
+export async function loadGraphQLSchema(schemaPath: string): Promise<string> {
+  const { createJiti } = await import("jiti");
+  const jiti = createJiti(import.meta.url, { interopDefault: true });
+  const module = (await jiti.import(schemaPath)) as { schema?: GraphQLSchema };
+  if (!module.schema) {
+    throw new Error(`${schemaPath} must export a 'schema' variable`);
+  }
+  const { printSchema, lexicographicSortSchema } = await import("graphql");
+  return printSchema(lexicographicSortSchema(module.schema));
+}
+
 export type DocumentAnalysis = {
   byFile: Map<string, Definition[]>;
   operationsByType: Record<OperationType, ExecutableOp[]>;
 };
 
 /**
- * Always-strict analysis:
+ * GraphQL documents analysis (strict):
  * - unnamed operations => error
  * - duplicate operation names => error
  * - duplicate fragment names => error
@@ -72,10 +90,17 @@ export function analyzeGraphQLDocuments(docs: Array<{ path: string; content: str
   return { byFile, operationsByType };
 }
 
+/**
+ * Generate GraphQL document registry source code
+ *
+ * @param analysis Documents analysis output
+ *
+ * @returns string Document registry source code
+ */
 export function generateRegistryByTypeSource(analysis: DocumentAnalysis["operationsByType"]) {
-  const q = analysis.query.map((o) => o.name);
-  const m = analysis.mutation.map((o) => o.name);
-  const s = analysis.subscription.map((o) => o.name);
+  const queries = analysis.query.map((o) => o.name);
+  const mutations = analysis.mutation.map((o) => o.name);
+  const subscriptions = analysis.subscription.map((o) => o.name);
 
   const lines: string[] = [
     `import type { TypedDocumentNode } from "@graphql-typed-document-node/core";`,
@@ -86,11 +111,11 @@ export function generateRegistryByTypeSource(analysis: DocumentAnalysis["operati
   ];
 
   // Queries
-  if (q.length > 0) {
+  if (queries.length > 0) {
     lines.push(
       ``,
       `export const queries = {`,
-      ...q.map((name) => `  ${name}: ops.${name}Document,`),
+      ...queries.map((name) => `  ${name}: ops.${name}Document,`),
       `} as const;`,
     );
   }
@@ -104,11 +129,11 @@ export function generateRegistryByTypeSource(analysis: DocumentAnalysis["operati
   );
 
   // Mutations
-  if (m.length > 0) {
+  if (mutations.length > 0) {
     lines.push(
       ``,
       `export const mutations = {`,
-      ...m.map((name) => `  ${name}: ops.${name}Document,`),
+      ...mutations.map((name) => `  ${name}: ops.${name}Document,`),
       `} as const;`,
     );
   }
@@ -122,11 +147,11 @@ export function generateRegistryByTypeSource(analysis: DocumentAnalysis["operati
   );
 
   // Subscriptions
-  if (s.length > 0) {
+  if (subscriptions.length > 0) {
     lines.push(
       ``,
       `export const subscriptions = {`,
-      ...s.map((name) => `  ${name}: ops.${name}Document,`),
+      ...subscriptions.map((name) => `  ${name}: ops.${name}Document,`),
       `} as const;`,
     );
   }
@@ -143,7 +168,8 @@ export function generateRegistryByTypeSource(analysis: DocumentAnalysis["operati
 }
 
 /**
- * Format operations/fragments for log output
+ * Format operations / fragments for log output
+ *
  * @param defs Definitions to format
  *
  * @returns Formatted string
@@ -162,24 +188,8 @@ export function formatDefinitions(defs: Definition[]): string {
 }
 
 /**
- * Load GraphQL schema from TypeScript file exporting `schema`
- * @param schemaPath Path to schema file
+ * Run GraphQL codegen
  *
- * @returns SDL string
- */
-export async function loadGraphQLSchema(schemaPath: string): Promise<string> {
-  const { createJiti } = await import("jiti");
-  const jiti = createJiti(import.meta.url, { interopDefault: true });
-  const module = (await jiti.import(schemaPath)) as { schema?: import("graphql").GraphQLSchema };
-  if (!module.schema) {
-    throw new Error(`${schemaPath} must export a 'schema' variable`);
-  }
-  const { printSchema, lexicographicSortSchema } = await import("graphql");
-  return printSchema(lexicographicSortSchema(module.schema));
-}
-
-/**
- * Run GraphQL codegen (no logging here; logging is handled by module.ts using the analyzer)
  * @param options Codegen options
  * @param options.sdl GraphQL schema SDL
  * @param options.documents Array of document file paths
