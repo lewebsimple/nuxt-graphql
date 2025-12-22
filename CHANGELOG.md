@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.1.9
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.8...v0.1.9)
+
+### 🚀 Enhancements
+
+- Graceful error handling or GraphQL server ([7714fdd](https://github.com/lewebsimple/nuxt-graphql/commit/7714fdd))
+- Minimal module options validation ([31b659a](https://github.com/lewebsimple/nuxt-graphql/commit/31b659a))
+
+### 🩹 Fixes
+
+- Disable GraphiQL in production ([6a0d86c](https://github.com/lewebsimple/nuxt-graphql/commit/6a0d86c))
+
+### 💅 Refactors
+
+- UseGraphQLMutation should return data / error from mutate ([9e0eeac](https://github.com/lewebsimple/nuxt-graphql/commit/9e0eeac))
+
+### 🏡 Chore
+
+- Code organization and comments ([512ca0d](https://github.com/lewebsimple/nuxt-graphql/commit/512ca0d))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.8
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.7...v0.1.8)
