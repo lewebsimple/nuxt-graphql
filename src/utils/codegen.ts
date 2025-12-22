@@ -187,18 +187,20 @@ export function formatDefinitions(defs: Definition[]): string {
   return defs.map((def) => `${colorOf(def)}${def.name}${reset}`).join(`${dim} / ${reset}`);
 }
 
+export interface CodegenOptions {
+  sdl: string;
+  documents: string[];
+  operationsFile: string;
+  scalars?: Record<string, string>;
+}
+
 /**
  * Run GraphQL codegen
  *
  * @param options Codegen options
- * @param options.sdl GraphQL schema SDL
- * @param options.documents Array of document file paths
- * @param options.operationsFile Output file path for operations
- *
- * @returns Promise<void>
  */
-export async function runCodegen(options: { sdl: string; documents: string[]; operationsFile: string }): Promise<void> {
-  const { sdl, documents, operationsFile } = options;
+export async function runCodegen(options: CodegenOptions): Promise<void> {
+  const { sdl, documents, operationsFile, scalars } = options;
   if (documents.length === 0) {
     logger.warn("No GraphQL documents found");
     return;
@@ -219,7 +221,7 @@ export async function runCodegen(options: { sdl: string; documents: string[]; op
               documentMode: "documentNode",
               strictScalars: true,
               defaultScalarType: "never",
-              // TODO: Make codegen config customizable, e.g. for custom scalars
+              scalars,
             },
           },
         },

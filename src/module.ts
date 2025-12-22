@@ -13,6 +13,7 @@ export interface ModuleOptions {
   codegen?: {
     pattern?: string;
     schemaOutput?: string;
+    scalars?: Record<string, string>;
   };
 }
 
@@ -119,7 +120,7 @@ export default defineNuxtModule<ModuleOptions>({
       }
 
       // Generate TypedDocumentNode exports
-      await runCodegen({ sdl, documents, operationsFile });
+      await runCodegen({ sdl, documents, operationsFile, scalars: options.codegen?.scalars });
 
       // Save GraphQL schema
       if (writeFileIfChanged(schemaFile, sdl)) {
@@ -127,8 +128,14 @@ export default defineNuxtModule<ModuleOptions>({
       }
 
       // Save GraphQL config
-      const config = JSON.stringify({ schema: relative(rootDir, schemaFile), documents: codegenPattern }, null, 2);
-      if (writeFileIfChanged(graphqlrcFile, config)) {
+      const graphqlrc: Record<string, unknown> = {
+        schema: relative(rootDir, schemaFile),
+        documents: codegenPattern,
+      };
+      if (options.codegen?.scalars) {
+        graphqlrc.scalars = options.codegen.scalars;
+      }
+      if (writeFileIfChanged(graphqlrcFile, JSON.stringify(graphqlrc, null, 2))) {
         logger.info(`GraphQL config saved to ${cyan}.graphqlrc${reset}`);
       }
 
