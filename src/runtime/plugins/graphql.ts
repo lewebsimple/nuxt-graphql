@@ -3,14 +3,14 @@ import { createClient, type Client as SSEClient } from "graphql-sse";
 import { defineNuxtPlugin, useRequestHeaders, useRequestURL, useRuntimeConfig } from "#imports";
 
 export default defineNuxtPlugin(() => {
-  const config = useRuntimeConfig();
+  const { public: { graphql: { endpoint } } } = useRuntimeConfig();
   const { origin } = useRequestURL();
-  const endpoint = `${origin}${config.public.graphql.endpoint}`;
+  const url = `${origin}${endpoint}`;
 
   let client: GraphQLClient | null = null;
   const getClient = (): GraphQLClient => {
     if (!client) {
-      client = new GraphQLClient(endpoint);
+      client = new GraphQLClient(url);
     }
     if (import.meta.server) {
       const headers = useRequestHeaders(["cookie", "authorization"]);
@@ -25,7 +25,7 @@ export default defineNuxtPlugin(() => {
       throw new Error("SSE subscriptions are not available on the server");
     }
     if (!sseClient) {
-      sseClient = createClient({ url: endpoint });
+      sseClient = createClient({ url });
     }
     return sseClient;
   };

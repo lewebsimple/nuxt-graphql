@@ -6,9 +6,7 @@ import type { IsEmptyObject } from "../utils/helpers";
 export function useGraphQLMutation<N extends MutationName>(operationName: N) {
   const document = mutations[operationName];
   const { $graphql } = useNuxtApp();
-
   const pending = ref(false);
-
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
       ? [variables?: MutationVariables<N>]
@@ -28,6 +26,5 @@ export function useGraphQLMutation<N extends MutationName>(operationName: N) {
       pending.value = false;
     }
   }
-
   return { mutate, pending };
 }
