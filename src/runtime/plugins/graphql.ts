@@ -4,6 +4,7 @@ import { defineNuxtPlugin, useRequestHeaders, useRequestURL, useRuntimeConfig } 
 import { wrapError } from "../utils/graphql-error";
 
 export default defineNuxtPlugin((nuxtApp) => {
+  // Initialize configuration
   const { public: { graphql: { endpoint, headers: staticHeaders } } } = useRuntimeConfig();
   const { origin } = useRequestURL();
   const url = `${origin}${endpoint}`;
@@ -12,13 +13,13 @@ export default defineNuxtPlugin((nuxtApp) => {
   const getClient = (): GraphQLClient => {
     const headers: Record<string, string> = { ...staticHeaders };
 
-    // Forward SSR headers
+    // Forward SSR headers on server-side
     if (import.meta.server) {
       const ssrHeaders = useRequestHeaders(["cookie", "authorization"]);
       Object.assign(headers, ssrHeaders);
     }
 
-    // Create fresh client with current headers
+    // Create client with headers and error handling
     const client = new GraphQLClient(url, {
       headers,
       responseMiddleware: (response) => {
@@ -31,18 +32,22 @@ export default defineNuxtPlugin((nuxtApp) => {
     return client;
   };
 
-  // GraphQL SSE client
+  // GraphQL SSE client (singleton, client-side only)
   let sseClient: SSEClient | null = null;
+
   const getSSEClient = (): SSEClient => {
     if (import.meta.server) {
       throw new Error("SSE subscriptions are not available on the server");
     }
+
     if (!sseClient) {
       sseClient = createClient({ url, headers: staticHeaders });
     }
+
     return sseClient;
   };
 
+  // Provide GraphQL clients to the application
   return {
     provide: {
       graphql: getClient,

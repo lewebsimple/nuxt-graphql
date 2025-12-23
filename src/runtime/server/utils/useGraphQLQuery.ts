@@ -3,6 +3,14 @@ import { getGraphQLClient } from "./graphql-client";
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
 import type { IsEmptyObject } from "../../utils/helpers";
 
+/**
+ * Server-side GraphQL query composable
+ *
+ * @param event H3 event
+ * @param operationName Query operation name
+ * @param args Variables and optional headers
+ * @returns Query result
+ */
 export async function useGraphQLQuery<N extends QueryName>(
   event: H3Event,
   operationName: N,
@@ -12,5 +20,6 @@ export async function useGraphQLQuery<N extends QueryName>(
 ): Promise<QueryResult<N>> {
   const client = getGraphQLClient(event);
   const [variables, headers] = args;
+
   return client.request(queries[operationName], variables, headers) as Promise<QueryResult<N>>;
 }

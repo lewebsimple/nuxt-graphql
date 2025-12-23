@@ -1,5 +1,6 @@
 import type { GraphQLError } from "graphql";
 
+// Custom error class for GraphQL client errors
 export class GraphQLClientError extends Error {
   readonly errors: GraphQLError[];
 
@@ -13,8 +14,7 @@ export class GraphQLClientError extends Error {
 /**
  * Wrap a generic error into a GraphQLClientError
  *
- * @param error Generic error
- *
+ * @param error Generic error from various sources
  * @returns Wrapped GraphQLClientError
  */
 export function wrapError(error: unknown): GraphQLClientError {
@@ -22,7 +22,7 @@ export function wrapError(error: unknown): GraphQLClientError {
     return error;
   }
 
-  // ClientError (graphql-request)
+  // Handle ClientError from graphql-request
   if (error && typeof error === "object" && "response" in error) {
     const clientError = error as {
       message: string;
@@ -31,14 +31,14 @@ export function wrapError(error: unknown): GraphQLClientError {
     return new GraphQLClientError(clientError.message, clientError.response?.errors);
   }
 
-  // Object with errors array (useGraphQLSubscription)
+  // Handle errors from useGraphQLSubscription
   if (error && typeof error === "object" && "errors" in error) {
     const { errors } = error as { errors: GraphQLError[] };
     const message = errors.map((e) => e.message).join(", ");
     return new GraphQLClientError(message, errors);
   }
 
-  // Generic error
+  // Handle generic errors
   const message = error instanceof Error ? error.message : String(error);
   return new GraphQLClientError(message);
 }

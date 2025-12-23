@@ -3,11 +3,19 @@ import { getGraphQLClient } from "./graphql-client";
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
 import type { IsEmptyObject } from "../../utils/helpers";
 
+/**
+ * Server-side GraphQL mutation composable
+ *
+ * @param event H3 event
+ * @param operationName Mutation operation name
+ * @returns Object with mutate function
+ */
 export async function useGraphQLMutation<N extends MutationName>(
   event: H3Event,
   operationName: N,
 ) {
   const client = getGraphQLClient(event);
+
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
       ? [variables?: MutationVariables<N>, headers?: HeadersInit]
@@ -23,5 +31,6 @@ export async function useGraphQLMutation<N extends MutationName>(
       return { data: null, error };
     }
   }
+
   return { mutate };
 }

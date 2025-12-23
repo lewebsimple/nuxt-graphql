@@ -4,16 +4,24 @@ import { mutations, type MutationName, type MutationResult, type MutationVariabl
 import type { IsEmptyObject } from "../utils/helpers";
 import { wrapError } from "../utils/graphql-error";
 
+/**
+ * Client-side GraphQL mutation composable
+ *
+ * @param operationName Mutation operation name
+ * @returns Object with mutate function and pending state
+ */
 export function useGraphQLMutation<N extends MutationName>(operationName: N) {
   const document = mutations[operationName];
   const { $graphql } = useNuxtApp();
   const pending = ref(false);
+
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
       ? [variables?: MutationVariables<N>, headers?: HeadersInit]
       : [variables: MutationVariables<N>, headers?: HeadersInit]
   ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
     pending.value = true;
+
     try {
       const [variables, headers] = args;
       const result = await $graphql().request(document, variables, headers) as MutationResult<N>;
@@ -26,5 +34,6 @@ export function useGraphQLMutation<N extends MutationName>(operationName: N) {
       pending.value = false;
     }
   }
+
   return { mutate, pending };
 }

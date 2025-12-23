@@ -4,11 +4,19 @@ import { queries, type QueryName, type QueryResult, type QueryVariables } from "
 import { cacheGet, cacheSet, dedupeGet, dedupeSet, registerRefresh, initCache, getCacheKey, type CacheOptions } from "../utils/graphql-cache";
 import type { IsEmptyObject } from "../utils/helpers";
 
+// Options for GraphQL query execution
 export interface UseGraphQLQueryOptions<T> extends AsyncDataOptions<T> {
   cache?: CacheOptions | false;
   headers?: HeadersInit;
 }
 
+/**
+ * Client-side GraphQL query composable with caching and deduplication
+ *
+ * @param operationName Query operation name
+ * @param args Variables and optional configuration
+ * @returns AsyncData object with query result
+ */
 export function useGraphQLQuery<N extends QueryName>(
   operationName: N,
   ...args: IsEmptyObject<QueryVariables<N>> extends true
@@ -20,6 +28,7 @@ export function useGraphQLQuery<N extends QueryName>(
   const document = queries[operationName];
   const [variables, options] = args;
 
+  // Determine cache settings
   const cacheEnabled = options?.cache !== false && globalCache.enabled;
   const cacheTtl = options?.cache === false ? 0 : (options?.cache?.ttl ?? globalCache.ttl);
 
@@ -30,24 +39,25 @@ export function useGraphQLQuery<N extends QueryName>(
 
   const key = getCacheKey(operationName, variables);
 
+  // Data fetcher with caching and deduplication
   const fetcher = async (): Promise<QueryResult<N>> => {
-    // Check cache (client-side only)
+    // Check cache first (client-side only)
     if (import.meta.client && cacheEnabled) {
       const cached = await cacheGet<QueryResult<N>>(operationName, variables);
       if (cached) return cached;
     }
 
-    // Check in-flight (deduplication)
+    // Check for in-flight request (deduplication)
     const inFlight = dedupeGet(operationName, variables);
     if (inFlight) return inFlight as Promise<QueryResult<N>>;
 
-    // Make request
+    // Execute GraphQL request
     const promise = $graphql().request(document, variables, options?.headers) as Promise<QueryResult<N>>;
     dedupeSet(operationName, variables, promise);
 
     const result = await promise;
 
-    // Cache result (client-side only)
+    // Store result in cache (client-side only)
     if (import.meta.client && cacheEnabled && cacheTtl) {
       await cacheSet(operationName, variables, result, cacheTtl);
     }
@@ -55,12 +65,12 @@ export function useGraphQLQuery<N extends QueryName>(
     return result;
   };
 
-  // Extract AsyncDataOptions (exclude our custom options)
+  // Extract AsyncDataOptions (exclude custom options)
   const { cache: _cache, headers: _headers, ...asyncDataOptions } = options ?? {};
 
   const asyncData = useAsyncData(key, fetcher, asyncDataOptions) as AsyncData<QueryResult<N>, Error | null>;
 
-  // Register for refresh on cache invalidation (client-side only)
+  // Register refresh callback for cache invalidation (client-side only)
   if (import.meta.client) {
     const unregister = registerRefresh(operationName, variables, () => asyncData.refresh());
     onScopeDispose(unregister);
