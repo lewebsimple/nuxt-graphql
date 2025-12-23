@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.1.12
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.11...v0.1.12)
+
+### 🚀 Enhancements
+
+- More tests ([e7cefb7](https://github.com/lewebsimple/nuxt-graphql/commit/e7cefb7))
+
+### 🩹 Fixes
+
+- Type errors ([e5b7f01](https://github.com/lewebsimple/nuxt-graphql/commit/e5b7f01))
+- Lint errors ([54af38d](https://github.com/lewebsimple/nuxt-graphql/commit/54af38d))
+
+### 🏡 Chore
+
+- Better source formatting and comments ([8ef21f0](https://github.com/lewebsimple/nuxt-graphql/commit/8ef21f0))
+- Update @graphql-codegen/* packages ([2bb90db](https://github.com/lewebsimple/nuxt-graphql/commit/2bb90db))
+- Rename server utils to prevent confusion ([cc3c289](https://github.com/lewebsimple/nuxt-graphql/commit/cc3c289))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.11
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.10...v0.1.11)
