@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { GraphQLClientError, wrapError } from "../../../src/runtime/utils/graphql-error";
+import type { GraphQLError } from "graphql/error";
 
 describe("GraphQLClientError", () => {
   it("should create error with message", () => {
@@ -12,7 +13,7 @@ describe("GraphQLClientError", () => {
 
   it("should create error with GraphQL errors", () => {
     const graphqlErrors = [
-      { message: "Field not found", extensions: {} } as any,
+      { message: "Field not found", extensions: {} } as GraphQLError,
     ];
     const error = new GraphQLClientError("GraphQL error", graphqlErrors);
 

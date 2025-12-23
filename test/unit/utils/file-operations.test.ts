@@ -58,7 +58,7 @@ describe("file-operations", () => {
       const dirs = [join(TEST_DIR, "dir1")];
 
       await expect(
-        findSingleFile(dirs, "nonexistent.ts", true)
+        findSingleFile(dirs, "nonexistent.ts", true),
       ).rejects.toThrow("File not found");
     });
   });

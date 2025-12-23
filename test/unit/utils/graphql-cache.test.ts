@@ -69,7 +69,7 @@ describe("graphql-cache", () => {
       await cacheSet("GetUser", { id: "123" }, data, 1);
 
       // Wait for expiration
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const cached = await cacheGet("GetUser", { id: "123" });
 
@@ -129,7 +129,7 @@ describe("graphql-cache", () => {
       await promise;
 
       // Give it time to clean up
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const dedupedPromise = dedupeGet("GetUser", { id: "123" });
       expect(dedupedPromise).toBeNull();
