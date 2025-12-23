@@ -23,6 +23,7 @@ export async function useGraphQLMutation<N extends MutationName>(
   ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
     try {
       const [variables, headers] = args;
+      /** @ts-expect-error variables type conflicts with schema from playground */
       const result = await client.request(mutations[operationName], variables, headers) as MutationResult<N>;
       return { data: result, error: null };
     }

@@ -31,7 +31,7 @@ describe("analyzeGraphQLDocuments", () => {
     const result = analyzeGraphQLDocuments(docs);
 
     expect(result.operationsByType.mutation).toHaveLength(1);
-    expect(result.operationsByType.mutation[0].name).toBe("CreateUser");
+    expect(result.operationsByType.mutation[0]!.name).toBe("CreateUser");
   });
 
   it("should analyze subscription operations", () => {
@@ -45,7 +45,7 @@ describe("analyzeGraphQLDocuments", () => {
     const result = analyzeGraphQLDocuments(docs);
 
     expect(result.operationsByType.subscription).toHaveLength(1);
-    expect(result.operationsByType.subscription[0].name).toBe("OnUserCreated");
+    expect(result.operationsByType.subscription[0]!.name).toBe("OnUserCreated");
   });
 
   it("should analyze fragment definitions", () => {
@@ -203,8 +203,8 @@ describe("generateRegistryByTypeSource", () => {
 
     const result = generateRegistryByTypeSource(analysis);
 
-    expect(result).toContain('import type { TypedDocumentNode }');
-    expect(result).toContain('import * as ops from "#graphql/operations"');
+    expect(result).toContain("import type { TypedDocumentNode }");
+    expect(result).toContain("import * as ops from \"#graphql/operations\"");
     expect(result).toContain("type ResultOf<T>");
     expect(result).toContain("type VariablesOf<T>");
   });
