@@ -10,7 +10,7 @@ import type { IsEmptyObject } from "../../utils/helpers";
  * @param operationName Mutation operation name
  * @returns Object with mutate function
  */
-export async function useGraphQLMutation<N extends MutationName>(
+export async function useServerGraphQLMutation<N extends MutationName>(
   event: H3Event,
   operationName: N,
 ) {

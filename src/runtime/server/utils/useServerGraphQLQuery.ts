@@ -11,7 +11,7 @@ import type { IsEmptyObject } from "../../utils/helpers";
  * @param args Variables and optional headers
  * @returns Query result
  */
-export async function useGraphQLQuery<N extends QueryName>(
+export async function useServerGraphQLQuery<N extends QueryName>(
   event: H3Event,
   operationName: N,
   ...args: IsEmptyObject<QueryVariables<N>> extends true
