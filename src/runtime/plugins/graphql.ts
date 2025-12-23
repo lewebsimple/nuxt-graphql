@@ -9,31 +9,25 @@ export default defineNuxtPlugin((nuxtApp) => {
   const url = `${origin}${endpoint}`;
 
   // GraphQL HTTP client
-  let client: GraphQLClient | null = null;
   const getClient = (): GraphQLClient => {
-    if (!client) {
-      client = new GraphQLClient(url, {
-        headers: staticHeaders,
-        requestMiddleware: async (request) => {
-          const headers: Record<string, string> = {};
-          await nuxtApp.callHook("graphql:headers", headers);
-          return {
-            ...request,
-            headers: { ...request.headers, ...headers },
-          };
-        },
-        responseMiddleware: (response) => {
-          if (response instanceof Error) {
-            const error = wrapError(response);
-            nuxtApp.callHook("graphql:error", error);
-          }
-        },
-      });
-    }
+    const headers: Record<string, string> = { ...staticHeaders };
+
+    // Forward SSR headers
     if (import.meta.server) {
-      const headers = useRequestHeaders(["cookie", "authorization"]);
-      client.setHeaders(headers);
+      const ssrHeaders = useRequestHeaders(["cookie", "authorization"]);
+      Object.assign(headers, ssrHeaders);
     }
+
+    // Create fresh client with current headers
+    const client = new GraphQLClient(url, {
+      headers,
+      responseMiddleware: (response) => {
+        if (response instanceof Error) {
+          nuxtApp.callHook("graphql:error", wrapError(response));
+        }
+      },
+    });
+
     return client;
   };
 
