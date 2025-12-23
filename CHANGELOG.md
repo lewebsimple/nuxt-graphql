@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.1.11
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.10...v0.1.11)
+
+### 🚀 Enhancements
+
+- Static headers / graphql:headers hook ([73d4b9c](https://github.com/lewebsimple/nuxt-graphql/commit/73d4b9c))
+- Error handling ([f2f96ec](https://github.com/lewebsimple/nuxt-graphql/commit/f2f96ec))
+- Client-side cache / useGraphQLCache ([fe3c5d7](https://github.com/lewebsimple/nuxt-graphql/commit/fe3c5d7))
+- Codegen scalars config ([3fd04bf](https://github.com/lewebsimple/nuxt-graphql/commit/3fd04bf))
+- Graphql-codegen-typescript-validation-schema ([e22526d](https://github.com/lewebsimple/nuxt-graphql/commit/e22526d))
+
+### 🩹 Fixes
+
+- Content-type headers ([f813c9c](https://github.com/lewebsimple/nuxt-graphql/commit/f813c9c))
+
+### 🏡 Chore
+
+- Update deps ([207a895](https://github.com/lewebsimple/nuxt-graphql/commit/207a895))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.10
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.9...v0.1.10)
