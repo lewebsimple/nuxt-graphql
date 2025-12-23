@@ -10,7 +10,6 @@ declare module "#app" {
   }
 
   interface RuntimeNuxtHooks {
-    "graphql:headers": (headers: Record<string, string>) => void | Promise<void>;
     "graphql:error": (error: GraphQLClientError) => void;
   }
 }

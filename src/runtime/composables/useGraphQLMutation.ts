@@ -24,6 +24,7 @@ export function useGraphQLMutation<N extends MutationName>(operationName: N) {
 
     try {
       const [variables, headers] = args;
+      /** @ts-expect-error variables type conflicts with schema from playground */
       const result = await $graphql().request(document, variables, headers) as MutationResult<N>;
       return { data: result, error: null };
     }
