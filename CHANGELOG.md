@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.14
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.13...v0.1.14)
+
+### 🩹 Fixes
+
+- Schema / documents in generates config only ([71a3f3d](https://github.com/lewebsimple/nuxt-graphql/commit/71a3f3d))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.13
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.12...v0.1.13)
