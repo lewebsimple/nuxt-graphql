@@ -211,6 +211,7 @@ export interface CodegenOptions {
   operationsFile: string;
   schemasFile?: string;
   scalars?: Record<string, ScalarConfig>;
+  generates?: CodegenConfig["generates"];
 }
 
 /**
@@ -219,7 +220,7 @@ export interface CodegenOptions {
  * @param options Codegen options
  */
 export async function runCodegen(options: CodegenOptions): Promise<void> {
-  const { sdl, documents, operationsFile, schemasFile, scalars } = options;
+  const { sdl, documents, operationsFile, schemasFile, scalars, generates: customGenerates } = options;
 
   if (documents.length === 0) {
     logger.warn("No GraphQL documents found");
@@ -286,6 +287,11 @@ export async function runCodegen(options: CodegenOptions): Promise<void> {
           scalarSchemas: zodScalars,
         },
       };
+
+      // Add custom generates if provided
+      if (customGenerates) {
+        Object.assign(generates, customGenerates);
+      }
     }
 
     await generate({ schema: sdl, documents, generates, silent: true, errorsOnly: true }, true);

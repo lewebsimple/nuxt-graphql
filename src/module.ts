@@ -5,6 +5,7 @@ import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./utils/f
 import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./utils/codegen";
 import { logger, cyan, reset } from "./utils/logger";
 import type { GraphQLCacheConfig } from "./runtime/utils/graphql-cache";
+import type { CodegenConfig } from "@graphql-codegen/cli";
 
 // Module configuration options
 export interface ModuleOptions {
@@ -15,6 +16,7 @@ export interface ModuleOptions {
     pattern?: string;
     schemaOutput?: string;
     scalars?: Record<string, string | { input: string; output: string }>;
+    generates?: CodegenConfig["generates"];
   };
 }
 
@@ -129,6 +131,7 @@ export default defineNuxtModule<ModuleOptions>({
         operationsFile,
         schemasFile,
         scalars: options.codegen?.scalars,
+        generates: options.codegen?.generates,
       });
 
       // Save GraphQL schema to file
