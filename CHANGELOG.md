@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.13
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.12...v0.1.13)
+
+### 🚀 Enhancements
+
+- Allow custom codegen generates ([2cbef8f](https://github.com/lewebsimple/nuxt-graphql/commit/2cbef8f))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.12
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.11...v0.1.12)
