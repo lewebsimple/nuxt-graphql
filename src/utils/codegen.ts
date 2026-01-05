@@ -206,7 +206,7 @@ export function formatDefinitions(defs: Definition[]): string {
 export type ScalarConfig = string | { input: string; output: string };
 
 export interface CodegenOptions {
-  sdl: string;
+  schema: string;
   documents: string[];
   operationsFile: string;
   schemasFile?: string;
@@ -220,7 +220,7 @@ export interface CodegenOptions {
  * @param options Codegen options
  */
 export async function runCodegen(options: CodegenOptions): Promise<void> {
-  const { sdl, documents, operationsFile, schemasFile, scalars, generates: customGenerates } = options;
+  const { schema, documents, operationsFile, schemasFile, scalars, generates: customGenerates } = options;
 
   if (documents.length === 0) {
     logger.warn("No GraphQL documents found");
@@ -255,6 +255,8 @@ export async function runCodegen(options: CodegenOptions): Promise<void> {
     // Configure TypeScript operations generation
     const generates: CodegenConfig["generates"] = {
       [operationsFile]: {
+        schema,
+        documents,
         plugins: ["typescript", "typescript-operations", "typed-document-node"],
         config: {
           useTypeImports: true,
@@ -272,6 +274,8 @@ export async function runCodegen(options: CodegenOptions): Promise<void> {
     // Add Zod schema generation if requested
     if (schemasFile) {
       generates[schemasFile] = {
+        schema,
+        documents,
         plugins: ["typescript-validation-schema"],
         config: {
           schema: "zodv4",
@@ -294,7 +298,7 @@ export async function runCodegen(options: CodegenOptions): Promise<void> {
       }
     }
 
-    await generate({ schema: sdl, documents, generates, silent: true, errorsOnly: true }, true);
+    await generate({ generates, silent: true, errorsOnly: true }, true);
     logger.success(`Generated types for ${documents.length} document(s)`);
   }
   catch (error) {

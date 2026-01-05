@@ -108,7 +108,7 @@ export default defineNuxtModule<ModuleOptions>({
     // Code generation function
     const generate = async () => {
       // Load schema and find all GraphQL document files
-      const [sdl, documents] = await Promise.all([
+      const [schema, documents] = await Promise.all([
         loadGraphQLSchema(schemaPath),
         findMultipleFiles(layerRootDirs, codegenPattern),
       ]);
@@ -126,7 +126,7 @@ export default defineNuxtModule<ModuleOptions>({
 
       // Generate TypedDocumentNode exports and Zod schemas
       await runCodegen({
-        sdl,
+        schema,
         documents,
         operationsFile,
         schemasFile,
@@ -135,7 +135,7 @@ export default defineNuxtModule<ModuleOptions>({
       });
 
       // Save GraphQL schema to file
-      if (writeFileIfChanged(schemaFile, sdl)) {
+      if (writeFileIfChanged(schemaFile, schema)) {
         logger.info(`GraphQL schema saved to ${cyan}${schemaOutput}${reset}`);
       }
 
