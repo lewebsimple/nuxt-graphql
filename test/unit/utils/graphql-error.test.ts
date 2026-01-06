@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GraphQLClientError, wrapError } from "../../../src/runtime/utils/graphql-error";
+import { GraphQLClientError, wrapError } from "../../../src/runtime/app/utils/graphql-error";
 import type { GraphQLError } from "graphql/error";
 
 describe("GraphQLClientError", () => {

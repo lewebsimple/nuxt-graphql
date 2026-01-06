@@ -3,7 +3,7 @@ import { print } from "graphql";
 import { useNuxtApp } from "#imports";
 import { subscriptions, type SubscriptionName, type SubscriptionResult, type SubscriptionVariables } from "#graphql/registry";
 import { wrapError, type GraphQLClientError } from "../utils/graphql-error";
-import type { IsEmptyObject } from "../utils/helpers";
+import type { IsEmptyObject } from "../../../helpers/is-empty-object";
 
 // Return type for subscription composable
 export type UseGraphQLSubscriptionReturn<N extends SubscriptionName> = {

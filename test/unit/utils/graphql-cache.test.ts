@@ -8,7 +8,7 @@ import {
   dedupeGet,
   dedupeSet,
   registerRefresh,
-} from "../../../src/runtime/utils/graphql-cache";
+} from "../../../src/runtime/app/utils/graphql-cache";
 
 describe("graphql-cache", () => {
   beforeEach(() => {

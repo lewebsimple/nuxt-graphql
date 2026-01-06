@@ -1,7 +1,7 @@
 import type { H3Event } from "h3";
 import { getGraphQLClient } from "./graphql-client";
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
-import type { IsEmptyObject } from "../../utils/helpers";
+import type { IsEmptyObject } from "../../../helpers/is-empty-object";
 
 /**
  * Server-side GraphQL query composable

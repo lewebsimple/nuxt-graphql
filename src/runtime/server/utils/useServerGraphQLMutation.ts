@@ -1,7 +1,7 @@
 import type { H3Event } from "h3";
 import { getGraphQLClient } from "./graphql-client";
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
-import type { IsEmptyObject } from "../../utils/helpers";
+import type { IsEmptyObject } from "../../../helpers/is-empty-object";
 
 /**
  * Server-side GraphQL mutation composable

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "../../../src/utils/file-operations";
+import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "../../../src/helpers/file-operations";
 
 const TEST_DIR = join(process.cwd(), "test-tmp");
 

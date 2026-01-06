@@ -1,10 +1,10 @@
 import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addTypeTemplate, createResolver, defineNuxtModule, getLayerDirectories } from "@nuxt/kit";
 import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./utils/file-operations";
-import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./utils/codegen";
-import { logger, cyan, reset } from "./utils/logger";
-import type { GraphQLCacheConfig } from "./runtime/utils/graphql-cache";
+import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./helpers/file-operations";
+import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./helpers/codegen";
+import { logger, cyan, reset } from "./helpers/logger";
+import type { GraphQLCacheConfig } from "./runtime/app/utils/graphql-cache";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
 // Module configuration options
@@ -166,14 +166,14 @@ export default defineNuxtModule<ModuleOptions>({
     }
 
     // Setup GraphQL client composables and plugins
-    addImportsDir(resolve("./runtime/composables"));
+    addImportsDir(resolve("./runtime/app/composables"));
     addServerImportsDir(resolve("./runtime/server/utils"));
-    addPlugin(resolve("./runtime/plugins/graphql"));
+    addPlugin(resolve("./runtime/app/plugins/graphql"));
 
     // Add GraphQL client type definitions
     addTypeTemplate({
       filename: "types/graphql-client.d.ts",
-      getContents: () => readFileSync(resolve("./runtime/types/graphql-client.d.ts"), "utf-8"),
+      getContents: () => readFileSync(resolve("./runtime/app/types/graphql-client.d.ts"), "utf-8"),
     });
 
     nuxt.hook("prepare:types", ({ references }) => {

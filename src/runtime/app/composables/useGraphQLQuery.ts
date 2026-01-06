@@ -2,7 +2,7 @@ import type { AsyncData, AsyncDataOptions } from "#app";
 import { useAsyncData, useNuxtApp, useRuntimeConfig, onScopeDispose } from "#imports";
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
 import { cacheGet, cacheSet, dedupeGet, dedupeSet, registerRefresh, initCache, getCacheKey, type CacheOptions } from "../utils/graphql-cache";
-import type { IsEmptyObject } from "../utils/helpers";
+import type { IsEmptyObject } from "../../../helpers/is-empty-object";
 
 // Options for GraphQL query execution
 export interface UseGraphQLQueryOptions<T> extends AsyncDataOptions<T> {

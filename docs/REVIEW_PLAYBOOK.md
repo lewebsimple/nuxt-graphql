@@ -7,11 +7,11 @@
 		- Defaults: `enabled: true`, `pattern: "**/*.gql"`, `schemaOutput: "server/graphql/schema.graphql"`.
 - **Runtime Config**: `public.graphql.endpoint` set during `setup()` in [src/module.ts](src/module.ts).
 - **Type Augmentation**: Public runtime config and app injection types in [src/types/graphql-client.d.ts](src/types/graphql-client.d.ts).
-- **Injected Plugin**: `$graphql: GraphQLClient` provided by [src/runtime/plugins/graphql.ts](src/runtime/plugins/graphql.ts).
+- **Injected Plugin**: `$graphql: GraphQLClient` provided by [src/runtime/app/plugins/graphql.ts](src/runtime/app/plugins/graphql.ts).
 - **Auto‑imported Composables**:
-	- `useGraphQL()` → wraps `$graphql.request` for `TypedDocumentNode`. See [src/runtime/composables/useGraphQL.ts](src/runtime/composables/useGraphQL.ts).
-	- `useGraphQLQuery(name, variables?, opts?)` → `useAsyncData` over registry entry. See [src/runtime/composables/useGraphQLQuery.ts](src/runtime/composables/useGraphQLQuery.ts).
-	- `useGraphQLMutation(name)` → returns `{ mutate, pending }`; `mutate(variables?)` resolves to `{ data, error }`. See [src/runtime/composables/useGraphQLMutation.ts](src/runtime/composables/useGraphQLMutation.ts).
+	- `useGraphQL()` → wraps `$graphql.request` for `TypedDocumentNode`. See [src/runtime/app/composables/useGraphQL.ts](src/runtime/app/composables/useGraphQL.ts).
+	- `useGraphQLQuery(name, variables?, opts?)` → `useAsyncData` over registry entry. See [src/runtime/app/composables/useGraphQLQuery.ts](src/runtime/app/composables/useGraphQLQuery.ts).
+	- `useGraphQLMutation(name)` → returns `{ mutate, pending }`; `mutate(variables?)` resolves to `{ data, error }`. See [src/runtime/app/composables/useGraphQLMutation.ts](src/runtime/app/composables/useGraphQLMutation.ts).
 - **Server Route**: GraphQL Yoga handler registered at fixed `/api/graphql` via `addServerHandler({ route: endpoint, handler: resolve("./runtime/server/yoga-handler") })` in [src/module.ts](src/module.ts). Handler lives at [src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts).
 - **Schema/Context Resolution**:
 	- Nitro aliases via `nitro:config` in [src/module.ts](src/module.ts):
@@ -21,7 +21,7 @@
 	- Aliases added in [src/module.ts](src/module.ts):
 		- `#graphql/operations` → `$buildDir/graphql/operations.ts` (generated).
 		- `#graphql/registry` → `$buildDir/graphql/registry.ts` (generated).
-	- Registry types (e.g., `QueryName`, `QueryResult<N>`, `QueryVariables<N>`) generated in [src/utils/codegen.ts](src/utils/codegen.ts) by `generateRegistryByTypeSource`.
+	- Registry types (e.g., `QueryName`, `QueryResult<N>`, `QueryVariables<N>`) generated in [src/helpers/codegen.ts](src/helpers/codegen.ts) by `generateRegistryByTypeSource`.
 - **Exports & Types**: See [package.json](package.json) exports: `types: ./dist/types.d.mts`, `import: ./dist/module.mjs`. Default export is the module; `ModuleOptions` included in generated types.
 - **Hooks**: `nitro:config`, `listen`, `prepare:types`, `builder:watch`, `addImportsDir`, `addPlugin`, `addTypeTemplate` used in [src/module.ts](src/module.ts).
 
@@ -32,7 +32,7 @@
 - **Yoga Server Creation**: [src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts) creates a singleton via `createYoga({ schema, graphqlEndpoint: "/api/graphql", fetchAPI: globalThis })`.
 	- H3 integration: `toWebRequest(event)` and `sendWebResponse(event, response)`.
 	- Context: `const context = await createContext(event)` from `#graphql/context` (user‑provided or default).
-- **GraphQL Client (SSR‑aware)**: [src/runtime/plugins/graphql.ts](src/runtime/plugins/graphql.ts) builds `GraphQLClient` using `useRequestURL().origin + config.public.graphql.endpoint`.
+- **GraphQL Client (SSR‑aware)**: [src/runtime/app/plugins/graphql.ts](src/runtime/app/plugins/graphql.ts) builds `GraphQLClient` using `useRequestURL().origin + config.public.graphql.endpoint`.
 	- No custom headers or per‑request cookie/authorization propagation.
 - **Shared Types/Config**: Operation documents compiled into `#graphql/operations`; registry generated as `#graphql/registry` with strong types.
 - **Dev vs Build**:
@@ -46,17 +46,17 @@
 	- Server uses H3 Web APIs and Yoga defaults; verify Nitro preset supplies required Web APIs.
 	- Client SSR calls HTTP to same origin; no header/cookie forwarding by default.
 - **Request Lifecycle**:
-	- Auth headers/cookies not propagated in [src/runtime/plugins/graphql.ts](src/runtime/plugins/graphql.ts). If SSR GraphQL needs auth, adjust client creation.
+	- Auth headers/cookies not propagated in [src/runtime/app/plugins/graphql.ts](src/runtime/app/plugins/graphql.ts). If SSR GraphQL needs auth, adjust client creation.
 - **Security**:
 	- Introspection/CORS/CSRF use Yoga defaults (no overrides). Consider environment‑based toggles.
 	- No depth/complexity limits, persisted queries, or explicit error masking.
 - **Performance**:
 	- Schema built once per worker; context per request.
 	- No result caching at module level; `useGraphQLQuery` relies on `useAsyncData` keys (name + variables hash).
-	- Codegen errors logged via [src/utils/logger.ts](src/utils/logger.ts).
+	- Codegen errors logged via [src/helpers/logger.ts](src/helpers/logger.ts).
 - **DX**:
 	- Strongly typed composables via registry; runtime config augmented.
-	- Analyzer errors for unnamed/duplicate ops/fragments in [src/utils/codegen.ts](src/utils/codegen.ts).
+	- Analyzer errors for unnamed/duplicate ops/fragments in [src/helpers/codegen.ts](src/helpers/codegen.ts).
 	- Server start logs endpoint; codegen logs documents/outputs.
 - **Semver**:
 	- Breaking changes include renaming composables, changing `public.graphql.endpoint` shape, altering registry types, or changing `$graphql` provide key.
@@ -80,9 +80,9 @@
 - **Files To Check First**:
 	- [src/module.ts](src/module.ts): options, hooks, aliases, codegen behavior.
 	- [src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts): server behavior, CORS/introspection, context wiring.
-	- [src/runtime/plugins/graphql.ts](src/runtime/plugins/graphql.ts): client creation and SSR behavior.
-	- [src/runtime/composables/*](src/runtime/composables): composable APIs and types.
-	- [src/utils/codegen.ts](src/utils/codegen.ts): analyzer strictness, registry format, codegen config.
+	- [src/runtime/app/plugins/graphql.ts](src/runtime/app/plugins/graphql.ts): client creation and SSR behavior.
+	- [src/runtime/app/composables/*](src/runtime/app/composables): composable APIs and types.
+	- [src/helpers/codegen.ts](src/helpers/codegen.ts): analyzer strictness, registry format, codegen config.
 	- [package.json](package.json): exports map, deps, Nuxt versions.
 - **Questions For Authors**:
 	- Does this change alter the `ModuleOptions` shape or defaults?

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, type DocumentAnalysis } from "../../../src/utils/codegen";
+import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, type DocumentAnalysis } from "../../../src/helpers/codegen";
 
 describe("analyzeGraphQLDocuments", () => {
   it("should analyze query operations", () => {

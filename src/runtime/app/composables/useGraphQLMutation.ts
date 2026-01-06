@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import { useNuxtApp } from "#imports";
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
-import type { IsEmptyObject } from "../utils/helpers";
+import type { IsEmptyObject } from "../../../helpers/is-empty-object";
 import { wrapError } from "../utils/graphql-error";
 
 /**

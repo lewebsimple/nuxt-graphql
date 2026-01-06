@@ -56,7 +56,7 @@ Unit tests are located in `test/unit/` and test individual functions and modules
 Example:
 ```typescript
 import { describe, it, expect } from "vitest";
-import { myFunction } from "../../../src/utils/myUtil";
+import { myFunction } from "../../../src/helpers/myUtil";
 
 describe("myFunction", () => {
   it("should return expected value", () => {
