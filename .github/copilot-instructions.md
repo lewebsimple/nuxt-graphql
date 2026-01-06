@@ -6,6 +6,8 @@
 
 - **Schema/context discovery**: Finds `server/graphql/schema.ts` (must export `schema`) and optional `server/graphql/context.ts`; falls back to [src/runtime/server/lib/default-context.ts](src/runtime/server/lib/default-context.ts). Schema SDL is printed to `graphql.codegen.schemaOutput` (default `server/graphql/schema.graphql`, warning if not `.graphql`).
 
+- **Remote/local schemas**: Local schema is optional; you can supply `remoteSchemas` (name, endpoint, headers) and we stitch everything. Each schema is cached to `.nuxt/graphql/schemas/{name}-schema.ts` (+ `.graphql` for tooling) and the stitched SDL is saved to `server/graphql/schema.graphql`. `.graphqlrc` lists the stitched schema first, followed by individual schemas for editor support.
+
 - **Yoga handler**: [src/runtime/server/api/graphql-handler.ts](src/runtime/server/api/graphql-handler.ts) converts H3 requests, builds context via `createContext`, and delegates to Yoga from [src/runtime/server/lib/create-yoga.ts](src/runtime/server/lib/create-yoga.ts) (GraphiQL in non-prod, SSE subscriptions enabled, endpoint from [src/runtime/server/lib/constants.ts](src/runtime/server/lib/constants.ts)).
 
 - **Codegen flow**: [src/helpers/codegen.ts](src/helpers/codegen.ts) loads schema via Jiti, scans `graphql.codegen.pattern` (`**/*.gql` default) across layers, errors on unnamed/duplicate operations or fragments, logs per-file definitions, and generates TypedDocumentNodes + registry + optional Zod schemas into `buildDir/graphql`. Writes `.graphqlrc` with schema/documents and custom scalar mappings.

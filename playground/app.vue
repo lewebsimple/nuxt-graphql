@@ -3,5 +3,6 @@
     <HelloQuery />
     <PingMutation />
     <TimeSubscription />
+    <SwapiFilms />
   </div>
 </template>

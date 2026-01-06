@@ -2,7 +2,8 @@ import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, create
 import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./helpers/file-operations";
-import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./helpers/codegen";
+import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, runCodegen } from "./helpers/codegen";
+import { loadLocalSchema, resolveSchemas, type RemoteSchemaOption } from "./helpers/schema";
 import { logger, cyan, reset } from "./helpers/logger";
 import { GRAPHQL_ENDPOINT } from "./runtime/server/lib/constants";
 import type { GraphQLCacheConfig } from "./runtime/app/utils/graphql-cache";
@@ -12,6 +13,8 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 export interface ModuleOptions {
   headers?: Record<string, string>;
   cache?: Partial<GraphQLCacheConfig>;
+  localSchema?: boolean;
+  remoteSchemas?: RemoteSchemaOption[];
   codegen?: {
     pattern?: string;
     schemaOutput?: string;
@@ -26,6 +29,8 @@ export default defineNuxtModule<ModuleOptions>({
     configKey: "graphql",
   },
   defaults: {
+    remoteSchemas: [],
+    localSchema: true,
     codegen: {
       pattern: "**/*.gql",
       schemaOutput: "server/graphql/schema.graphql",
@@ -44,8 +49,10 @@ export default defineNuxtModule<ModuleOptions>({
     const layerRootDirs = layerDirs.map(({ root }) => root);
 
     // Resolve GraphQL schema and context files
-    const schemaPath = await findSingleFile(layerServerDirs, "graphql/schema.{ts,mjs}", true);
-    const contextPath = (await findSingleFile(layerServerDirs, "graphql/context.{ts,mjs}")) || resolve("./runtime/server/graphql/default-context.ts");
+    const schemaPath = options.localSchema === false
+      ? undefined
+      : await findSingleFile(layerServerDirs, "graphql/schema.{ts,mjs}");
+    const contextPath = (await findSingleFile(layerServerDirs, "graphql/context.{ts,mjs}")) || resolve("./runtime/server/lib/default-context.ts");
 
     // Resolve code generation paths
     const codegenPattern = options.codegen?.pattern ?? "**/*.gql";
@@ -55,6 +62,7 @@ export default defineNuxtModule<ModuleOptions>({
     const operationsFile = join(nuxt.options.buildDir, "graphql/operations.ts");
     const registryFile = join(nuxt.options.buildDir, "graphql/registry.ts");
     const zodSchemasFile = join(nuxt.options.buildDir, "graphql/zod.ts");
+    const stitchedSchemaModule = join(nuxt.options.buildDir, "graphql/stitched-schema.ts");
 
     // Resolve schema output path and validate extension
     const schemaOutput = options.codegen?.schemaOutput ?? "server/graphql/schema.graphql";
@@ -66,7 +74,7 @@ export default defineNuxtModule<ModuleOptions>({
     const setupAliases = () => {
       nuxt.hook("nitro:config", (config) => {
         config.alias ||= {};
-        config.alias["#graphql/schema"] = schemaPath;
+        config.alias["#graphql/schema"] = stitchedSchemaModule;
         config.alias["#graphql/context"] = contextPath;
       });
 
@@ -95,9 +103,22 @@ export default defineNuxtModule<ModuleOptions>({
     };
 
     const setupCodegen = () => {
+      const resolveSchemaArtifacts = async () => {
+        const localSchema = schemaPath ? await loadLocalSchema(schemaPath) : undefined;
+
+        return resolveSchemas({
+          localSchema,
+          localSchemaPath: schemaPath,
+          rootDir,
+          buildDir: nuxt.options.buildDir,
+          schemaOutputPath: schemaFile,
+          remoteSchemas: options.remoteSchemas,
+        });
+      };
+
       const generate = async () => {
-        const [schema, documents] = await Promise.all([
-          loadGraphQLSchema(schemaPath),
+        const [schemaArtifacts, documents] = await Promise.all([
+          resolveSchemaArtifacts(),
           findMultipleFiles(layerRootDirs, codegenPattern),
         ]);
 
@@ -111,7 +132,7 @@ export default defineNuxtModule<ModuleOptions>({
         }
 
         await runCodegen({
-          schema,
+          schema: schemaArtifacts.stitchedSDL,
           documents,
           operationsFile,
           schemasFile: zodSchemasFile,
@@ -119,12 +140,8 @@ export default defineNuxtModule<ModuleOptions>({
           generates: options.codegen?.generates,
         });
 
-        if (writeFileIfChanged(schemaFile, schema)) {
-          logger.info(`GraphQL schema saved to ${cyan}${schemaOutput}${reset}`);
-        }
-
         const graphqlrc: Record<string, unknown> = {
-          schema: relative(rootDir, schemaFile),
+          schema: schemaArtifacts.schemaPointers.map((pointer) => relative(rootDir, pointer)),
           documents: codegenPattern,
         };
 
