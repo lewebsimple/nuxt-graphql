@@ -1,11 +1,9 @@
 import { defineEventHandler, toWebRequest, sendWebResponse, createError } from "h3";
-import { getRuntimeLogger } from "../lib/logger";
+import { logger } from "../lib/logger";
 import { getYoga } from "../graphql/create-yoga";
 import { createContext } from "#graphql/context";
 
 export default defineEventHandler(async (event) => {
-  const logger = getRuntimeLogger();
-
   try {
     const request = toWebRequest(event);
     const context = await createContext(event);
