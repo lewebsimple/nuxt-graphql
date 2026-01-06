@@ -2,7 +2,7 @@ import { createYoga } from "graphql-yoga";
 import { defineEventHandler, toWebRequest, sendWebResponse, createError } from "h3";
 import { schema } from "#graphql/schema";
 import { createContext } from "#graphql/context";
-import { consola } from "consola";
+import { logger } from "./lib/logger";
 
 let yoga: ReturnType<typeof createYoga> | null = null;
 function getYoga() {
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   }
   catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    consola.error("GraphQL Server Error:", message);
+    logger.error("GraphQL server error:", message);
     throw createError({ statusCode: 500, message: "GraphQL server error" });
   }
 });
