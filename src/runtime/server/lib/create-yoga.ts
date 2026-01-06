@@ -1,6 +1,5 @@
 import { createYoga } from "graphql-yoga";
 import { schema } from "#graphql/schema";
-import { createContext } from "#graphql/context";
 import { GRAPHQL_ENDPOINT } from "./constants";
 
 let yoga: ReturnType<typeof createYoga> | null = null;

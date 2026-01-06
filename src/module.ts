@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./helpers/file-operations";
 import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./helpers/codegen";
 import { logger, cyan, reset } from "./helpers/logger";
-import { GRAPHQL_ENDPOINT } from "./runtime/server/graphql/constants";
+import { GRAPHQL_ENDPOINT } from "./runtime/server/lib/constants";
 import type { GraphQLCacheConfig } from "./runtime/app/utils/graphql-cache";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 

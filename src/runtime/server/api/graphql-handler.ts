@@ -1,6 +1,6 @@
 import { defineEventHandler, toWebRequest, sendWebResponse, createError } from "h3";
 import { logger } from "../lib/logger";
-import { getYoga } from "../graphql/create-yoga";
+import { getYoga } from "../lib/create-yoga";
 import { createContext } from "#graphql/context";
 
 export default defineEventHandler(async (event) => {
