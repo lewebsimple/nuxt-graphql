@@ -1,7 +1,8 @@
 import { GraphQLClient } from "graphql-request";
 import { createClient, type Client as SSEClient } from "graphql-sse";
 import { defineNuxtPlugin, useRequestHeaders, useRequestURL, useRuntimeConfig } from "#imports";
-import { wrapError } from "../utils/graphql-error";
+import { wrapError, type GraphQLClientError } from "../utils/graphql-error";
+import type { GraphQLCacheConfig } from "../utils/graphql-cache";
 
 export default defineNuxtPlugin((nuxtApp) => {
   // Initialize configuration
@@ -55,3 +56,27 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
   };
 });
+
+// Inline module augmentations alongside the provided clients
+declare module "#app" {
+  interface NuxtApp {
+    $graphql: () => GraphQLClient;
+    $graphqlSSE: () => SSEClient;
+  }
+
+  interface RuntimeNuxtHooks {
+    "graphql:error": (error: GraphQLClientError) => void;
+  }
+}
+
+declare module "nuxt/schema" {
+  interface PublicRuntimeConfig {
+    graphql: {
+      endpoint: string;
+      headers: Record<string, string>;
+      cache: GraphQLCacheConfig;
+    };
+  }
+}
+
+export { };
