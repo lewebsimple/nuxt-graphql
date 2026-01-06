@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.2.0
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.14...v0.2.0)
+
+### 🚀 Enhancements
+
+- ⚠️  GraphQL endpoint is now fixed to /api/graphql ([2166bd7](https://github.com/lewebsimple/nuxt-graphql/commit/2166bd7))
+
+### 🩹 Fixes
+
+- Runtime logger exported directly ([c2b99b5](https://github.com/lewebsimple/nuxt-graphql/commit/c2b99b5))
+
+### 💅 Refactors
+
+- Split runtime into app and server, rename helpers ([4bc7443](https://github.com/lewebsimple/nuxt-graphql/commit/4bc7443))
+- Split the handler with shared constants and a factory ([0b7df64](https://github.com/lewebsimple/nuxt-graphql/commit/0b7df64))
+- Inline types where they are used ([78a8781](https://github.com/lewebsimple/nuxt-graphql/commit/78a8781))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  GraphQL endpoint is now fixed to /api/graphql ([2166bd7](https://github.com/lewebsimple/nuxt-graphql/commit/2166bd7))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.1.14
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.13...v0.1.14)
