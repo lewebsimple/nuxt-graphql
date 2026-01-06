@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./helpers/file-operations";
 import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, loadGraphQLSchema, runCodegen } from "./helpers/codegen";
 import { logger, cyan, reset } from "./helpers/logger";
+import { GRAPHQL_ENDPOINT } from "./runtime/server/graphql/constants";
 import type { GraphQLCacheConfig } from "./runtime/app/utils/graphql-cache";
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
@@ -33,7 +34,7 @@ export default defineNuxtModule<ModuleOptions>({
   async setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
-    const endpoint = "/api/graphql";
+    const endpoint = GRAPHQL_ENDPOINT;
 
     // Resolve layer directories
     const { rootDir, serverDir } = nuxt.options;
@@ -56,7 +57,7 @@ export default defineNuxtModule<ModuleOptions>({
     });
 
     // Setup GraphQL Yoga handler
-    addServerHandler({ route: endpoint, handler: resolve("./runtime/server/yoga-handler") });
+    addServerHandler({ route: endpoint, handler: resolve("./runtime/server/api/graphql-handler") });
 
     nuxt.hook("listen", (_, { url }) => {
       logger.success(`GraphQL Yoga ready at ${cyan}${url.replace(/\/$/, "")}${endpoint}${reset}`);
