@@ -2,17 +2,17 @@ import { createYoga } from "graphql-yoga";
 import { defineEventHandler, toWebRequest, sendWebResponse, createError } from "h3";
 import { schema } from "#graphql/schema";
 import { createContext } from "#graphql/context";
-import { useLogger } from "@nuxt/kit";
+import { consola } from "consola";
 
-let yoga = null;
-
+let yoga: ReturnType<typeof createYoga> | null = null;
 function getYoga() {
   if (!yoga) {
     yoga = createYoga({
       schema,
-      graphqlEndpoint: "{{endpoint}}",
+      graphqlEndpoint: "/api/graphql",
       fetchAPI: globalThis,
       graphiql: process.env.NODE_ENV !== "production",
+      // @ts-expect-error Subscriptions type missing in module context
       subscriptions: { protocol: "SSE" },
     });
   }
@@ -20,7 +20,6 @@ function getYoga() {
 }
 
 export default defineEventHandler(async (event) => {
-  const logger = useLogger();
   try {
     const request = toWebRequest(event);
     const context = await createContext(event);
@@ -29,7 +28,7 @@ export default defineEventHandler(async (event) => {
   }
   catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("GraphQL Server Error:", message);
+    consola.error("GraphQL Server Error:", message);
     throw createError({ statusCode: 500, message: "GraphQL server error" });
   }
 });

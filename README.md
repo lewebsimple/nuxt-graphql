@@ -30,8 +30,6 @@ Optionnally adjust options in your Nuxt config. The defaults shown below:
 export default defineNuxtConfig({
   modules: ["@lewebsimple/nuxt-graphql"],
   graphql: {
-    // GraphQL HTTP endpoint served by Yoga
-    endpoint: "/api/graphql",
     // Codegen controls document scanning and outputs
     codegen: {
       enabled: true,

@@ -1,4 +1,4 @@
-import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addServerTemplate, addTypeTemplate, createResolver, defineNuxtModule, getLayerDirectories } from "@nuxt/kit";
+import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addTypeTemplate, createResolver, defineNuxtModule, getLayerDirectories } from "@nuxt/kit";
 import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./utils/file-operations";
@@ -9,7 +9,6 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 // Module configuration options
 export interface ModuleOptions {
-  endpoint?: string;
   headers?: Record<string, string>;
   cache?: Partial<GraphQLCacheConfig>;
   codegen?: {
@@ -26,7 +25,6 @@ export default defineNuxtModule<ModuleOptions>({
     configKey: "graphql",
   },
   defaults: {
-    endpoint: "/api/graphql",
     codegen: {
       pattern: "**/*.gql",
       schemaOutput: "server/graphql/schema.graphql",
@@ -35,12 +33,7 @@ export default defineNuxtModule<ModuleOptions>({
   async setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url);
 
-    // Validate configuration
-    if (options.endpoint) {
-      if (!options.endpoint.startsWith("/")) {
-        logger.warn("GraphQL endpoint should start with '/' (e.g., '/api/graphql')");
-      }
-    }
+    const endpoint = "/api/graphql";
 
     // Resolve layer directories
     const { rootDir, serverDir } = nuxt.options;
@@ -63,12 +56,7 @@ export default defineNuxtModule<ModuleOptions>({
     });
 
     // Setup GraphQL Yoga handler
-    const endpoint = options.endpoint ?? "/api/graphql";
-    addServerTemplate({
-      filename: "graphql/yoga-handler",
-      getContents: () => readFileSync(resolve("./templates/yoga-handler.mjs"), "utf-8").replace("{{endpoint}}", endpoint),
-    });
-    addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" });
+    addServerHandler({ route: endpoint, handler: resolve("./runtime/server/yoga-handler") });
 
     nuxt.hook("listen", (_, { url }) => {
       logger.success(`GraphQL Yoga ready at ${cyan}${url.replace(/\/$/, "")}${endpoint}${reset}`);

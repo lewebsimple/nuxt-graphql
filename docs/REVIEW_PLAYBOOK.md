@@ -3,7 +3,6 @@
 ## Public API
 
 - **Module Options**: `ModuleOptions` with sensible defaults, defined in [src/module.ts](src/module.ts).
-	- `endpoint?: string` (default: `"/api/graphql"`)
 	- `codegen?: { enabled?: boolean; pattern?: string; schemaOutput?: string }`
 		- Defaults: `enabled: true`, `pattern: "**/*.gql"`, `schemaOutput: "server/graphql/schema.graphql"`.
 - **Runtime Config**: `public.graphql.endpoint` set during `setup()` in [src/module.ts](src/module.ts).
@@ -13,7 +12,7 @@
 	- `useGraphQL()` → wraps `$graphql.request` for `TypedDocumentNode`. See [src/runtime/composables/useGraphQL.ts](src/runtime/composables/useGraphQL.ts).
 	- `useGraphQLQuery(name, variables?, opts?)` → `useAsyncData` over registry entry. See [src/runtime/composables/useGraphQLQuery.ts](src/runtime/composables/useGraphQLQuery.ts).
 	- `useGraphQLMutation(name)` → returns `{ mutate, pending }`; `mutate(variables?)` resolves to `{ data, error }`. See [src/runtime/composables/useGraphQLMutation.ts](src/runtime/composables/useGraphQLMutation.ts).
-- **Server Route**: GraphQL Yoga handler registered at `endpoint` (default `"/api/graphql"`). Added via `addServerHandler({ route: endpoint, handler: "graphql/yoga-handler" })` in [src/module.ts](src/module.ts). Template at [src/templates/yoga-handler.mjs](src/templates/yoga-handler.mjs).
+- **Server Route**: GraphQL Yoga handler registered at fixed `/api/graphql` via `addServerHandler({ route: endpoint, handler: resolve("./runtime/server/yoga-handler") })` in [src/module.ts](src/module.ts). Handler lives at [src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts).
 - **Schema/Context Resolution**:
 	- Nitro aliases via `nitro:config` in [src/module.ts](src/module.ts):
 		- `#graphql/schema` → first match of `server/graphql/schema.{ts,mjs}` (required).
@@ -29,8 +28,8 @@
 ## Architecture Map
 
 - **Module Entry & Hooks**: `defineNuxtModule<ModuleOptions>(...)` in [src/module.ts](src/module.ts).
-	- Registers aliases, templates, server handler, types, composable auto‑imports, and codegen hooks.
-- **Yoga Server Creation**: Template [src/templates/yoga-handler.mjs](src/templates/yoga-handler.mjs) creates a singleton via `createYoga({ schema, graphqlEndpoint, fetchAPI: globalThis })`.
+	- Registers aliases, server handler, types, composable auto‑imports, and codegen hooks.
+- **Yoga Server Creation**: [src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts) creates a singleton via `createYoga({ schema, graphqlEndpoint: "/api/graphql", fetchAPI: globalThis })`.
 	- H3 integration: `toWebRequest(event)` and `sendWebResponse(event, response)`.
 	- Context: `const context = await createContext(event)` from `#graphql/context` (user‑provided or default).
 - **GraphQL Client (SSR‑aware)**: [src/runtime/plugins/graphql.ts](src/runtime/plugins/graphql.ts) builds `GraphQLClient` using `useRequestURL().origin + config.public.graphql.endpoint`.
@@ -73,14 +72,14 @@
 	- Yoga: `graphql-yoga: ^5.17.1`.
 	- Client: `graphql-request: ^7.4.0`.
 	- GraphQL: `^16.12.0`.
-- **Build Output / Exports / Types**: ESM‑only (`"type": "module"`); exports map configured in [package.json](package.json). Templates copied via [build.config.ts](build.config.ts).
+- **Build Output / Exports / Types**: ESM‑only (`"type": "module"`); exports map configured in [package.json](package.json).
 - **Dependencies**: `graphql`, `graphql-request`, `graphql-yoga` as regular dependencies (not peers). `@nuxt/kit` is a dependency (typical for modules built with `@nuxt/module-builder`).
 
 ## PR Review Checklist
 
 - **Files To Check First**:
-	- [src/module.ts](src/module.ts): options, hooks, aliases, endpoints, codegen behavior.
-	- [src/templates/yoga-handler.mjs](src/templates/yoga-handler.mjs): server behavior, CORS/introspection, context wiring.
+	- [src/module.ts](src/module.ts): options, hooks, aliases, codegen behavior.
+	- [src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts): server behavior, CORS/introspection, context wiring.
 	- [src/runtime/plugins/graphql.ts](src/runtime/plugins/graphql.ts): client creation and SSR behavior.
 	- [src/runtime/composables/*](src/runtime/composables): composable APIs and types.
 	- [src/utils/codegen.ts](src/utils/codegen.ts): analyzer strictness, registry format, codegen config.

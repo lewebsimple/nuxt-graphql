@@ -2,7 +2,7 @@
 
 - **Purpose**: This repo is a Nuxt module wrapping GraphQL Yoga with `graphql-request`/`graphql-sse`, plus typed composables and cache helpers.
 
-- **Module setup**: The module entry [src/module.ts](src/module.ts) wires the Yoga handler, runtime aliases (`#graphql/schema`, `#graphql/context`, `#graphql/operations`, `#graphql/registry`, `#graphql/zod`), and injects the plugin/composables/templates during `setup`. It also logs endpoint readiness on `listen`.
+- **Module setup**: The module entry [src/module.ts](src/module.ts) wires the Yoga handler (fixed route `/api/graphql` via [src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts)), runtime aliases (`#graphql/schema`, `#graphql/context`, `#graphql/operations`, `#graphql/registry`, `#graphql/zod`), and injects the plugin/composables during `setup`. It logs endpoint readiness on `listen`.
 
 - **Schema/context discovery**: By default expects `server/graphql/schema.ts` (must export `schema`) and optional `server/graphql/context.ts`; otherwise falls back to [src/runtime/server/graphql/default-context.ts](src/runtime/server/graphql/default-context.ts). Schema output defaults to `server/graphql/schema.graphql`.
 
@@ -30,7 +30,7 @@
 
 - **Extending codegen**: Pass `graphql.codegen.generates` for extra outputs; base generates already include TypedDocumentNode operations and optional Zod validation schemas.
 
-- **Runtime config**: Public config exposes `graphql.endpoint`, `headers`, and cache defaults (enabled, ttl, storage). Overrides come from `nuxt.config` `graphql` block.
+- **Runtime config**: Public config exposes `graphql.endpoint` (always `/api/graphql`), `headers`, and cache defaults (enabled, ttl, storage). Only cache/headers are configurable in `nuxt.config` `graphql`.
 
 - **GraphQL errors**: Wrap errors via [src/runtime/utils/graphql-error.ts](src/runtime/utils/graphql-error.ts); plugin emits `nuxtApp.callHook("graphql:error", wrappedError)` for consumers to react.
 

@@ -13,7 +13,6 @@ export default defineConfig({
         "src/**/*.test.ts",
         "src/**/*.spec.ts",
         "src/module.ts", // Tested via E2E
-        "src/templates/**",
       ],
     },
   },
