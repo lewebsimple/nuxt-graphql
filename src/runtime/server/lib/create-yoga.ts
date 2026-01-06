@@ -1,4 +1,5 @@
 import { createYoga } from "graphql-yoga";
+// @ts-expect-error Schema missing in module context
 import { schema } from "#graphql/schema";
 import { GRAPHQL_ENDPOINT } from "./constants";
 

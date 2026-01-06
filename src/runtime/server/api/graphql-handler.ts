@@ -1,12 +1,11 @@
 import { defineEventHandler, toWebRequest, sendWebResponse, createError } from "h3";
 import { logger } from "../lib/logger";
 import { getYoga } from "../lib/create-yoga";
-import { createContext } from "#graphql/context";
 
 export default defineEventHandler(async (event) => {
   try {
     const request = toWebRequest(event);
-    const context = await createContext(event);
+    const context = {};
     const response = await getYoga().handleRequest(request, context);
     return sendWebResponse(event, response);
   }

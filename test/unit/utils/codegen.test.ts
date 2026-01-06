@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, type DocumentAnalysis } from "../../../src/helpers/codegen";
+import { analyzeDocuments, formatDefinitions, generateRegistryByTypeSource, type DocumentAnalysis } from "../../../src/helpers/codegen";
 
 describe("analyzeGraphQLDocuments", () => {
   it("should analyze query operations", () => {
@@ -10,7 +10,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    const result = analyzeGraphQLDocuments(docs);
+    const result = analyzeDocuments(docs);
 
     expect(result.operationsByType.query).toHaveLength(1);
     expect(result.operationsByType.query[0]).toEqual({
@@ -28,7 +28,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    const result = analyzeGraphQLDocuments(docs);
+    const result = analyzeDocuments(docs);
 
     expect(result.operationsByType.mutation).toHaveLength(1);
     expect(result.operationsByType.mutation[0]!.name).toBe("CreateUser");
@@ -42,7 +42,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    const result = analyzeGraphQLDocuments(docs);
+    const result = analyzeDocuments(docs);
 
     expect(result.operationsByType.subscription).toHaveLength(1);
     expect(result.operationsByType.subscription[0]!.name).toBe("OnUserCreated");
@@ -56,7 +56,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    const result = analyzeGraphQLDocuments(docs);
+    const result = analyzeDocuments(docs);
 
     expect(result.byFile.get("/test/UserFragment.gql")).toEqual([
       { kind: "fragment", name: "UserFields" },
@@ -71,7 +71,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    expect(() => analyzeGraphQLDocuments(docs)).toThrow("Unnamed query operation");
+    expect(() => analyzeDocuments(docs)).toThrow("Unnamed query operation");
   });
 
   it("should throw on duplicate operation names", () => {
@@ -86,7 +86,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    expect(() => analyzeGraphQLDocuments(docs)).toThrow("Duplicate query operation name");
+    expect(() => analyzeDocuments(docs)).toThrow("Duplicate query operation name");
   });
 
   it("should throw on duplicate fragment names", () => {
@@ -101,7 +101,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    expect(() => analyzeGraphQLDocuments(docs)).toThrow("Duplicate fragment name");
+    expect(() => analyzeDocuments(docs)).toThrow("Duplicate fragment name");
   });
 
   it("should handle multiple operations in different files", () => {
@@ -119,7 +119,7 @@ describe("analyzeGraphQLDocuments", () => {
       },
     ];
 
-    const result = analyzeGraphQLDocuments(docs);
+    const result = analyzeDocuments(docs);
 
     expect(result.operationsByType.query).toHaveLength(2);
     expect(result.operationsByType.mutation).toHaveLength(1);

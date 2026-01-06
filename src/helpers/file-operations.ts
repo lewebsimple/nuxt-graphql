@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { dirname, join, parse, relative } from "node:path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { glob } from "tinyglobby";
 import { cyan, reset } from "./logger";
@@ -62,4 +62,14 @@ export function writeFileIfChanged(path: string, content: string): boolean {
   writeFileSync(path, content, "utf-8");
 
   return true;
+}
+
+export function toImportPath(from: string, to: string): string {
+  // Drop the extension and build a relative module import path, prefixed with ./ when needed
+  const { dir, name } = parse(to);
+  let importPath = relative(dirname(from), join(dir, name));
+  if (!importPath.startsWith(".")) {
+    importPath = "./" + importPath;
+  }
+  return importPath;
 }

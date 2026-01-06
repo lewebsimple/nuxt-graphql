@@ -55,7 +55,3 @@ coverage
 Network Trash Folder
 Temporary Items
 .apdisk
-
-# GraphQL codegen
-/.graphqlrc
-/server/graphql/

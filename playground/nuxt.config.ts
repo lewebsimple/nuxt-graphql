@@ -3,11 +3,15 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   compatibilityDate: "2025-12-13",
   graphql: {
-    remoteSchemas: [
-      {
-        name: "swapi",
-        endpoint: "https://swapi-graphql.netlify.app/graphql",
+    schemas: {
+      local: {
+        type: "local",
+        path: "server/graphql/schema.ts",
       },
-    ],
+      swapi: {
+        type: "remote",
+        url: "https://swapi-graphql.netlify.app/graphql",
+      },
+    },
   },
 });
