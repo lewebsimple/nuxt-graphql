@@ -92,11 +92,11 @@ export default defineNuxtModule<ModuleOptions>({
     // Setup generated files and aliases
     const operationsFile = join(nuxt.options.buildDir, "graphql/operations.ts");
     const registryFile = join(nuxt.options.buildDir, "graphql/registry.ts");
-    const schemasFile = join(nuxt.options.buildDir, "graphql/schemas.ts");
+    const zodSchemasFile = join(nuxt.options.buildDir, "graphql/zod.ts");
 
     nuxt.options.alias["#graphql/operations"] = operationsFile;
     nuxt.options.alias["#graphql/registry"] = registryFile;
-    nuxt.options.alias["#graphql/schemas"] = schemasFile;
+    nuxt.options.alias["#graphql/zod"] = zodSchemasFile;
 
     // Configure schema output file
     const schemaOutput = options.codegen?.schemaOutput ?? "server/graphql/schema.graphql";
@@ -129,7 +129,7 @@ export default defineNuxtModule<ModuleOptions>({
         schema,
         documents,
         operationsFile,
-        schemasFile,
+        schemasFile: zodSchemasFile,
         scalars: options.codegen?.scalars,
         generates: options.codegen?.generates,
       });
@@ -165,7 +165,7 @@ export default defineNuxtModule<ModuleOptions>({
 
       if (existsSync(operationsFile)) references.push({ path: operationsFile });
       if (existsSync(registryFile)) references.push({ path: registryFile });
-      if (existsSync(schemasFile)) references.push({ path: schemasFile });
+      if (existsSync(zodSchemasFile)) references.push({ path: zodSchemasFile });
     });
 
     // Watch for changes in development mode
