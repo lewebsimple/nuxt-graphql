@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { findSingleFile, findMultipleFiles, writeFileIfChanged } from "./helpers/file-operations";
 import { analyzeGraphQLDocuments, formatDefinitions, generateRegistryByTypeSource, runCodegen } from "./helpers/codegen";
-import { loadLocalSchema, resolveSchemas, type RemoteSchemaOption } from "./helpers/schema";
+import { loadLocalSchema, resolveSchemas, type RemoteSchemaOption, type SchemaArtifacts } from "./helpers/schema";
 import { logger, cyan, reset } from "./helpers/logger";
 import { GRAPHQL_ENDPOINT } from "./runtime/server/lib/constants";
 import type { GraphQLCacheConfig } from "./runtime/app/utils/graphql-cache";
@@ -71,6 +71,22 @@ export default defineNuxtModule<ModuleOptions>({
     }
     const schemaFile = join(rootDir, schemaOutput);
 
+    let schemaArtifactsPromise: Promise<SchemaArtifacts> | null = null;
+    const resolveSchemaArtifacts = async () => {
+      if (!schemaArtifactsPromise) {
+        const localSchema = schemaPath ? await loadLocalSchema(schemaPath) : undefined;
+        schemaArtifactsPromise = resolveSchemas({
+          localSchema,
+          localSchemaPath: schemaPath,
+          rootDir,
+          buildDir: nuxt.options.buildDir,
+          schemaOutputPath: schemaFile,
+          remoteSchemas: options.remoteSchemas,
+        });
+      }
+      return schemaArtifactsPromise;
+    };
+
     const setupAliases = () => {
       nuxt.hook("nitro:config", (config) => {
         config.alias ||= {};
@@ -103,19 +119,6 @@ export default defineNuxtModule<ModuleOptions>({
     };
 
     const setupCodegen = () => {
-      const resolveSchemaArtifacts = async () => {
-        const localSchema = schemaPath ? await loadLocalSchema(schemaPath) : undefined;
-
-        return resolveSchemas({
-          localSchema,
-          localSchemaPath: schemaPath,
-          rootDir,
-          buildDir: nuxt.options.buildDir,
-          schemaOutputPath: schemaFile,
-          remoteSchemas: options.remoteSchemas,
-        });
-      };
-
       const generate = async () => {
         const [schemaArtifacts, documents] = await Promise.all([
           resolveSchemaArtifacts(),
@@ -183,6 +186,7 @@ export default defineNuxtModule<ModuleOptions>({
     setupAliases();
     setupHandler();
     setupRuntimeConfig();
+    await resolveSchemaArtifacts();
     setupCodegen();
     setupAppRuntime();
   },
