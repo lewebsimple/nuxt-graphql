@@ -11,6 +11,7 @@ export default defineNuxtConfig({
       swapi: {
         type: "remote",
         url: "https://swapi-graphql.netlify.app/graphql",
+        middleware: "server/graphql/swapi-middleware.ts",
       },
     },
   },

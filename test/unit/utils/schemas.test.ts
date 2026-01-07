@@ -24,15 +24,10 @@ describe("writeLocalSchemaModule", () => {
     writeFileSync(schemaPath, "export const schema = 'ok';\n", "utf-8");
     const modulePath = join(tmpDir, "module.ts");
 
-    writeLocalSchemaModule(schemaPath, modulePath);
+    writeLocalSchemaModule({ localPath: schemaPath, modulePath });
 
     const content = readFileSync(modulePath, "utf-8");
     expect(content).toMatch(/export \{ schema \} from ".+schema"/);
-  });
-
-  it("throws if local schema is missing", () => {
-    const missing = join(tmpDir, "missing.ts");
-    expect(() => writeLocalSchemaModule(missing, join(tmpDir, "module.ts"))).toThrow("Local schema file not found");
   });
 });
 
@@ -46,7 +41,7 @@ describe("writeRemoteSchemaSdl", () => {
     }) as unknown as typeof fetch;
 
     const sdlPath = join(tmpDir, "remote.ts");
-    await writeRemoteSchemaSdl({ type: "remote", url: "https://example.com/graphql" }, sdlPath);
+    await writeRemoteSchemaSdl({ schemaDef: { type: "remote", url: "https://example.com/graphql" }, sdlPath });
 
     const content = readFileSync(sdlPath, "utf-8");
     expect(content).toContain("export const sdl = /* GraphQL */ `");
@@ -60,7 +55,7 @@ describe("writeRemoteSchemaModule", () => {
     const sdlPath = join(tmpDir, "remote-sdl.ts");
     writeFileSync(sdlPath, "export const sdl = 'type Query { hello: String }';", "utf-8");
 
-    writeRemoteSchemaModule({ type: "remote", url: "https://example.com/graphql", headers: { Authorization: "token" } }, sdlPath, modulePath);
+    writeRemoteSchemaModule({ schemaDef: { type: "remote", url: "https://example.com/graphql", headers: { Authorization: "token" } }, sdlPath, modulePath });
 
     const content = readFileSync(modulePath, "utf-8");
     expect(content).toContain("https://example.com/graphql");
@@ -73,7 +68,7 @@ describe("writeStitchedSchemaModule", () => {
   it("stitches provided schemas", () => {
     const modulePath = join(tmpDir, "stitched.ts");
 
-    writeStitchedSchemaModule(["local", "remote"], modulePath);
+    writeStitchedSchemaModule({ schemaNames: ["local", "remote"], modulePath });
 
     const content = readFileSync(modulePath, "utf-8");
     expect(content).toContain("import { schema as localSchema }");

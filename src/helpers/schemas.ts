@@ -2,10 +2,6 @@ import { existsSync } from "node:fs";
 import { buildClientSchema, getIntrospectionQuery, printSchema } from "graphql";
 import { toImportPath, writeFileIfChanged } from "./file-operations";
 
-const schemaHeader = "/* GraphQL */";
-const escapeSDL = (sdl: string) => sdl.replace(/`/g, "\\`");
-const serializeSDL = (sdl: string) => `${schemaHeader} \`${escapeSDL(sdl)}\``;
-
 export type LocalSchema = {
   type: "local";
   path: string;
@@ -15,12 +11,16 @@ export type RemoteSchema = {
   type: "remote";
   url: string;
   headers?: Record<string, string>;
+  middleware?: string;
 };
 
 export type SchemaDefinition = LocalSchema | RemoteSchema;
 
 // Write a proxy module that re-exports the user's local schema
-export function writeLocalSchemaModule(localPath: string, modulePath: string) {
+export function writeLocalSchemaModule({ localPath, modulePath }: {
+  localPath: string;
+  modulePath: string;
+}) {
   if (!existsSync(localPath)) {
     throw new Error(`Local schema file not found at path: ${localPath}`);
   }
@@ -31,7 +31,10 @@ export function writeLocalSchemaModule(localPath: string, modulePath: string) {
 }
 
 // Fetch and cache a remote schema SDL into a TypeScript module with a named export
-export async function writeRemoteSchemaSdl({ url, headers }: RemoteSchema, sdlPath: string) {
+export async function writeRemoteSchemaSdl({ schemaDef: { url, headers }, sdlPath }: {
+  schemaDef: RemoteSchema;
+  sdlPath: string;
+}) {
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
@@ -45,19 +48,22 @@ export async function writeRemoteSchemaSdl({ url, headers }: RemoteSchema, sdlPa
 
   const schema = buildClientSchema(json.data);
   const sdl = printSchema(schema);
-
-  const content = [`export const sdl = ${serializeSDL(sdl)};`, ""].join("\n");
+  const content = `export const sdl = \`${sdl.replace(/`/g, "\\`")}\`;`;
   return writeFileIfChanged(sdlPath, content);
 }
 
 // Build a remote schema proxy that constructs a GraphQL schema and executor from the cached SDL
-export function writeRemoteSchemaModule({ url, headers }: RemoteSchema, remoteSdlPath: string, modulePath: string) {
+export function writeRemoteSchemaModule({ schemaDef: { url, headers }, sdlPath, modulePath }: {
+  schemaDef: RemoteSchema;
+  sdlPath: string;
+  modulePath: string;
+}) {
   const headerSource = headers && Object.keys(headers).length > 0 ? JSON.stringify(headers, null, 2) : "{}";
   const content = [
     `import { buildSchema, print } from "graphql";`,
     `import type { Executor } from "@graphql-tools/utils";`,
     `import type { SubschemaConfig } from "@graphql-tools/delegate";`,
-    `import { sdl } from ${JSON.stringify(toImportPath(modulePath, remoteSdlPath))};`,
+    `import { sdl } from ${JSON.stringify(toImportPath(modulePath, sdlPath))};`,
     ``,
     `const endpoint = ${JSON.stringify(url)};`,
     `const headers = ${headerSource} as Record<string, string>;`,
@@ -83,7 +89,10 @@ export function writeRemoteSchemaModule({ url, headers }: RemoteSchema, remoteSd
 }
 
 // Stitch together the per-source schemas into a single exported schema
-export function writeStitchedSchemaModule(schemaNames: string[], modulePath: string) {
+export function writeStitchedSchemaModule({ schemaNames, modulePath }: {
+  schemaNames: string[];
+  modulePath: string;
+}) {
   const schemas = schemaNames.map((name) => ({
     path: `./schemas/${name}`,
     ref: `${name}Schema`,

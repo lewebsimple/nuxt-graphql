@@ -47,15 +47,11 @@ export default defineNuxtModule<ModuleOptions>({
 
     const layerRootDirs = getLayerDirectories(nuxt).map(({ root }) => root);
 
+    const middlewarePath = resolve("./runtime/server/utils/defineRemoteMiddleware");
     const stitchedPath = join(nuxt.options.buildDir, "graphql/schema.ts");
     const sdlPath = join(nuxt.options.rootDir, options.codegen?.saveSchema || ".nuxt/graphql/schema.graphql");
-    const middlewarePath = resolve("./runtime/server/utils/defineRemoteMiddleware");
 
     nuxt.options.alias ||= {};
-
-    if (!Object.keys(options.schemas || {}).length) {
-      throw new Error("No GraphQL schemas configured. Please set 'graphql.schemas' with at least one local or remote schema.");
-    }
 
     // Setup GraphQL context and schemas (writes proxy modules and stitched schema)
     async function setupContextSchemas() {
@@ -66,7 +62,7 @@ export default defineNuxtModule<ModuleOptions>({
         logger.info(`Using GraphQL context from ${cyan}${relative(nuxt.options.rootDir, contextPath)}${reset}`);
       }
       else {
-        contextPath = resolve("./runtime/server/graphql/context");
+        contextPath = resolve("./runtime/server/lib/default-context.ts");
         logger.info(`Using default GraphQL context`);
       }
 
@@ -77,14 +73,14 @@ export default defineNuxtModule<ModuleOptions>({
         if (schemaDef.type === "local") {
           // Local GraphQL schema
           const localPath = await findSingleFile(layerRootDirs, schemaDef.path, true);
-          writeLocalSchemaModule(localPath, schemasPath[name]);
+          writeLocalSchemaModule({ localPath, modulePath: schemasPath[name] });
           logger.info(`Local GraphQL schema "${blue}${name}${reset}" loaded from ${cyan}${relative(nuxt.options.rootDir, localPath)}${reset}`);
         }
         else if (schemaDef.type === "remote") {
           // Remote GraphQL schema
-          const remoteSdlPath = join(nuxt.options.buildDir, `graphql/schemas/${name}-sdl.ts`);
-          await writeRemoteSchemaSdl(schemaDef, remoteSdlPath);
-          writeRemoteSchemaModule(schemaDef, remoteSdlPath, schemasPath[name]);
+          const sdlPath = join(nuxt.options.buildDir, `graphql/schemas/${name}-sdl.ts`);
+          await writeRemoteSchemaSdl({ schemaDef, sdlPath });
+          writeRemoteSchemaModule({ schemaDef, sdlPath, modulePath: schemasPath[name] });
           logger.info(`Remote GraphQL schema "${magenta}${name}${reset}" loaded from ${cyan}${schemaDef.url}${reset}`);
         }
         else {
@@ -93,7 +89,7 @@ export default defineNuxtModule<ModuleOptions>({
       }
 
       // Stitched GraphQL schema (combines all per-source proxies)
-      writeStitchedSchemaModule(Object.keys(options.schemas), stitchedPath);
+      writeStitchedSchemaModule({ schemaNames: Object.keys(options.schemas), modulePath: stitchedPath });
 
       nuxt.hook("nitro:config", (config) => {
         config.alias ||= {};
@@ -127,12 +123,12 @@ export default defineNuxtModule<ModuleOptions>({
           await runCodegen({ schema: sdlPath, documents, operationsPath, zodPath, scalars: options.codegen?.scalars });
 
           // Write operations registry
-          const analysis = analyzeDocuments(documents);
-          analysis.byFile.forEach((defs, path) => {
+          const { byFile, operationsByType } = analyzeDocuments(documents);
+          byFile.forEach((defs, path) => {
             const relativePath = relative(nuxt.options.rootDir, path);
             logger.info(`${cyan}${relativePath}${reset} [${formatDefinitions(defs)}]`);
           });
-          writeRegistryModule(registryPath, analysis);
+          writeRegistryModule({ registryPath, operationsByType });
 
           // Write GraphQL config to .graphqlrc
           const config = {

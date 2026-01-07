@@ -26,23 +26,16 @@ export async function loadSchemaSdl(schemaPath: string): Promise<string> {
 
 export type ScalarConfig = string | { input: string; output: string };
 
-export interface CodegenOptions {
-  // GraphQL schema SDL
-  schema: string;
-  // Paths to GraphQL documents
-  documents: string[];
-  // Output path for generated operations/types
-  operationsPath: string;
-  // Output path for generated Zod schemas (optional)
-  zodPath?: string;
-  // Custom scalar mappings (optional)
-  scalars?: Record<string, ScalarConfig>;
-}
-
 /**
  * Run GraphQL code generation
  */
-export async function runCodegen({ schema, documents, operationsPath, zodPath, scalars }: CodegenOptions): Promise<void> {
+export async function runCodegen({ schema, documents, operationsPath, zodPath, scalars }: {
+  schema: string;
+  documents: string[];
+  operationsPath: string;
+  zodPath?: string;
+  scalars?: Record<string, ScalarConfig>;
+}): Promise<void> {
   // Configure TypeScript operations generation
   const generates: CodegenConfig["generates"] = {
     [operationsPath]: {
@@ -207,11 +200,14 @@ export function formatDefinitions(defs: Definition[]): string {
  * Generate GraphQL document registry source code
  *
  * @param registryPath Output path for registry module
- * @param analysis Documents analysis output
- * @param analysis.operationsByType Operations grouped by type
+ * @param operationsByType Operations grouped by type
+ *
  * @returns Document registry source code
  */
-export function writeRegistryModule(registryPath: string, { operationsByType }: DocumentAnalysis) {
+export function writeRegistryModule({ registryPath, operationsByType }: {
+  registryPath: string;
+  operationsByType: DocumentAnalysis["operationsByType"];
+}): boolean {
   const queries = operationsByType.query.map((o) => o.name);
   const mutations = operationsByType.mutation.map((o) => o.name);
   const subscriptions = operationsByType.subscription.map((o) => o.name);
