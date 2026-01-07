@@ -5,79 +5,83 @@
 [![License][license-src]][license-href]
 [![Nuxt][nuxt-src]][nuxt-href]
 
-Opinionated Nuxt module for using GraphQL Yoga with graphql-request / graphql-sse.
+Opinionated Nuxt module that ships a stitched GraphQL Yoga server, typed GraphQL Codegen, and client/server composables powered by graphql-request and graphql-sse.
 
 - ✨ [Release Notes](/CHANGELOG.md)
 - 🏀 [Online playground](https://stackblitz.com/github/lewebsimple/nuxt-graphql?file=playground%2Fapp.vue)
 
 ## Features
-- 🧘‍♂️ GraphQL Yoga server handler with user-provided schema / context
-- 📄 Auto-import GraphQL documents from `**/*.gql` (configurable)
-- 🧩 Type-safe composables to call operations by name, i.e. `useGraphQLQuery("Hello")`
-- 🧵 Optional stitching of local schema with remote schemas (custom headers), with stitched SDL emitted to `server/graphql/schema.graphql`
 
-## Quick Setup
+- 🧘‍♂️ GraphQL Yoga handler at `/api/graphql` with GraphiQL in development.
+- 🪡 Schema stitching: mix local schemas and remote endpoints (with per-source headers). Stitched SDL is emitted to `server/graphql/schema.graphql` (configurable).
+- 🪄 Code generation: scans named operations in `**/*.gql` (across Nuxt layers), generates typed documents, operations, registry (`#graphql/registry`), and optional Zod validation.
+- 🧩 Typed composables: `useGraphQLQuery`, `useGraphQLMutation`, `useGraphQLSubscription` consume registry names (e.g. `useGraphQLQuery("Hello")`). Server equivalents mirror the API for Nitro handlers.
+- 🚀 Caching and dedupe: in-memory or localStorage TTL cache, in-flight request deduplication, and refresh callbacks driven by runtime config.
+- 📡 SSE subscriptions: client-only via graphql-sse, using the same registry documents.
+- 🛡️SSR-friendly clients: forward `cookie` and `authorization` headers automatically on the server.
+
+## Quick start
 
 Install the module to your Nuxt application with one command:
 
 ```bash
-npx nuxi module add @lewebsimple/nuxt-graphql
+pnpx nuxi module add @lewebsimple/nuxt-graphql
 ```
 
-Optionnally adjust options in your Nuxt config. The defaults shown below:
+Configure at least one schema (local or remote) and optionnally your context (path to your context factory). Example with a local schema and remote stitched source:
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
   modules: ["@lewebsimple/nuxt-graphql"],
   graphql: {
-    // Codegen controls document scanning and outputs
+    // Optional: path to your GraphQL context factory
+    // Defaults to src/runtime/server/lib/default-context.ts if omitted
+    context: "server/graphql/context.ts",
+    schemas: {
+      local: { type: "local", path: "server/graphql/schema.ts" },
+      swapi: { type: "remote", url: "https://swapi-graphql.netlify.app/.netlify/functions/index" },
+    },
     codegen: {
-      enabled: true,
-      pattern: "**/*.gql", // scan .gql files across layers
-      schemaOutput: "server/graphql/schema.graphql", // saved SDL
+      documents: "**/*.gql", // only named operations allowed
+      saveSchema: "server/graphql/schema.graphql",
+    },
+    client: {
+      cache: { enabled: true, ttl: 60_000, storage: "memory" },
+      headers: {},
     },
   },
 });
 ```
 
-Define your GraphQL schema in `server/graphql/schema.ts`:
-
-```ts
-import { createSchema } from "graphql-yoga";
-import type { GraphQLContext } from "./context";
-
-export const schema = createSchema<GraphQLContext>({
-  typeDefs: /* GraphQL */ `
-      type Query {
-        hello: String!
-      }
-    `,
-  resolvers: {
-    Query: {
-      hello: () => "Hello world!",
-    },
-  },
-});
-```
-
-Optionnally define your GraphQL context in `server/graphql/context.ts`:
+Define context (optional) in `server/graphql/context.ts`:
 
 ```ts
 import type { H3Event } from "h3";
 
-export async function createContext(_event: H3Event) {
-  return {
-    foo: "bar",
-  };
+export async function createContext(event: H3Event) {
+  return { event, user: event.context.user };
 }
+```
 
-export type GraphQLContext = Awaited<ReturnType<typeof createContext>>;
+Write named operations in `.gql` files and use the auto-generated composables by operation name:
+
+```ts
+const { data, pending, error } = useGraphQLQuery("Hello", { name: "world" });
+const { mutate } = useGraphQLMutation("Ping");
+const { data: time } = useGraphQLSubscription("Time");
 ```
 
 That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
 
 Yoga GraphiQL is available at `http://localhost:3000/api/graphql` by default.
+
+## Development notes
+
+- Generated artifacts live under `.nuxt/graphql` and `.graphqlrc`; they are rewritten only when contents change.
+- Operations must be **named and unique**; duplicates or unnamed operations fail codegen.
+- SSE subscriptions are client-only; do not call `$graphqlSSE` on the server.
+- Cache defaults come from `runtimeConfig.public.graphql.cache`; pass `cache: false` to per-call options to bypass.
 
 ## Contribution
 

@@ -1,43 +1,22 @@
-# Nuxt GraphQL – AI Guide
+# Copilot Instructions
 
-- **Purpose**: Nuxt module bundling GraphQL Yoga + `graphql-request`/`graphql-sse`, typed composables, cache helpers, and codegen wiring.
+- Project: Nuxt module `@lewebsimple/nuxt-graphql` that wires GraphQL Yoga server-side with graphql-request / graphql-sse clients and typed composables for operations.
+- Core setup lives in [src/module.ts](src/module.ts): requires at least one schema under `graphql.schemas` (local `path` or remote `url`+`headers`), stitches them, aliases `#graphql/context`, `#graphql/schema`, `#graphql/operations`, `#graphql/registry`, `#graphql/zod`, and registers the Yoga handler at `/api/graphql`.
+- Context defaults to [src/runtime/server/lib/default-context.ts](src/runtime/server/lib/default-context.ts); override via `graphql.context` path. Schemas are proxied into `.nuxt/graphql` via [src/helpers/schemas.ts](src/helpers/schemas.ts) with remote introspection + fetch-based executor.
+- GraphQL Codegen: during `prepare:types` it loads stitched SDL, scans `codegen.documents` (default `**/*.gql` across layers), runs typed-document + operations + optional Zod generation, writes `.graphqlrc`, and logs each document via [src/helpers/codegen.ts](src/helpers/codegen.ts). Operations must be named and unique; duplicates or unnamed ops throw.
+- Registry: [src/helpers/codegen.ts](src/helpers/codegen.ts) writes `#graphql/registry` mapping operation names to documents and derived result/variables types; all composables take operation names from this registry.
+- Client runtime: [src/runtime/app/plugins/graphql.ts](src/runtime/app/plugins/graphql.ts) exposes `$graphql` (graphql-request) and `$graphqlSSE` (graphql-sse). SSR requests forward `cookie` and `authorization` headers.
+- Client composables: [src/runtime/app/composables/useGraphQLQuery.ts](src/runtime/app/composables/useGraphQLQuery.ts) adds cache/dedupe and AsyncData; [useGraphQLMutation](src/runtime/app/composables/useGraphQLMutation.ts) and [useGraphQLSubscription](src/runtime/app/composables/useGraphQLSubscription.ts) handle mutations and SSE subscriptions with typed names.
+- Caching: [src/runtime/app/utils/graphql-cache.ts](src/runtime/app/utils/graphql-cache.ts) provides in-memory/localStorage TTL cache, in-flight dedupe, and refresh callbacks. Global defaults come from `graphql.client.cache`; per-call `cache: false` disables it.
+- Error handling: [src/runtime/app/utils/graphql-error.ts](src/runtime/app/utils/graphql-error.ts) wraps errors into `GraphQLClientError` and triggers Nuxt hook `graphql:error` in the plugin middleware.
+- Server utilities: [src/runtime/server/utils/graphql-client.ts](src/runtime/server/utils/graphql-client.ts) reuses a per-event GraphQLClient; [useServerGraphQLQuery](src/runtime/server/utils/useServerGraphQLQuery.ts) and [useServerGraphQLMutation](src/runtime/server/utils/useServerGraphQLMutation.ts) mirror the client composables for Nitro handlers.
+- Yoga handler: [src/runtime/server/api/graphql-handler.ts](src/runtime/server/api/graphql-handler.ts) uses `createYoga` from [src/runtime/server/lib/create-yoga.ts](src/runtime/server/lib/create-yoga.ts) with SSE subscriptions enabled and GraphiQL in non-production.
+- File helpers: [src/helpers/file-operations.ts](src/helpers/file-operations.ts) finds files across layers and only rewrites generated artifacts when content changes to avoid noisy rebuilds.
+- Playground app for manual testing lives in [playground](playground); `pnpm run dev` boots it, `pnpm run dev:build` builds it.
+- Scripts (package.json): `pnpm run dev:prepare` builds stubs and prepares playground; `pnpm run dev` starts playground with the module; `pnpm run lint` (eslint flat); `pnpm run test`/`test:watch`/`test:coverage` (vitest); `pnpm run test:types` (vue-tsc for root + playground); `pnpm run release` runs lint, tests, build, changelog, publish.
+- Tests: unit and e2e under [test](test); fixtures for @nuxt/test-utils in [test/fixtures](test/fixtures). Coverage output is already tracked under [coverage](coverage).
+- Patterns: always create named GraphQL operations in `.gql` files; rely on auto-imported documents and registry names rather than raw gql strings; prefer provided composables and server utils to keep cache/dedupe/error hooks consistent.
+- Endpoint and runtime config: public runtime config `graphql` is set in the module (endpoint `/api/graphql`, headers, cache policy). SSE subscriptions are client-only; do not call `$graphqlSSE` on the server.
+- Generators write into `.nuxt/graphql`; do not commit generated artifacts.
 
-- **Module wiring**: [src/module.ts](src/module.ts) registers the Yoga handler at `/api/graphql` ([src/runtime/server/yoga-handler.ts](src/runtime/server/yoga-handler.ts)), injects aliases (`#graphql/schema`, `#graphql/context`, `#graphql/operations`, `#graphql/registry`, `#graphql/zod`), adds app/server imports, and logs readiness on `listen`.
-
-- **Schema/context discovery**: Finds `server/graphql/schema.ts` (must export `schema`) and optional `server/graphql/context.ts`; falls back to [src/runtime/server/lib/default-context.ts](src/runtime/server/lib/default-context.ts). Schema SDL is printed to `graphql.codegen.schemaOutput` (default `server/graphql/schema.graphql`, warning if not `.graphql`).
-
-- **Remote/local schemas**: Local schema is optional; you can supply `remoteSchemas` (name, endpoint, headers) and we stitch everything. Each schema is cached to `.nuxt/graphql/schemas/{name}-schema.ts` (+ `.graphql` for tooling) and the stitched SDL is saved to `server/graphql/schema.graphql`. `.graphqlrc` lists the stitched schema first, followed by individual schemas for editor support.
-
-- **Yoga handler**: [src/runtime/server/api/graphql-handler.ts](src/runtime/server/api/graphql-handler.ts) converts H3 requests, builds context via `createContext`, and delegates to Yoga from [src/runtime/server/lib/create-yoga.ts](src/runtime/server/lib/create-yoga.ts) (GraphiQL in non-prod, SSE subscriptions enabled, endpoint from [src/runtime/server/lib/constants.ts](src/runtime/server/lib/constants.ts)).
-
-- **Codegen flow**: [src/helpers/codegen.ts](src/helpers/codegen.ts) loads schema via Jiti, scans `graphql.codegen.pattern` (`**/*.gql` default) across layers, errors on unnamed/duplicate operations or fragments, logs per-file definitions, and generates TypedDocumentNodes + registry + optional Zod schemas into `buildDir/graphql`. Writes `.graphqlrc` with schema/documents and custom scalar mappings.
-
-- **Codegen triggers**: Runs on `prepare:types`; in dev, `builder:watch` regenerates on `.gql` changes. Generated files are pushed into type references when present.
-
-- **Registry shape**: `generateRegistryByTypeSource` emits `queries/mutations/subscriptions` maps keyed by operation name plus helper types `ResultOf`/`VariablesOf`; composables consume these names directly (no stringly-typed documents needed).
-
-- **Runtime plugin**: [src/runtime/app/plugins/graphql.ts](src/runtime/app/plugins/graphql.ts) provides `$graphql` (GraphQLClient) and `$graphqlSSE` (singleton SSE client). SSR requests forward `cookie`/`authorization` headers; errors fire `graphql:error` hook via [src/runtime/app/utils/graphql-error.ts](src/runtime/app/utils/graphql-error.ts). SSE is client-only.
-
-- **Composable patterns**: [src/runtime/app/composables/useGraphQLQuery.ts](src/runtime/app/composables/useGraphQLQuery.ts) wraps `useAsyncData`, accepts registry name + typed vars, and supports custom headers. Caching/dedupe use [src/runtime/app/utils/graphql-cache.ts](src/runtime/app/utils/graphql-cache.ts); `registerRefresh` pairs with `cacheInvalidate` for refresh-on-invalidate.
-
-- **Mutations/subscriptions**: [src/runtime/app/composables/useGraphQLMutation.ts](src/runtime/app/composables/useGraphQLMutation.ts) returns `{ mutate, pending }` with wrapped errors. [src/runtime/app/composables/useGraphQLSubscription.ts](src/runtime/app/composables/useGraphQLSubscription.ts) streams via SSE (`start/stop`, auto-start client-side) and wraps GraphQL errors.
-
-- **Cache config**: Public runtime config (`runtimeConfig.public.graphql`) exposes `endpoint`, `headers`, and cache defaults (`enabled`, `ttl`, `storage` = memory|localStorage). Cache is off by default unless enabled via module options; per-call `cache: false` disables for a query.
-
-- **Server utilities**: [src/runtime/server/utils/graphql-client.ts](src/runtime/server/utils/graphql-client.ts) builds/caches a request-scoped GraphQLClient using incoming headers. Server-side utilities live under `src/runtime/server/utils` and are auto-imported.
-
-- **Logging**: [src/helpers/logger.ts](src/helpers/logger.ts) provides colored info/success/error logs for codegen (per-file operation summaries) and schema writes.
-
-- **Playground**: [playground](playground) uses the local module build with schema/context under `playground/server/graphql`; handy for manual GraphiQL and composable testing.
-
-- **Tests**: Vitest E2E fixtures in [test/fixtures](test/fixtures) exercised by [test/basic.test.ts](test/basic.test.ts) and [test/hooks.test.ts](test/hooks.test.ts); unit tests under [test/unit](test/unit). E2E boot via `@nuxt/test-utils`.
-
-- **Scripts (pnpm)**: `pnpm run dev:prepare` (generate stubs/build module), `pnpm run dev` (develop with playground), `pnpm run dev:build` (build playground), `pnpm run lint`, `pnpm run test|test:watch|test:coverage`, `pnpm run test:types`, `pnpm run prepack` (module build), `pnpm run release` (lint/tests/prepack/changelog/publish).
-
-- **Gotchas**: Every `.gql` operation must be named/unique; codegen errors otherwise. SSE subscriptions throw on server use. Schema output not ending in `.graphql` only logs a warning. Cache only works client-side and requires `runtimeConfig.public.graphql.cache.enabled`.
-
-- **File ops**: [src/helpers/file-operations.ts](src/helpers/file-operations.ts) locates schema/docs across layers and only writes when content changes to avoid watch loops.
-
-- **Contribution nudge**: Use pnpm, run `pnpm run dev:prepare` before hacking (ensures generated stubs), and avoid editing built `dist` artifacts.
-
-If anything here feels off or incomplete, tell me which section to refine.
+If anything here feels incomplete or unclear, tell me what to adjust and I’ll refine the instructions.
