@@ -4,7 +4,7 @@ import { setup, $fetch } from "@nuxt/test-utils/e2e";
 
 describe("graphql:error hook", async () => {
   await setup({
-    rootDir: fileURLToPath(new URL("./fixtures/basic", import.meta.url)),
+    rootDir: fileURLToPath(new URL("./fixtures/hooks", import.meta.url)),
   });
 
   it("should trigger error hook on GraphQL errors", async () => {

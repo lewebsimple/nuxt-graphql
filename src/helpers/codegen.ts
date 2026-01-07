@@ -206,7 +206,9 @@ export function formatDefinitions(defs: Definition[]): string {
 /**
  * Generate GraphQL document registry source code
  *
+ * @param registryPath Output path for registry module
  * @param analysis Documents analysis output
+ * @param analysis.operationsByType Operations grouped by type
  * @returns Document registry source code
  */
 export function writeRegistryModule(registryPath: string, { operationsByType }: DocumentAnalysis) {

@@ -1,6 +1,11 @@
 export default defineNuxtConfig({
   modules: ["../../../src/module"],
   graphql: {
-    endpoint: "/api/graphql",
+    schemas: {
+      local: {
+        type: "local",
+        path: "server/graphql/schema.ts",
+      },
+    },
   },
 });

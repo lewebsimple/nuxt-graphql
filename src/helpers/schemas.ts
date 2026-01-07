@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import { dirname, relative } from "node:path";
 import { buildClientSchema, getIntrospectionQuery, printSchema } from "graphql";
 import { toImportPath, writeFileIfChanged } from "./file-operations";
 

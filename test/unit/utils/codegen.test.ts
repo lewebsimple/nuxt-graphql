@@ -1,14 +1,28 @@
-import { describe, it, expect } from "vitest";
-import { analyzeDocuments, formatDefinitions, generateRegistryByTypeSource, type DocumentAnalysis } from "../../../src/helpers/codegen";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { analyzeDocuments, formatDefinitions, writeRegistryModule, type DocumentAnalysis } from "../../../src/helpers/codegen";
+
+let tmpDir: string;
+
+beforeEach(() => {
+  tmpDir = mkdtempSync(join(tmpdir(), "codegen-test-"));
+});
+
+afterEach(() => {
+  rmSync(tmpDir, { recursive: true, force: true });
+});
+
+const writeDoc = (name: string, content: string) => {
+  const path = join(tmpDir, name);
+  writeFileSync(path, content, "utf-8");
+  return path;
+};
 
 describe("analyzeGraphQLDocuments", () => {
   it("should analyze query operations", () => {
-    const docs = [
-      {
-        path: "/test/GetUser.gql",
-        content: `query GetUser($id: ID!) { user(id: $id) { id name } }`,
-      },
-    ];
+    const docs = [writeDoc("GetUser.gql", `query GetUser($id: ID!) { user(id: $id) { id name } }`)];
 
     const result = analyzeDocuments(docs);
 
@@ -21,12 +35,7 @@ describe("analyzeGraphQLDocuments", () => {
   });
 
   it("should analyze mutation operations", () => {
-    const docs = [
-      {
-        path: "/test/CreateUser.gql",
-        content: `mutation CreateUser($name: String!) { createUser(name: $name) { id } }`,
-      },
-    ];
+    const docs = [writeDoc("CreateUser.gql", `mutation CreateUser($name: String!) { createUser(name: $name) { id } }`)];
 
     const result = analyzeDocuments(docs);
 
@@ -35,12 +44,7 @@ describe("analyzeGraphQLDocuments", () => {
   });
 
   it("should analyze subscription operations", () => {
-    const docs = [
-      {
-        path: "/test/OnUserCreated.gql",
-        content: `subscription OnUserCreated { userCreated { id name } }`,
-      },
-    ];
+    const docs = [writeDoc("OnUserCreated.gql", `subscription OnUserCreated { userCreated { id name } }`)];
 
     const result = analyzeDocuments(docs);
 
@@ -49,41 +53,25 @@ describe("analyzeGraphQLDocuments", () => {
   });
 
   it("should analyze fragment definitions", () => {
-    const docs = [
-      {
-        path: "/test/UserFragment.gql",
-        content: `fragment UserFields on User { id name email }`,
-      },
-    ];
+    const docs = [writeDoc("UserFragment.gql", `fragment UserFields on User { id name email }`)];
 
     const result = analyzeDocuments(docs);
 
-    expect(result.byFile.get("/test/UserFragment.gql")).toEqual([
+    expect(result.byFile.get(docs[0]!)).toEqual([
       { kind: "fragment", name: "UserFields" },
     ]);
   });
 
   it("should throw on unnamed operations", () => {
-    const docs = [
-      {
-        path: "/test/Unnamed.gql",
-        content: `query { users { id } }`,
-      },
-    ];
+    const docs = [writeDoc("Unnamed.gql", `query { users { id } }`)];
 
     expect(() => analyzeDocuments(docs)).toThrow("Unnamed query operation");
   });
 
   it("should throw on duplicate operation names", () => {
     const docs = [
-      {
-        path: "/test/GetUser1.gql",
-        content: `query GetUser { user { id } }`,
-      },
-      {
-        path: "/test/GetUser2.gql",
-        content: `query GetUser { user { name } }`,
-      },
+      writeDoc("GetUser1.gql", `query GetUser { user { id } }`),
+      writeDoc("GetUser2.gql", `query GetUser { user { name } }`),
     ];
 
     expect(() => analyzeDocuments(docs)).toThrow("Duplicate query operation name");
@@ -91,14 +79,8 @@ describe("analyzeGraphQLDocuments", () => {
 
   it("should throw on duplicate fragment names", () => {
     const docs = [
-      {
-        path: "/test/Fragment1.gql",
-        content: `fragment UserFields on User { id }`,
-      },
-      {
-        path: "/test/Fragment2.gql",
-        content: `fragment UserFields on User { name }`,
-      },
+      writeDoc("Fragment1.gql", `fragment UserFields on User { id }`),
+      writeDoc("Fragment2.gql", `fragment UserFields on User { name }`),
     ];
 
     expect(() => analyzeDocuments(docs)).toThrow("Duplicate fragment name");
@@ -106,17 +88,11 @@ describe("analyzeGraphQLDocuments", () => {
 
   it("should handle multiple operations in different files", () => {
     const docs = [
-      {
-        path: "/test/Queries.gql",
-        content: `
+      writeDoc("Queries.gql", `
           query GetUser { user { id } }
           query GetUsers { users { id } }
-        `,
-      },
-      {
-        path: "/test/Mutations.gql",
-        content: `mutation CreateUser { createUser { id } }`,
-      },
+        `),
+      writeDoc("Mutations.gql", `mutation CreateUser { createUser { id } }`),
     ];
 
     const result = analyzeDocuments(docs);
@@ -148,7 +124,13 @@ describe("formatDefinitions", () => {
   });
 });
 
-describe("generateRegistryByTypeSource", () => {
+describe("writeRegistryModule", () => {
+  const readRegistry = (analysis: DocumentAnalysis["operationsByType"]) => {
+    const registryPath = join(tmpDir, "registry.ts");
+    writeRegistryModule(registryPath, { byFile: new Map(), operationsByType: analysis });
+    return readFileSync(registryPath, "utf-8");
+  };
+
   it("should generate empty registry for no operations", () => {
     const analysis: DocumentAnalysis["operationsByType"] = {
       query: [],
@@ -156,7 +138,7 @@ describe("generateRegistryByTypeSource", () => {
       subscription: [],
     };
 
-    const result = generateRegistryByTypeSource(analysis);
+    const result = readRegistry(analysis);
 
     expect(result).toContain("export const queries = {} as const");
     expect(result).toContain("export const mutations = {} as const");
@@ -173,7 +155,7 @@ describe("generateRegistryByTypeSource", () => {
       subscription: [],
     };
 
-    const result = generateRegistryByTypeSource(analysis);
+    const result = readRegistry(analysis);
 
     expect(result).toContain("GetUser: ops.GetUserDocument");
     expect(result).toContain("GetUsers: ops.GetUsersDocument");
@@ -187,7 +169,7 @@ describe("generateRegistryByTypeSource", () => {
       subscription: [{ kind: "operation", type: "subscription", name: "OnUserCreated" }],
     };
 
-    const result = generateRegistryByTypeSource(analysis);
+    const result = readRegistry(analysis);
 
     expect(result).toContain("GetUser: ops.GetUserDocument");
     expect(result).toContain("CreateUser: ops.CreateUserDocument");
@@ -201,11 +183,45 @@ describe("generateRegistryByTypeSource", () => {
       subscription: [],
     };
 
-    const result = generateRegistryByTypeSource(analysis);
+    const result = readRegistry(analysis);
 
     expect(result).toContain("import type { TypedDocumentNode }");
     expect(result).toContain("import * as ops from \"#graphql/operations\"");
     expect(result).toContain("type ResultOf<T>");
     expect(result).toContain("type VariablesOf<T>");
+  });
+});
+
+describe("loadSchemaSdl", () => {
+  it("should load SDL from a schema-exporting module", async () => {
+    const schemaPath = writeDoc("schema.ts", `export const schema = {} as any;`);
+
+    vi.resetModules();
+    vi.doMock("graphql", () => ({
+      printSchema: () => "type Query { ping: Boolean }",
+      lexicographicSortSchema: (s: unknown) => s,
+    }));
+
+    const { loadSchemaSdl } = await import("../../../src/helpers/codegen");
+    const sdl = await loadSchemaSdl(schemaPath);
+
+    vi.resetModules();
+    vi.doUnmock("graphql");
+
+    expect(sdl).toContain("type Query");
+    expect(sdl).toContain("ping");
+  });
+
+  it("should throw when module lacks schema export", async () => {
+    const badSchemaPath = writeDoc("bad-schema.ts", `export const notSchema = 1;`);
+
+    vi.resetModules();
+    vi.doUnmock("graphql");
+
+    await expect(async () => {
+      const { loadSchemaSdl } = await import("../../../src/helpers/codegen");
+      await loadSchemaSdl(badSchemaPath);
+    }).rejects.toThrow("must export a 'schema' variable");
+    vi.resetModules();
   });
 });
