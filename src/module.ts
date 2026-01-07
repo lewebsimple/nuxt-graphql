@@ -49,6 +49,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     const stitchedPath = join(nuxt.options.buildDir, "graphql/schema.ts");
     const sdlPath = join(nuxt.options.rootDir, options.codegen?.saveSchema || ".nuxt/graphql/schema.graphql");
+    const middlewarePath = resolve("./runtime/server/utils/defineRemoteMiddleware");
 
     nuxt.options.alias ||= {};
 
@@ -97,6 +98,7 @@ export default defineNuxtModule<ModuleOptions>({
       nuxt.hook("nitro:config", (config) => {
         config.alias ||= {};
         config.alias["#graphql/context"] = contextPath;
+        config.alias["#graphql/middleware"] = middlewarePath;
         for (const name of Object.keys(options.schemas)) {
           config.alias[`#graphql/schemas/${name}`] = schemasPath[name];
         }
