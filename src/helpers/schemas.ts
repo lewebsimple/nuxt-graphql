@@ -53,29 +53,45 @@ export async function writeRemoteSchemaSdl({ schemaDef: { url, headers }, sdlPat
 }
 
 // Build a remote schema proxy that constructs a GraphQL schema and executor from the cached SDL
-export function writeRemoteSchemaModule({ schemaDef: { url, headers }, sdlPath, modulePath }: {
+export function writeRemoteSchemaModule({ name, schemaDef: { url, headers }, sdlPath, modulePath, middlewarePath }: {
+  name: string;
   schemaDef: RemoteSchema;
   sdlPath: string;
   modulePath: string;
+  middlewarePath?: string;
 }) {
   const headerSource = headers && Object.keys(headers).length > 0 ? JSON.stringify(headers, null, 2) : "{}";
+  const middlewareImport = middlewarePath ? `import middleware from ${JSON.stringify(toImportPath(modulePath, middlewarePath))};` : "";
   const content = [
     `import { buildSchema, print } from "graphql";`,
     `import type { Executor } from "@graphql-tools/utils";`,
     `import type { SubschemaConfig } from "@graphql-tools/delegate";`,
     `import { sdl } from ${JSON.stringify(toImportPath(modulePath, sdlPath))};`,
+    middlewareImport,
     ``,
     `const endpoint = ${JSON.stringify(url)};`,
     `const headers = ${headerSource} as Record<string, string>;`,
+    `const remoteName = ${JSON.stringify(name)};`,
+    `const mw = (typeof middleware === 'object' && middleware) || {};`,
     ``,
-    `const executor: Executor = async ({ document, variables }) => {`,
+    `const executor: Executor = async ({ document, variables, context, operationName }) => {`,
     `  const query = typeof document === "string" ? document : print(document);`,
-    `  const response = await fetch(endpoint, {`,
+    `  let fetchOptions = {`,
     `    method: "POST",`,
     `    headers: { "Content-Type": "application/json", ...headers },`,
     `    body: JSON.stringify({ query, variables }),`,
-    `  });`,
-    ``,
+    `  };`,
+    `  const mwContext = { remoteName, operationName, context, fetchOptions };`,
+    `  if (typeof mw.onRequest === "function") {`,
+    `    const maybeOverride = await mw.onRequest(mwContext);`,
+    `    if (maybeOverride && typeof maybeOverride === "object") {`,
+    `      fetchOptions = maybeOverride;`,
+    `    }`,
+    `  }`,
+    `  const response = await fetch(endpoint, fetchOptions);`,
+    `  if (typeof mw.onResponse === "function") {`,
+    `    await mw.onResponse({ ...mwContext, response });`,
+    `  }`,
     `  return response.json();`,
     `};`,
     ``,

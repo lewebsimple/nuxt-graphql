@@ -1,11 +1,11 @@
-import type { H3Event } from "h3";
+import type { GraphQLContext } from "#graphql/context";
 
 type Awaitable<T> = T | Promise<T>;
 
 export type RemoteMiddlewareContext = {
   remoteName: string;
   operationName?: string | null;
-  event: H3Event;
+  context: GraphQLContext;
 };
 
 export type RemoteMiddlewareRequestContext = RemoteMiddlewareContext & {
@@ -20,8 +20,3 @@ export type RemoteMiddleware = {
   onRequest?: (context: RemoteMiddlewareRequestContext) => Awaitable<RequestInit | undefined>;
   onResponse?: (context: RemoteMiddlewareResponseContext) => Awaitable<void>;
 };
-
-// Helper for user-defined remote middleware to get type inference
-export function defineRemoteMiddleware(middleware: RemoteMiddleware) {
-  return middleware;
-}

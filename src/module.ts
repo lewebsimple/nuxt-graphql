@@ -47,7 +47,7 @@ export default defineNuxtModule<ModuleOptions>({
 
     const layerRootDirs = getLayerDirectories(nuxt).map(({ root }) => root);
 
-    const middlewarePath = resolve("./runtime/server/utils/defineRemoteMiddleware");
+    const middlewarePath = resolve("./runtime/server/utils/remote-middleware");
     const stitchedPath = join(nuxt.options.buildDir, "graphql/schema.ts");
     const sdlPath = join(nuxt.options.rootDir, options.codegen?.saveSchema || ".nuxt/graphql/schema.graphql");
 
@@ -68,6 +68,7 @@ export default defineNuxtModule<ModuleOptions>({
 
       // GraphQL schemas (write proxies under .nuxt)
       const schemasPath: Record<string, string> = {};
+      const middlewaresPath: Record<string, string> = {};
       for (const [name, schemaDef] of Object.entries(options.schemas)) {
         schemasPath[name] = join(nuxt.options.buildDir, `graphql/schemas/${name}.ts`);
         if (schemaDef.type === "local") {
@@ -79,8 +80,11 @@ export default defineNuxtModule<ModuleOptions>({
         else if (schemaDef.type === "remote") {
           // Remote GraphQL schema
           const sdlPath = join(nuxt.options.buildDir, `graphql/schemas/${name}-sdl.ts`);
+          if (schemaDef.middleware) {
+            middlewaresPath[name] = await findSingleFile(layerRootDirs, schemaDef.middleware, true);
+          }
           await writeRemoteSchemaSdl({ schemaDef, sdlPath });
-          writeRemoteSchemaModule({ schemaDef, sdlPath, modulePath: schemasPath[name] });
+          writeRemoteSchemaModule({ name, schemaDef, sdlPath, modulePath: schemasPath[name], middlewarePath: middlewaresPath[name] });
           logger.info(`Remote GraphQL schema "${magenta}${name}${reset}" loaded from ${cyan}${schemaDef.url}${reset}`);
         }
         else {
@@ -97,6 +101,9 @@ export default defineNuxtModule<ModuleOptions>({
         config.alias["#graphql/middleware"] = middlewarePath;
         for (const name of Object.keys(options.schemas)) {
           config.alias[`#graphql/schemas/${name}`] = schemasPath[name];
+        }
+        for (const name of Object.keys(middlewaresPath)) {
+          config.alias[`#graphql/middlewares/${name}`] = middlewaresPath[name];
         }
         config.alias["#graphql/schema"] = stitchedPath;
       });
