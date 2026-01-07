@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.2.1
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.2.0...v0.2.1)
+
+### 🚀 Enhancements
+
+- Local / remote schema stitching ([d52c079](https://github.com/lewebsimple/nuxt-graphql/commit/d52c079))
+
+### 🩹 Fixes
+
+- Eager schema generation ([9617ba7](https://github.com/lewebsimple/nuxt-graphql/commit/9617ba7))
+- Update tests ([f1244eb](https://github.com/lewebsimple/nuxt-graphql/commit/f1244eb))
+- UseLogger instead of consola ([861673e](https://github.com/lewebsimple/nuxt-graphql/commit/861673e))
+
+### 💅 Refactors
+
+- Unified schemas definition ([e2916ba](https://github.com/lewebsimple/nuxt-graphql/commit/e2916ba))
+
+### 🏡 Chore
+
+- Update copilot instructions ([720aa2d](https://github.com/lewebsimple/nuxt-graphql/commit/720aa2d))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.2.0
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.1.14...v0.2.0)
