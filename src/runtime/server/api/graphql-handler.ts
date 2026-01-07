@@ -1,5 +1,4 @@
 import { defineEventHandler, toWebRequest, sendWebResponse, createError } from "h3";
-import { logger } from "../lib/logger";
 import { getYoga } from "../lib/create-yoga";
 
 export default defineEventHandler(async (event) => {
@@ -11,7 +10,7 @@ export default defineEventHandler(async (event) => {
   }
   catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("GraphQL Server Error:", message);
+    console.error("GraphQL Server Error:", message);
     throw createError({ statusCode: 500, message: "GraphQL server error" });
   }
 });

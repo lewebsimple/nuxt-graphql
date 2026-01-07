@@ -1,7 +1,7 @@
-import { consola } from "consola";
+import { useLogger } from "@nuxt/kit";
 
 // Module logger instance
-export const logger = consola.withTag("@lewebsimple/nuxt-graphql");
+export const logger = useLogger("@lewebsimple/nuxt-graphql");
 
 // ANSI color codes for terminal output
 export const blue = "\x1B[34m";
