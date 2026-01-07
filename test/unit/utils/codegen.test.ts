@@ -125,9 +125,9 @@ describe("formatDefinitions", () => {
 });
 
 describe("writeRegistryModule", () => {
-  const readRegistry = (analysis: DocumentAnalysis["operationsByType"]) => {
+  const readRegistry = (operationsByType: DocumentAnalysis["operationsByType"]) => {
     const registryPath = join(tmpDir, "registry.ts");
-    writeRegistryModule(registryPath, { byFile: new Map(), operationsByType: analysis });
+    writeRegistryModule({ registryPath, operationsByType });
     return readFileSync(registryPath, "utf-8");
   };
 

@@ -48,7 +48,7 @@ export async function writeRemoteSchemaSdl({ schemaDef: { url, headers }, sdlPat
 
   const schema = buildClientSchema(json.data);
   const sdl = printSchema(schema);
-  const content = `export const sdl = \`${sdl.replace(/`/g, "\\`")}\`;`;
+  const content = `export const sdl = /* GraphQL */ \`${sdl.replace(/`/g, "\\`")}\`;`;
   return writeFileIfChanged(sdlPath, content);
 }
 
