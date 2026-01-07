@@ -14,6 +14,7 @@ Opinionated Nuxt module that ships a stitched GraphQL Yoga server, typed GraphQL
 
 - 🧘‍♂️ GraphQL Yoga handler at `/api/graphql` with GraphiQL in development.
 - 🪡 Schema stitching: mix local schemas and remote endpoints (with per-source headers). Stitched SDL is emitted to `server/graphql/schema.graphql` (configurable).
+- 🚦 Remote middleware hooks: per-remote `onRequest` / `onResponse` callbacks to tweak headers, log responses, or short-circuit requests before forwarding.
 - 🪄 Code generation: scans named operations in `**/*.gql` (across Nuxt layers), generates typed documents, operations, registry (`#graphql/registry`), and optional Zod validation.
 - 🧩 Typed composables: `useGraphQLQuery`, `useGraphQLMutation`, `useGraphQLSubscription` consume registry names (e.g. `useGraphQLQuery("Hello")`). Server equivalents mirror the API for Nitro handlers.
 - 🚀 Caching and dedupe: in-memory or localStorage TTL cache, in-flight request deduplication, and refresh callbacks driven by runtime config.
@@ -40,7 +41,11 @@ export default defineNuxtConfig({
     context: "server/graphql/context.ts",
     schemas: {
       local: { type: "local", path: "server/graphql/schema.ts" },
-      swapi: { type: "remote", url: "https://swapi-graphql.netlify.app/.netlify/functions/index" },
+      swapi: {
+        type: "remote",
+        url: "https://swapi-graphql.netlify.app/.netlify/functions/index",
+        middleware: "server/graphql/swapi-middleware.ts",
+      },
     },
     codegen: {
       documents: "**/*.gql", // only named operations allowed
@@ -75,6 +80,27 @@ const { data: time } = useGraphQLSubscription("Time");
 That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
 
 Yoga GraphiQL is available at `http://localhost:3000/api/graphql` by default.
+
+Optional: add a remote middleware at `server/graphql/swapi-middleware.ts` to adjust headers or log activity for stitched sources:
+
+```ts
+export default {
+  async onRequest({ fetchOptions }) {
+    return {
+      ...fetchOptions,
+      headers: {
+        ...fetchOptions.headers,
+        "x-swapi-api-key": process.env.SWAPI_TOKEN ?? "",
+      },
+    };
+  },
+  async onResponse({ operationName }) {
+    console.log(`[SWAPI] completed ${operationName ?? "unknown"}`);
+  },
+} satisfies RemoteMiddleware
+```
+
+Both hooks are optional; return a new `RequestInit` from `onRequest` to override the outgoing fetch, or use `onResponse` for side-effects such as metrics and logging.
 
 ## Development notes
 
