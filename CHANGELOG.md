@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.2.2
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.2.1...v0.2.2)
+
+### 🚀 Enhancements
+
+- Initial defineRemoteMiddleware helper ([53837e8](https://github.com/lewebsimple/nuxt-graphql/commit/53837e8))
+- Remote middleware (onRequest / onResponse) ([883b65b](https://github.com/lewebsimple/nuxt-graphql/commit/883b65b))
+
+### 🩹 Fixes
+
+- Create context in graphql handler ([07fc8de](https://github.com/lewebsimple/nuxt-graphql/commit/07fc8de))
+- Tests ([d066741](https://github.com/lewebsimple/nuxt-graphql/commit/d066741))
+
+### 💅 Refactors
+
+- Object-style signatures for helpers ([85ad80d](https://github.com/lewebsimple/nuxt-graphql/commit/85ad80d))
+
+### 🏡 Chore
+
+- Update README and copilot-instructions ([0cf3353](https://github.com/lewebsimple/nuxt-graphql/commit/0cf3353))
+- Update README.md ([7827838](https://github.com/lewebsimple/nuxt-graphql/commit/7827838))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.2.1
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.2.0...v0.2.1)
