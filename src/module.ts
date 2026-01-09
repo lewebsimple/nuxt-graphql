@@ -7,6 +7,8 @@ import { writeLocalSchemaModule, writeRemoteSchemaModule, writeRemoteSchemaSdl, 
 import { GRAPHQL_ENDPOINT } from "./runtime/server/lib/constants";
 import type { GraphQLCacheConfig } from "./runtime/app/utils/graphql-cache";
 
+const isPlayground = process.env.PLAYGROUND_MODULE_BUILD;
+
 // Module configuration options
 export interface ModuleOptions {
   context?: string;
@@ -43,6 +45,9 @@ export default defineNuxtModule<ModuleOptions>({
     },
   },
   async setup(options, nuxt) {
+    if (isPlayground) {
+      return;
+    }
     const { resolve } = createResolver(import.meta.url);
 
     const layerRootDirs = getLayerDirectories(nuxt).map(({ root }) => root);
