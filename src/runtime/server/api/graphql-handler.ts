@@ -1,6 +1,5 @@
 import { defineEventHandler, toWebRequest, sendWebResponse, createError } from "h3";
 import { getYoga } from "../lib/create-yoga";
-// @ts-expect-error #graphql/context missing in module context
 import { createContext } from "#graphql/context";
 
 export default defineEventHandler(async (event) => {

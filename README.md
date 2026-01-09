@@ -13,12 +13,12 @@ Opinionated Nuxt module that ships a stitched GraphQL Yoga server, typed GraphQL
 ## Features
 
 - 🧘‍♂️ GraphQL Yoga handler at `/api/graphql` with GraphiQL in development.
-- 🪡 Schema stitching: mix local schemas and remote endpoints (with per-source headers). Stitched SDL is emitted to `server/graphql/schema.graphql` (configurable).
-- 🚦 Remote middleware hooks: per-remote `onRequest` / `onResponse` callbacks to tweak headers, log responses, or short-circuit requests before forwarding.
-- 🪄 Code generation: scans named operations in `**/*.gql` (across Nuxt layers), generates typed documents, operations, registry (`#graphql/registry`), and optional Zod validation.
-- 🧩 Typed composables: `useGraphQLQuery`, `useGraphQLMutation`, `useGraphQLSubscription` consume registry names (e.g. `useGraphQLQuery("Hello")`). Server equivalents mirror the API for Nitro handlers.
+- 🪡 Schema stitching: mix local schema(s) and remote endpoint(s).
+- 🚦 Middleware hooks: global and per-remote `onRequest` / `onResponse` callbacks.
+- 🪄 Code generation: scan `**/*.gql` across Nuxt layers to generate typed documents and Zod schemas for input types.
+- 🧩 Auto-imported composables and server utils: `useGraphQLQuery`, `useGraphQLMutation`, `useGraphQLSubscription` execute operations by name with full type-safety.
 - 🚀 Caching and dedupe: in-memory or localStorage TTL cache, in-flight request deduplication, and refresh callbacks driven by runtime config.
-- 📡 SSE subscriptions: client-only via graphql-sse, using the same registry documents.
+- 📡 SSE subscriptions (client-only): graphql-sse, using the same registry documents.
 - 🛡️SSR-friendly clients: forward `cookie` and `authorization` headers automatically on the server.
 
 ## Quick start
