@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.3.0
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.2.2...v0.3.0)
+
+### 🩹 Fixes
+
+- Skip module if PLAYGROUND_MODULE_BUILD defined ([a561721](https://github.com/lewebsimple/nuxt-graphql/commit/a561721))
+
+### 💅 Refactors
+
+- ⚠️  Complete module rewrite with better structure, comments and documentation ([ffd88d1](https://github.com/lewebsimple/nuxt-graphql/commit/ffd88d1))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Complete module rewrite with better structure, comments and documentation ([ffd88d1](https://github.com/lewebsimple/nuxt-graphql/commit/ffd88d1))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.2.2
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.2.1...v0.2.2)
