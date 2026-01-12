@@ -1,4 +1,4 @@
-import { defineRemoteExecMiddleware } from "../../../src/runtime/server/lib/define-remote-exec-middleware";
+import { defineRemoteExecMiddleware } from "../../../src/helpers";
 
 export default defineRemoteExecMiddleware({
   onRequest({ remoteName, operationName, fetchOptions }) {

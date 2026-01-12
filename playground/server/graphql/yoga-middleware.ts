@@ -1,4 +1,4 @@
-import { defineYogaMiddleware } from "../../../src/runtime/server/lib/define-yoga-middleware";
+import { defineYogaMiddleware } from "../../../src/helpers";
 
 export default defineYogaMiddleware({
   async onRequest({ event }) {

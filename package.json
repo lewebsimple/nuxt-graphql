@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/types.d.mts",
       "import": "./dist/module.mjs"
+    },
+    "./helpers": {
+      "types": "./dist/helpers.d.mts",
+      "import": "./dist/helpers.mjs"
     }
   },
   "main": "./dist/module.mjs",
@@ -16,6 +20,9 @@
     "*": {
       ".": [
         "./dist/types.d.mts"
+      ],
+      "helpers": [
+        "./dist/helpers.d.mts"
       ]
     }
   },

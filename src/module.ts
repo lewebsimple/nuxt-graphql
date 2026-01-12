@@ -10,11 +10,6 @@ import { getLocalSchemaProxy, getRemoteSchemaProxy, getSDLFromGraphQLSchema, get
 import { getGenericServerProxy } from "./helpers/server-proxy";
 import { getYogaMiddlewareProxy } from "./helpers/yoga-middleware";
 
-// Re-export helper function
-export { defineGraphQLContext } from "./runtime/server/lib/define-graphql-context";
-export { defineRemoteExecMiddleware } from "./runtime/server/lib/define-remote-exec-middleware";
-export { defineYogaMiddleware } from "./runtime/server/lib/define-yoga-middleware";
-
 // Nuxt GraphQL module options
 export interface NuxtGraphQLModuleOptions {
   // GraphQL schema(s) definition

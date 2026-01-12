@@ -142,7 +142,7 @@ The GraphQL context can be user-defined with the provided `defineGraphQLContext`
 For example, providing the user from the `nuxt-auth-utils` session with the configuration above, create `server/graphql/context.ts`:
 
 ```ts
-import { defineGraphQLContext } from "@lewebsimple/nuxt-graphql";
+import { defineGraphQLContext } from "@lewebsimple/nuxt-graphql/helpers";
 import { getUserSession } from "nuxt-auth-utils";
 
 export default defineGraphQLContext(async (event) => {
@@ -356,7 +356,7 @@ You can define custom logic around the Yoga event handler by using the provided 
 For the example configuration above, create `server/graphql/yoga-middleware.ts`:
 
 ```ts
-import { defineYogaMiddleware } from "@lewebsimple/nuxt-graphql";
+import { defineYogaMiddleware } from "@lewebsimple/nuxt-graphql/helpers";
 import { getUserSession } from "nuxt-auth-utils";
 
 export default defineYogaMiddleware({

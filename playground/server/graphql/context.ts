@@ -1,3 +1,3 @@
-import { defineGraphQLContext } from "../../../src/runtime/server/lib/define-graphql-context";
+import { defineGraphQLContext } from "../../../src/helpers";
 
 export default defineGraphQLContext(() => ({ message: "Hello world" }));
