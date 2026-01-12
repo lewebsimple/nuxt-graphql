@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.3
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.2...v0.3.3)
+
+### 🚀 Enhancements
+
+- Provide dummy schema when no schemas provided. ([5ade714](https://github.com/lewebsimple/nuxt-graphql/commit/5ade714))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.3.2
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.1...v0.3.2)
