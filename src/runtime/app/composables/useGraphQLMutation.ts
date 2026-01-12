@@ -1,35 +1,48 @@
-import { ref } from "vue";
-import { useNuxtApp } from "#imports";
+import { ref, useNuxtApp } from "#imports";
+// @ts-expect-error Types available at runtime
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
-import type { IsEmptyObject } from "../../../helpers/is-empty-object";
-import { wrapError } from "../utils/graphql-error";
+import { normalizeGraphQLError } from "../../shared/lib/graphql-error";
+import { mergeHeaders } from "../../shared/lib/headers";
+
+// useGraphQLMutation composable options
+export interface UseGraphQLMutationOptions {
+  headers?: HeadersInit;
+}
+
+// Mutate function options
+export interface MutateOptions {
+  headers?: HeadersInit;
+}
 
 /**
- * Client-side GraphQL mutation composable
+ * GraphQL mutation composable
  *
- * @param operationName Mutation operation name
- * @returns Object with mutate function and pending state
+ * @param operationName Name of the GraphQL mutation operation in the registry
+ * @returns Mutation handler
  */
-export function useGraphQLMutation<N extends MutationName>(operationName: N) {
+export function useGraphQLMutation<N extends MutationName>(
+  operationName: N,
+  options?: UseGraphQLMutationOptions,
+) {
+  const { $getGraphQLClient } = useNuxtApp();
   const document = mutations[operationName];
-  const { $graphql } = useNuxtApp();
   const pending = ref(false);
 
+  // Mutation handler
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
-      ? [variables?: MutationVariables<N>, headers?: HeadersInit]
-      : [variables: MutationVariables<N>, headers?: HeadersInit]
-  ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
+      ? [variables?: MutationVariables<N>, mutateOptions?: MutateOptions]
+      : [variables: MutationVariables<N>, mutateOptions?: MutateOptions]
+  ) {
     pending.value = true;
-
     try {
-      const [variables, headers] = args;
-      /** @ts-expect-error variables type conflicts with schema from playground */
-      const result = await $graphql().request(document, variables, headers) as MutationResult<N>;
-      return { data: result, error: null };
+      const [variables, mutateOptions] = args;
+      const headers = mergeHeaders(options?.headers, mutateOptions?.headers);
+      const data = await $getGraphQLClient().request<MutationResult<N>>(document, variables, headers);
+      return { data, error: null };
     }
     catch (error) {
-      return { data: null, error: wrapError(error) };
+      return { data: null, error: normalizeGraphQLError(error) };
     }
     finally {
       pending.value = false;

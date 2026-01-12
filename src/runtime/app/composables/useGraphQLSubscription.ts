@@ -1,24 +1,24 @@
-import { ref, onScopeDispose, toValue, type MaybeRefOrGetter, type Ref } from "vue";
+import { shallowRef, onScopeDispose, toValue, type MaybeRefOrGetter, type Ref } from "vue";
 import { print } from "graphql";
 import { useNuxtApp } from "#imports";
+// @ts-expect-error Types available at runtime
 import { subscriptions, type SubscriptionName, type SubscriptionResult, type SubscriptionVariables } from "#graphql/registry";
-import { wrapError, type GraphQLClientError } from "../utils/graphql-error";
-import type { IsEmptyObject } from "../../../helpers/is-empty-object";
+import { normalizeGraphQLError, type NormalizedGraphQLError } from "../../shared/lib/graphql-error";
 
-// Return type for subscription composable
+// useGraphQLSubscription return type
 export type UseGraphQLSubscriptionReturn<N extends SubscriptionName> = {
   data: Ref<SubscriptionResult<N> | null>;
-  error: Ref<GraphQLClientError | null>;
+  error: Ref<NormalizedGraphQLError | null>;
   start: () => void;
   stop: () => void;
 };
 
 /**
- * Client-side GraphQL subscription composable using SSE
+ * GraphQL subscription composable (client-side only)
  *
  * @param operationName Subscription operation name
- * @param args Variables (can be reactive)
- * @returns Object with data, error, start, and stop
+ * @param args Variables (reactive or not)
+ * @returns Object with reactive data, error and  start / stop helpers
  */
 export function useGraphQLSubscription<N extends SubscriptionName>(
   operationName: N,
@@ -26,11 +26,16 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
     ? [variables?: MaybeRefOrGetter<SubscriptionVariables<N>>]
     : [variables: MaybeRefOrGetter<SubscriptionVariables<N>>]
 ): UseGraphQLSubscriptionReturn<N> {
-  const { $graphqlSSE } = useNuxtApp();
+  // Prevent server-side usage
+  if (import.meta.server) {
+    throw new Error("useGraphQLSubscription is not available on the server");
+  }
+
+  const { $getGraphQLSSEClient } = useNuxtApp();
   const [variables] = args;
 
-  const data = ref<SubscriptionResult<N> | null>(null);
-  const error = ref<GraphQLClientError | null>(null);
+  const data = shallowRef<SubscriptionResult<N> | null>(null) as Ref<SubscriptionResult<N> | null>;
+  const error = shallowRef<NormalizedGraphQLError | null>(null) as Ref<NormalizedGraphQLError | null>;
 
   let unsubscribe: (() => void) | null = null;
 
@@ -38,8 +43,7 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
   function start() {
     stop();
     error.value = null;
-
-    unsubscribe = $graphqlSSE().subscribe<SubscriptionResult<N>>(
+    unsubscribe = $getGraphQLSSEClient().subscribe<SubscriptionResult<N>>(
       {
         query: print(subscriptions[operationName]),
         variables: toValue(variables),
@@ -47,14 +51,14 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
       {
         next: (result) => {
           if (result.errors?.length) {
-            error.value = wrapError({ errors: result.errors });
+            error.value = normalizeGraphQLError({ errors: result.errors });
           }
           else if (result.data) {
             data.value = result.data as SubscriptionResult<N>;
           }
         },
-        error: (e) => {
-          error.value = wrapError(e);
+        error: (err) => {
+          error.value = normalizeGraphQLError(err);
         },
         complete: () => {
           unsubscribe = null;
@@ -69,12 +73,9 @@ export function useGraphQLSubscription<N extends SubscriptionName>(
     unsubscribe = null;
   }
 
-  // Auto-start on client-side
-  if (import.meta.client) {
-    start();
-  }
-
+  // Start automatically and stop on scope dispose
+  start();
   onScopeDispose(stop);
 
-  return { data, error, start, stop } as UseGraphQLSubscriptionReturn<N>;
+  return { data, error, start, stop };
 }

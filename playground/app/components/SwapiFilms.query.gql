@@ -1,0 +1,12 @@
+fragment TheFilm on Film {
+  title
+  releaseDate
+}
+
+query SwapiFilms {
+  allFilms {
+    films {
+      ...TheFilm
+    }
+  }
+}

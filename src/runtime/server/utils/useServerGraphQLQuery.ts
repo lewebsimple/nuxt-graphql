@@ -1,25 +1,16 @@
 import type { H3Event } from "h3";
-import { getGraphQLClient } from "./graphql-client";
+// @ts-expect-error Types available at runtime
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
-import type { IsEmptyObject } from "../../../helpers/is-empty-object";
+import { executeServerGraphQL, type ExecuteServerGraphQLOptions } from "../lib/execute-server-graphql";
 
-/**
- * Server-side GraphQL query composable
- *
- * @param event H3 event
- * @param operationName Query operation name
- * @param args Variables and optional headers
- * @returns Query result
- */
 export async function useServerGraphQLQuery<N extends QueryName>(
   event: H3Event,
   operationName: N,
   ...args: IsEmptyObject<QueryVariables<N>> extends true
-    ? [variables?: QueryVariables<N>, headers?: HeadersInit]
-    : [variables: QueryVariables<N>, headers?: HeadersInit]
+    ? [variables?: QueryVariables<N>, options?: ExecuteServerGraphQLOptions]
+    : [variables: QueryVariables<N>, options?: ExecuteServerGraphQLOptions]
 ): Promise<QueryResult<N>> {
-  const client = getGraphQLClient(event);
-  const [variables, headers] = args;
+  const [variables, options] = args;
 
-  return client.request(queries[operationName], variables, headers) as Promise<QueryResult<N>>;
+  return executeServerGraphQL(event, queries[operationName], variables, options) as Promise<QueryResult<N>>;
 }

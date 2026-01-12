@@ -1,80 +1,127 @@
-import type { AsyncData, AsyncDataOptions } from "#app";
-import { useAsyncData, useNuxtApp, useRuntimeConfig, onScopeDispose } from "#imports";
+import type { AsyncDataOptions } from "#app";
+import { computed, toValue, useAsyncData, useNuxtApp, useNuxtData, useRuntimeConfig, type MaybeRefOrGetter } from "#imports";
+// @ts-expect-error Types available at runtime
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
-import { cacheGet, cacheSet, dedupeGet, dedupeSet, registerRefresh, initCache, getCacheKey, type CacheOptions } from "../utils/graphql-cache";
-import type { IsEmptyObject } from "../../../helpers/is-empty-object";
+import { resolveCacheConfig, type CacheConfig } from "../../../helpers/cache-config";
+import { getCacheKeyParts, getInFlightRequests } from "../lib/graphql-cache";
+import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
-// Options for GraphQL query execution
+// useGraphQLQuery composable options (extends useAsyncData options)
 export interface UseGraphQLQueryOptions<T> extends AsyncDataOptions<T> {
-  cache?: CacheOptions | false;
   headers?: HeadersInit;
+  cache?: CacheConfig;
 }
 
-/**
- * Client-side GraphQL query composable with caching and deduplication
- *
- * @param operationName Query operation name
- * @param args Variables and optional configuration
- * @returns AsyncData object with query result
- */
 export function useGraphQLQuery<N extends QueryName>(
   operationName: N,
   ...args: IsEmptyObject<QueryVariables<N>> extends true
-    ? [variables?: QueryVariables<N>, options?: UseGraphQLQueryOptions<QueryResult<N>>]
-    : [variables: QueryVariables<N>, options?: UseGraphQLQueryOptions<QueryResult<N>>]
-): AsyncData<QueryResult<N>, Error | null> {
-  const { $graphql } = useNuxtApp();
-  const { public: { graphql: { cache: globalCache } } } = useRuntimeConfig();
+    ? [variables?: MaybeRefOrGetter<QueryVariables<N>>, options?: UseGraphQLQueryOptions<QueryResult<N>>]
+    : [variables: MaybeRefOrGetter<QueryVariables<N>>, options?: UseGraphQLQueryOptions<QueryResult<N>>]
+): ReturnType<typeof useAsyncData<QueryResult<N>>> {
+  const { $getGraphQLClient } = useNuxtApp();
+  const inFlightRequests = getInFlightRequests();
+
+  // Initialize query parameters
+  const isClient = import.meta.client;
+  const { public: { graphql: { cacheConfig: runtimeCacheConfig } } } = useRuntimeConfig();
   const document = queries[operationName];
   const [variables, options] = args;
+  const { headers, cache, ...asyncDataOptions } = options ?? {};
 
-  // Determine cache settings
-  const cacheEnabled = options?.cache !== false && globalCache.enabled;
-  const cacheTtl = options?.cache === false ? 0 : (options?.cache?.ttl ?? globalCache.ttl);
+  // Resolve cache configuration
+  const cacheConfig = resolveCacheConfig(runtimeCacheConfig, cache);
 
-  // Initialize cache on first use (client-side only)
-  if (import.meta.client && cacheEnabled) {
-    initCache(globalCache.storage);
-  }
+  // Reactive cache key based on operation name and variables
+  const cacheKey = computed(() => getCacheKeyParts(cacheConfig, operationName, toValue(variables)).key);
 
-  const key = getCacheKey(operationName, variables);
-
-  // Data fetcher with caching and deduplication
-  const fetcher = async (): Promise<QueryResult<N>> => {
-    // Check cache first (client-side only)
-    if (import.meta.client && cacheEnabled) {
-      const cached = await cacheGet<QueryResult<N>>(operationName, variables);
-      if (cached) return cached;
+  // Promise to execute the network request with deduplication and optional persistence
+  async function executeNetwork() {
+    // Check for existing in-flight request
+    const existing = inFlightRequests.get(cacheKey.value);
+    if (existing) {
+      return existing as Promise<QueryResult<N>>;
     }
 
-    // Check for in-flight request (deduplication)
-    const inFlight = dedupeGet(operationName, variables);
-    if (inFlight) return inFlight as Promise<QueryResult<N>>;
+    // GraphQL request execution promise with optional persistence on client
+    const promise = ($getGraphQLClient().request(document, toValue(variables), headers) as Promise<QueryResult<N>>)
+      .then((result) => {
+        if (isClient && cacheConfig.ttl !== undefined) {
+          setPersistedEntry(cacheKey.value, result, cacheConfig.ttl);
+        }
+        return result;
+      });
 
-    // Execute GraphQL request
-    const promise = $graphql().request(document, variables, options?.headers) as Promise<QueryResult<N>>;
-    dedupeSet(operationName, variables, promise);
+    // Store in-flight request promise until settled
+    inFlightRequests.set(cacheKey.value, promise);
+    promise.finally(() => {
+      inFlightRequests.delete(cacheKey.value);
+    });
 
-    const result = await promise;
-
-    // Store result in cache (client-side only)
-    if (import.meta.client && cacheEnabled && cacheTtl) {
-      await cacheSet(operationName, variables, result, cacheTtl);
-    }
-
-    return result;
+    return promise;
   };
 
-  // Extract AsyncDataOptions (exclude custom options)
-  const { cache: _cache, headers: _headers, ...asyncDataOptions } = options ?? {};
+  // GraphQL query async data handler with caching logic
+  async function asyncDataHandler() {
+    const nuxtData = useNuxtData<QueryResult<N>>(cacheKey.value);
+    let cachedValue = nuxtData.data.value;
 
-  const asyncData = useAsyncData(key, fetcher, asyncDataOptions) as AsyncData<QueryResult<N>, Error | null>;
+    // Bypass cache if disabled
+    if (cacheConfig.cachePolicy === "no-cache") {
+      return await executeNetwork();
+    }
 
-  // Register refresh callback for cache invalidation (client-side only)
-  if (import.meta.client) {
-    const unregister = registerRefresh(operationName, variables, () => asyncData.refresh());
-    onScopeDispose(unregister);
+    // Seed from persisted cache on client if enabled and no in-memory value
+    if (isClient && cachedValue === undefined && cacheConfig.ttl !== undefined) {
+      const persisted = await getPersistedEntry<QueryResult<N>>(cacheKey.value);
+      if (persisted !== undefined) {
+        cachedValue = nuxtData.data.value = persisted;
+      }
+    }
+
+    // Apply cache policy
+    switch (cacheConfig.cachePolicy) {
+      // Cache-first: return cached value if exists, else fetch from network
+      case "cache-first": {
+        if (cachedValue !== undefined) {
+          return cachedValue;
+        }
+        return await executeNetwork();
+      }
+
+      // Network-first: try network request, fallback to cache on error
+      case "network-first": {
+        try {
+          return await executeNetwork();
+        }
+        catch (error) {
+          if (cachedValue !== undefined) {
+            return cachedValue;
+          }
+          throw error;
+        }
+      }
+
+      // Stale-while-revalidate: return cached value if exists, then revalidate in background
+      case "swr": {
+        if (cachedValue !== undefined) {
+          // Trigger background revalidation if not already in-flight
+          if (!inFlightRequests.has(cacheKey.value)) {
+            executeNetwork().then((result) => {
+              nuxtData.data.value = result;
+            }).catch(() => {
+              // Ignore errors
+            });
+          }
+          return cachedValue;
+        }
+        return await executeNetwork();
+      }
+
+      default:
+        return await executeNetwork();
+    }
   }
 
-  return asyncData;
+  // Use useAsyncData with the fetcher and cache key
+  return useAsyncData(cacheKey, asyncDataHandler, asyncDataOptions) as ReturnType<typeof useAsyncData<QueryResult<N>>>;
 }

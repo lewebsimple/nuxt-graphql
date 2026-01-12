@@ -1,36 +1,29 @@
 import type { H3Event } from "h3";
-import { getGraphQLClient } from "./graphql-client";
+// @ts-expect-error Types available at runtime
 import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
-import type { IsEmptyObject } from "../../../helpers/is-empty-object";
+import { executeServerGraphQL, type ExecuteServerGraphQLOptions } from "../lib/execute-server-graphql";
+import { mergeHeaders } from "../../shared/lib/headers";
 
-/**
- * Server-side GraphQL mutation composable
- *
- * @param event H3 event
- * @param operationName Mutation operation name
- * @returns Object with mutate function
- */
-export async function useServerGraphQLMutation<N extends MutationName>(
+export interface ServerMutateOptions {
+  headers?: HeadersInit;
+}
+
+export function useServerGraphQLMutation<N extends MutationName>(
   event: H3Event,
   operationName: N,
+  options?: ExecuteServerGraphQLOptions,
 ) {
-  const client = getGraphQLClient(event);
-
   async function mutate(
     ...args: IsEmptyObject<MutationVariables<N>> extends true
-      ? [variables?: MutationVariables<N>, headers?: HeadersInit]
-      : [variables: MutationVariables<N>, headers?: HeadersInit]
-  ): Promise<{ data: MutationResult<N> | null; error: Error | null }> {
-    try {
-      const [variables, headers] = args;
-      /** @ts-expect-error variables type conflicts with schema from playground */
-      const result = await client.request(mutations[operationName], variables, headers) as MutationResult<N>;
-      return { data: result, error: null };
-    }
-    catch (e) {
-      const error = e instanceof Error ? e : new Error(String(e));
-      return { data: null, error };
-    }
+      ? [variables?: MutationVariables<N>, mutateOptions?: ServerMutateOptions]
+      : [variables: MutationVariables<N>, mutateOptions?: ServerMutateOptions]
+  ): Promise<MutationResult<N>> {
+    const [variables, mutateOptions] = args;
+
+    return executeServerGraphQL(event, mutations[operationName], variables, {
+      ...options,
+      headers: mergeHeaders(options?.headers, mutateOptions?.headers),
+    }) as Promise<MutationResult<N>>;
   }
 
   return { mutate };

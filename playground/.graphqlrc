@@ -1,4 +1,0 @@
-{
-  "schema": "server/graphql/schema.graphql",
-  "documents": "**/*.gql"
-}

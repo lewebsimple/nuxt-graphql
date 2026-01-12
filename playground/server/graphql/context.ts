@@ -1,9 +1,3 @@
-import type { H3Event } from "h3";
+import { defineGraphQLContext } from "../../../src/runtime/server/lib/define-graphql-context";
 
-export async function createContext(_event: H3Event) {
-  return {
-    foo: "bar",
-  };
-}
-
-export type GraphQLContext = Awaited<ReturnType<typeof createContext>>;
+export default defineGraphQLContext(() => ({ message: "Hello world" }));

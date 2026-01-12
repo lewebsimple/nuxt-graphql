@@ -1,8 +1,0 @@
-query SwapiFilms {
-  allFilms {
-    films {
-      title
-      releaseDate
-    }
-  }
-}

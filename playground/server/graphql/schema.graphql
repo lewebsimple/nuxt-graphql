@@ -648,6 +648,7 @@ type Query {
   allSpecies(after: String, before: String, first: Int, last: Int): SpeciesConnection
   allStarships(after: String, before: String, first: Int, last: Int): StarshipsConnection
   allVehicles(after: String, before: String, first: Int, last: Int): VehiclesConnection
+  currentTime: String!
   film(filmID: ID, id: ID): Film
   hello: String!
 

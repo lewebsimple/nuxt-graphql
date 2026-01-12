@@ -1,22 +1,70 @@
-# Copilot Instructions
+# Copilot instructions (Nuxt GraphQL module)
 
-- Project: Nuxt module `@lewebsimple/nuxt-graphql` that wires GraphQL Yoga server-side with graphql-request / graphql-sse clients and typed composables for operations.
-- Core setup lives in [src/module.ts](src/module.ts): requires at least one schema under `graphql.schemas` (local `path` or remote `url`+`headers`), stitches them, aliases `#graphql/context`, `#graphql/schema`, `#graphql/operations`, `#graphql/registry`, `#graphql/zod`, and registers the Yoga handler at `/api/graphql`.
-- Context defaults to [src/runtime/server/lib/default-context.ts](src/runtime/server/lib/default-context.ts); override via `graphql.context` path. Schemas are proxied into `.nuxt/graphql` via [src/helpers/schemas.ts](src/helpers/schemas.ts) with remote introspection + fetch-based executor.
-- GraphQL Codegen: during `prepare:types` it loads stitched SDL, scans `codegen.documents` (default `**/*.gql` across layers), runs typed-document + operations + optional Zod generation, writes `.graphqlrc`, and logs each document via [src/helpers/codegen.ts](src/helpers/codegen.ts). Operations must be named and unique; duplicates or unnamed ops throw.
-- Registry: [src/helpers/codegen.ts](src/helpers/codegen.ts) writes `#graphql/registry` mapping operation names to documents and derived result/variables types; all composables take operation names from this registry.
-- Client runtime: [src/runtime/app/plugins/graphql.ts](src/runtime/app/plugins/graphql.ts) exposes `$graphql` (graphql-request) and `$graphqlSSE` (graphql-sse). SSR requests forward `cookie` and `authorization` headers.
-- Client composables: [src/runtime/app/composables/useGraphQLQuery.ts](src/runtime/app/composables/useGraphQLQuery.ts) adds cache/dedupe and AsyncData; [useGraphQLMutation](src/runtime/app/composables/useGraphQLMutation.ts) and [useGraphQLSubscription](src/runtime/app/composables/useGraphQLSubscription.ts) handle mutations and SSE subscriptions with typed names.
-- Caching: [src/runtime/app/utils/graphql-cache.ts](src/runtime/app/utils/graphql-cache.ts) provides in-memory/localStorage TTL cache, in-flight dedupe, and refresh callbacks. Global defaults come from `graphql.client.cache`; per-call `cache: false` disables it.
-- Error handling: [src/runtime/app/utils/graphql-error.ts](src/runtime/app/utils/graphql-error.ts) wraps errors into `GraphQLClientError` and triggers Nuxt hook `graphql:error` in the plugin middleware.
-- Server utilities: [src/runtime/server/utils/graphql-client.ts](src/runtime/server/utils/graphql-client.ts) reuses a per-event GraphQLClient; [useServerGraphQLQuery](src/runtime/server/utils/useServerGraphQLQuery.ts) and [useServerGraphQLMutation](src/runtime/server/utils/useServerGraphQLMutation.ts) mirror the client composables for Nitro handlers.
-- Yoga handler: [src/runtime/server/api/graphql-handler.ts](src/runtime/server/api/graphql-handler.ts) uses `createYoga` from [src/runtime/server/lib/create-yoga.ts](src/runtime/server/lib/create-yoga.ts) with SSE subscriptions enabled and GraphiQL in non-production.
-- File helpers: [src/helpers/file-operations.ts](src/helpers/file-operations.ts) finds files across layers and only rewrites generated artifacts when content changes to avoid noisy rebuilds.
-- Playground app for manual testing lives in [playground](playground); `pnpm run dev` boots it, `pnpm run dev:build` builds it.
-- Scripts (package.json): `pnpm run dev:prepare` builds stubs and prepares playground; `pnpm run dev` starts playground with the module; `pnpm run lint` (eslint flat); `pnpm run test`/`test:watch`/`test:coverage` (vitest); `pnpm run test:types` (vue-tsc for root + playground); `pnpm run release` runs lint, tests, build, changelog, publish.
-- Tests: unit and e2e under [test](test); fixtures for @nuxt/test-utils in [test/fixtures](test/fixtures). Coverage output is already tracked under [coverage](coverage).
-- Patterns: always create named GraphQL operations in `.gql` files; rely on auto-imported documents and registry names rather than raw gql strings; prefer provided composables and server utils to keep cache/dedupe/error hooks consistent.
-- Endpoint and runtime config: public runtime config `graphql` is set in the module (endpoint `/api/graphql`, headers, cache policy). SSE subscriptions are client-only; do not call `$graphqlSSE` on the server.
-- Generators write into `.nuxt/graphql`; do not commit generated artifacts.
+## Big picture
+- This repo is a Nuxt 4 module that wires a GraphQL server + client tooling into consuming apps.
+- The module entry is `src/module.ts`: it generates build-time artifacts under `.nuxt/graphql/**` and exposes them via Nitro aliases.
+- Key generated aliases (do not edit by hand):
+  - `#graphql/schema` (stitched schema)
+  - `#graphql/context` (typed context)
+  - `#graphql/yoga-middleware` (optional request/response hooks)
+  - `#graphql/typed-documents` (GraphQL Codegen output)
+  - `#graphql/registry` (operation-name registry → used by composables)
 
-If anything here feels incomplete or unclear, tell me what to adjust and I’ll refine the instructions.
+## How it works (data flow)
+- Server:
+  - A Yoga handler is registered at `/api/graphql` from `src/runtime/server/api/yoga-handler.ts`.
+  - `#graphql/schema` is built from configured schemas (local and/or remote) and stitched via `@graphql-tools/stitch` (see `src/helpers/schema.ts`).
+  - `#graphql/context` is a proxy around a user-supplied `defineGraphQLContext()` file (see `src/helpers/context.ts`).
+  - Optional Yoga middleware is defined via `defineYogaMiddleware()` and proxied via `#graphql/yoga-middleware`.
+- Client:
+  - `src/runtime/app/plugins/graphql-request.ts` provides `$getGraphQLClient()` using `graphql-request` against `${origin}/api/graphql`.
+  - `src/runtime/app/plugins/graphql-sse.client.ts` provides `$getGraphQLSSEClient()` using `graphql-sse` (client-only).
+  - Composables use `#graphql/registry` operation names:
+    - `useGraphQLQuery()` uses `useAsyncData` with a stable cache key and supports client-side query caching:
+      - Cache policies: `no-cache`, `cache-first`, `network-first`, `swr`.
+      - Persistence is TTL-driven: when `ttl` is set, entries are stored in localStorage (`0` = never expires; `undefined` disables persistence).
+      - In-flight request deduplication (same operation + variables → one network call).
+      - Cache keys are built in `src/runtime/app/lib/graphql-cache.ts`.
+      - Manual invalidation via client-only `useGraphQLCache()` in `src/runtime/app/composables/useGraphQLCache.client.ts`.
+    - `useGraphQLMutation()` merges headers and normalizes errors.
+    - `useGraphQLSubscription()` is client-only and uses SSE.
+  - Server-side utilities execute operations directly against the schema (no HTTP):
+    - `src/runtime/server/lib/execute-server-graphql.ts`
+    - `src/runtime/server/utils/useServerGraphQLQuery.ts`
+    - `src/runtime/server/utils/useServerGraphQLMutation.ts`
+
+## Project conventions to follow
+- GraphQL documents live in `**/*.gql` by default (configurable via `graphql.documents`).
+- Operation names must be unique across all `.gql` files; duplicates throw during registry generation (`src/helpers/registry.ts`).
+- Fragment names must also be unique across all `.gql` files; duplicates throw during registry generation.
+- Prefer calling operations by registry name (string literal), e.g. `useGraphQLQuery("HelloWorld")` as shown in `playground/app/components/HelloWorld.vue`.
+- Fragments are supported in documents and are generated by GraphQL Codegen into `#graphql/typed-documents` as both a type (e.g. `TheFilmFragment`) and a document constant (e.g. `TheFilmFragmentDoc`).
+- Fragments are not registered in `#graphql/registry` (only operations are), so composables/utils expect operation names and you should not call `useGraphQLQuery("SomeFragment")`.
+- When touching anything that affects types/registry/schema, expect regeneration during Nuxt `prepare:types` and during dev watch on `.gql` changes (see `src/module.ts`).
+- Headers merging is done via `mergeHeaders()` (`src/runtime/shared/lib/merge-headers.ts`); it requires Node 18+ (global `Headers`).
+- Cache config is exposed to runtime via `runtimeConfig.public.graphql.cacheConfig` (see `src/module.ts`).
+- Remote schemas:
+  - Are introspected at module-setup time to build SDL (`src/helpers/schema.ts`).
+  - Use a shared executor with optional request/response/error middleware (`src/runtime/server/lib/remote-executor.ts`, `src/helpers/remote-exec-middleware.ts`).
+
+## Dev workflows (match CI)
+- Node: CI uses Node 20. Package manager is via Corepack (`pnpm-lock.yaml` exists); CI installs with `npx nypm@latest i`.
+- Common commands (from `package.json`/README):
+  - `npm run dev:prepare` (generates module stubs + prepares playground + GraphQL artifacts)
+  - `npm run dev` (runs playground via `nuxi dev playground`)
+  - `npm run dev:build` (builds playground)
+  - `npm run lint`
+  - `npm run test` (Vitest; e2e fixture in `test/fixtures/basic`)
+  - `npm run test:types` (runs `vue-tsc` in repo + playground)
+
+## Where to look for examples
+- Playground module usage and schema config: `playground/nuxt.config.ts`
+- Local schema example: `playground/server/graphql/schema.ts`
+- Context example: `playground/server/graphql/context.ts`
+- Yoga middleware example: `playground/server/graphql/yoga-middleware.ts`
+- Remote exec middleware example: `playground/server/graphql/swapi-middleware.ts`
+
+## Editing guidance
+- If you need to change runtime behavior, update `src/runtime/**` and wire it in via `src/module.ts` (plugins, composables, handlers, server imports).
+- If you need to change generated artifacts or schema/document handling, update `src/helpers/**` and the generation hooks in `src/module.ts`.
+- Avoid editing anything under `.nuxt/` in fixtures or playground output; those are generated.

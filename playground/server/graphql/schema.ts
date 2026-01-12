@@ -1,20 +1,22 @@
 import { createSchema } from "graphql-yoga";
-import type { GraphQLContext } from "./context";
+import type { GraphQLContext } from "#graphql/context";
 
 export const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
-      type Query {
-        hello: String!
-      }
-      type Mutation {
-        ping(message: String!): String!
-      }
-      type Subscription {
-        time: String!
-      }
-    `,
+    type Query {
+      hello: String!
+      currentTime: String!
+    }
+    type Mutation {
+      ping(message: String!): String!
+    }
+    type Subscription {
+      time: String!
+    }
+  `,
   resolvers: {
     Query: {
+      currentTime: () => new Date().toISOString(),
       hello: () => "Hello from @lewebsimple/nuxt-graphql playground!",
     },
     Mutation: {

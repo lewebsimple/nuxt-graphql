@@ -1,0 +1,4 @@
+{
+  "schema": "./playground/server/graphql/schema.graphql",
+  "documents": "playground/**/*.gql"
+}
