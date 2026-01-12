@@ -6,7 +6,7 @@ import { resolveCacheConfig, type CacheConfig } from "./helpers/cache-config";
 import { runGraphQLCodegen } from "./helpers/codegen";
 import { cyan, logger, reset } from "./helpers/logger";
 import { getRegistryContent } from "./helpers/registry";
-import { getLocalSchemaProxy, getRemoteSchemaProxy, getSDLFromGraphQLSchema, getStitchedSchemaProxy, loadGraphQLSchema, type SchemaDef } from "./helpers/schema";
+import { getDummySchemaProxy, getLocalSchemaProxy, getRemoteSchemaProxy, getSDLFromGraphQLSchema, getStitchedSchemaProxy, loadGraphQLSchema, type SchemaDef } from "./helpers/schema";
 import { getGenericServerProxy } from "./helpers/server-proxy";
 import { getYogaMiddlewareProxy } from "./helpers/yoga-middleware";
 
@@ -69,26 +69,30 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     // Setup GraphQL schema(s) and stitched schema (server-only proxies)
     if (Object.keys(options.schemas || {}).length === 0) {
-      throw new Error("At least one GraphQL schema must be defined in the module options.");
+      logger.warn("No GraphQL schemas defined in nuxt.config.ts, using dummy schema.");
+      serverProxies["schemas/dummy"] = getDummySchemaProxy();
+      serverProxies["schema"] = await getStitchedSchemaProxy({ schemaNames: ["dummy"] });
     }
-    for (const [schemaName, schemaDef] of Object.entries(options.schemas)) {
-      switch (schemaDef.type) {
-        case "local": {
-          serverProxies[`schemas/${schemaName}`] = await getLocalSchemaProxy({ layerRootDirs, schemaDef });
-          break;
+    else {
+      for (const [schemaName, schemaDef] of Object.entries(options.schemas)) {
+        switch (schemaDef.type) {
+          case "local": {
+            serverProxies[`schemas/${schemaName}`] = await getLocalSchemaProxy({ layerRootDirs, schemaDef });
+            break;
+          }
+          case "remote": {
+            const { middlewareContent, sdlContent, schemaContent } = await getRemoteSchemaProxy({ rootDir, schemaName, schemaDef });
+            serverProxies[`schemas/${schemaName}-middleware`] = middlewareContent;
+            serverProxies[`schemas/${schemaName}-sdl`] = sdlContent;
+            serverProxies[`schemas/${schemaName}`] = schemaContent;
+            break;
+          }
+          default:
+            throw new Error(`Unsupported GraphQL schema type: ${(schemaDef as { type: unknown }).type}`);
         }
-        case "remote": {
-          const { middlewareContent, sdlContent, schemaContent } = await getRemoteSchemaProxy({ rootDir, schemaName, schemaDef });
-          serverProxies[`schemas/${schemaName}-middleware`] = middlewareContent;
-          serverProxies[`schemas/${schemaName}-sdl`] = sdlContent;
-          serverProxies[`schemas/${schemaName}`] = schemaContent;
-          break;
-        }
-        default:
-          throw new Error(`Unsupported GraphQL schema type: ${(schemaDef as { type: unknown }).type}`);
       }
+      serverProxies["schema"] = await getStitchedSchemaProxy({ schemaNames: Object.keys(options.schemas) });
     }
-    serverProxies["schema"] = await getStitchedSchemaProxy({ schemaNames: Object.keys(options.schemas) });
 
     // Setup Yoga middleware (server-only proxy)
     if (options.middleware) {

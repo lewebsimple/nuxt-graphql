@@ -18,6 +18,26 @@ export type RemoteSchemaDef = {
 
 export type SchemaDef = LocalSchemaDef | RemoteSchemaDef;
 
+// Generate server proxy for a dummy GraphQL schema
+export function getDummySchemaProxy(): string {
+  return [
+    `import { createSchema } from "graphql-yoga";`,
+    ``,
+    `export const schema = createSchema({`,
+    `  typeDefs: /* GraphQL */ \``,
+    `    type Query {`,
+    `      hello: String!`,
+    `    } `,
+    `  \`,`,
+    `  resolvers: {`,
+    `    Query: {`,
+    `      hello: () => "Hello world!",`,
+    `    },`,
+    `  },`,
+    `});`,
+  ].join("\n");
+}
+
 // Generate server proxy for local GraphQL schema
 export async function getLocalSchemaProxy({ layerRootDirs, schemaDef }: {
   layerRootDirs: string[];
