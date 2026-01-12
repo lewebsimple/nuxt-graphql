@@ -1,6 +1,6 @@
 import { hash } from "ohash";
 import { useRequestEvent } from "#imports";
-import type { CacheConfig } from "../../../helpers/cache-config";
+import type { CacheConfig } from "./cache-config";
 
 export type CacheKeyParts = {
   key: string;

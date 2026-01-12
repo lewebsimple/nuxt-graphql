@@ -2,7 +2,7 @@ import type { AsyncDataOptions } from "#app";
 import { computed, toValue, useAsyncData, useNuxtApp, useNuxtData, useRuntimeConfig, type MaybeRefOrGetter } from "#imports";
 // @ts-expect-error Types available at runtime
 import { queries, type QueryName, type QueryResult, type QueryVariables } from "#graphql/registry";
-import { resolveCacheConfig, type CacheConfig } from "../../../helpers/cache-config";
+import { resolveCacheConfig, type CacheConfig } from "../lib/cache-config";
 import { getCacheKeyParts, getInFlightRequests } from "../lib/graphql-cache";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 

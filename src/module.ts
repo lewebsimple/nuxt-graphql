@@ -2,13 +2,13 @@ import { join } from "node:path";
 import { defineNuxtModule, addPlugin, createResolver, getLayerDirectories, addServerHandler, addImportsDir, addServerImportsDir } from "@nuxt/kit";
 import { getGraphQLContextProxy } from "./helpers/context";
 import { findSingleFile, toRelativePath, writeFileIfChanged, type GlobPattern } from "./helpers/file-operations";
-import { resolveCacheConfig, type CacheConfig } from "./helpers/cache-config";
 import { runGraphQLCodegen } from "./helpers/codegen";
 import { cyan, logger, reset } from "./helpers/logger";
 import { getRegistryContent } from "./helpers/registry";
 import { getDummySchemaProxy, getLocalSchemaProxy, getRemoteSchemaProxy, getSDLFromGraphQLSchema, getStitchedSchemaProxy, loadGraphQLSchema, type SchemaDef } from "./helpers/schema";
 import { getGenericServerProxy } from "./helpers/server-proxy";
 import { getYogaMiddlewareProxy } from "./helpers/yoga-middleware";
+import { resolveCacheConfig, type CacheConfig } from "./runtime/app/lib/cache-config";
 
 // Nuxt GraphQL module options
 export interface NuxtGraphQLModuleOptions {
