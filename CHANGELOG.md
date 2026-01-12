@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.4
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.3...v0.3.4)
+
+### 🩹 Fixes
+
+- Cache-config should be in runtime/ ([3db5274](https://github.com/lewebsimple/nuxt-graphql/commit/3db5274))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.3.3
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.2...v0.3.3)
