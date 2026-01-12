@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.1
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.0...v0.3.1)
+
+### 🩹 Fixes
+
+- Export helpers from separate entry  file ([1c9be5c](https://github.com/lewebsimple/nuxt-graphql/commit/1c9be5c))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.3.0
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.2.2...v0.3.0)
