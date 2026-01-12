@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.2
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.1...v0.3.2)
+
+### 🩹 Fixes
+
+- Abort if no schemas defined (prevents module installation) ([1616391](https://github.com/lewebsimple/nuxt-graphql/commit/1616391))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.3.1
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.0...v0.3.1)
