@@ -34,6 +34,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     configKey: "graphql",
   },
   defaults: {
+    schemas: {},
   },
   async setup(options, nuxt) {
     // Initialize path resolution / alias
@@ -67,6 +68,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     serverProxies["remote-executor"] = getGenericServerProxy(resolve("./runtime/server/lib/remote-executor.ts"));
 
     // Setup GraphQL schema(s) and stitched schema (server-only proxies)
+    if (Object.keys(options.schemas || {}).length === 0) {
+      throw new Error("At least one GraphQL schema must be defined in the module options.");
+    }
     for (const [schemaName, schemaDef] of Object.entries(options.schemas)) {
       switch (schemaDef.type) {
         case "local": {
