@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.5
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.4...v0.3.5)
+
+### 🩹 Fixes
+
+- UseGraphQLQuery should accept Partial<CacheConfig> ([cbe9ac0](https://github.com/lewebsimple/nuxt-graphql/commit/cbe9ac0))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.3.4
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.3...v0.3.4)
