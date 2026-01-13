@@ -9,7 +9,7 @@ import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 // useGraphQLQuery composable options (extends useAsyncData options)
 export interface UseGraphQLQueryOptions<T> extends AsyncDataOptions<T> {
   headers?: HeadersInit;
-  cache?: CacheConfig;
+  cache?: Partial<CacheConfig>;
 }
 
 export function useGraphQLQuery<N extends QueryName>(
