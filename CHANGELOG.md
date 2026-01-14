@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.4.0
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.5...v0.4.0)
+
+### 🚀 Enhancements
+
+- ⚠️  Remove Zod generation schema (postponed) ([c52e0ad](https://github.com/lewebsimple/nuxt-graphql/commit/c52e0ad))
+
+### 🩹 Fixes
+
+- Ensure middleware hooks are called only once per execution ([3afb13c](https://github.com/lewebsimple/nuxt-graphql/commit/3afb13c))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Remove Zod generation schema (postponed) ([c52e0ad](https://github.com/lewebsimple/nuxt-graphql/commit/c52e0ad))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.3.5
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.4...v0.3.5)
