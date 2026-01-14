@@ -4,11 +4,10 @@ import type { GlobPattern } from "./file-operations";
 /**
  * Run GraphQL Codegen with the specified configuration.
  */
-export async function runGraphQLCodegen({ schema, documents, typedDocumentsPath, zodPath }: {
+export async function runGraphQLCodegen({ schema, documents, typedDocumentsPath }: {
   schema: string;
   documents: GlobPattern;
   typedDocumentsPath: string;
-  zodPath: string;
 }) {
   const config: CodegenConfig = {
     schema,
@@ -26,15 +25,6 @@ export async function runGraphQLCodegen({ schema, documents, typedDocumentsPath,
           preResolveTypes: false,
           skipTypename: true,
           strictScalars: true,
-          useTypeImports: true,
-        },
-      },
-      // Zod schemas
-      [zodPath]: {
-        plugins: ["typescript-validation-schema"],
-        config: {
-          schema: "zodv4",
-          importFrom: "#graphql/operations",
           useTypeImports: true,
         },
       },

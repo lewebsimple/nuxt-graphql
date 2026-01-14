@@ -14,7 +14,7 @@ Opinionated Nuxt module that wires a typed GraphQL server + client into your app
 
 - 🧘 **GraphQL Yoga** server at `/api/graphql` (**GraphiQL** in dev) + **SSE subscriptions**
 - 🪡 **Stitched schema** from local and/or remote schemas (remote introspection at build time)
-- 🪄 Code generation from `.gql` documents → **typed documents nodes** + **Zod** input schemas output
+- 🪄 Code generation from `.gql` documents → **typed documents nodes**
 - 🧠 **Type-safe GraphQL helpers** for **queries, mutations, and subscriptions**, driven by **operation names** and shared across **client + server routes**
 - 🧊 **SSR-friendly** by default: request header/cookie forwarding + no-HTTP server execution helpers
 - 🚀 **Query caching** for `useGraphQLQuery` (cache policies + optional persistence in localStorage)
@@ -164,7 +164,6 @@ By default, the module scans `**/*.gql` and generates:
 
 - Typed documents in `#graphql/typed-documents`
 - Operation registry by name in `#graphql/registry` (used internally)
-- Zod schemas in `#graphql/zod`
 - A `graphql.config.json` at the project root (editor tooling)
 
 Example document files (filenaming convention can vary):

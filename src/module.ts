@@ -124,14 +124,12 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       }
     }
 
-    // Generate GraphQL operations / fragments and Zod schemas using GraphQL Codegen
+    // Generate GraphQL operations / fragments using GraphQL Codegen
     const typedDocumentsPath = join(buildDir, "graphql/typed-documents.ts");
     nuxt.options.alias["#graphql/typed-documents"] = typedDocumentsPath;
-    const zodPath = join(buildDir, "graphql/zod.ts");
-    nuxt.options.alias["#graphql/zod"] = zodPath;
     async function generateGraphQLCodegen() {
       try {
-        const files = await runGraphQLCodegen({ schema: sdlPath, documents, typedDocumentsPath, zodPath });
+        const files = await runGraphQLCodegen({ schema: sdlPath, documents, typedDocumentsPath });
         for (const file of files) {
           logger.info(`GraphQL Codegen generated: ${cyan}${toRelativePath(rootDir, file)}${reset}`);
         }
@@ -202,7 +200,6 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       // Add references to Nuxt types
       references.push({ path: registryPath });
       references.push({ path: typedDocumentsPath });
-      references.push({ path: zodPath });
     });
 
     // Watch for changes in development mode
