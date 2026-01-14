@@ -48,7 +48,10 @@ export function createRemoteExecutor(options: CreateRemoteExecutorOptions): Exec
   const { url, remoteName, headers = {}, middleware } = options;
   const { onRequest, onResponse, onError } = middleware ?? {};
 
+  let executionDepth = 0;
+
   return async ({ document, variables, context, operationName }) => {
+    executionDepth++;
     const parsedDocument = typeof document === "string" ? parse(document) : document;
     const op = getOperationAST(parsedDocument, operationName);
     const resolvedOperationName = op?.name?.value ?? operationName ?? "anonymous";
@@ -61,7 +64,7 @@ export function createRemoteExecutor(options: CreateRemoteExecutorOptions): Exec
       body: JSON.stringify({ query, variables, operationName: resolvedOperationName }),
     } satisfies RequestInit;
 
-    if (onRequest) {
+    if (onRequest && executionDepth === 1) {
       await onRequest({
         remoteName,
         operationName: resolvedOperationName,
@@ -82,7 +85,7 @@ export function createRemoteExecutor(options: CreateRemoteExecutorOptions): Exec
         throw statusError;
       }
 
-      if (onResponse) {
+      if (onResponse && executionDepth === 1) {
         await onResponse({ remoteName, operationName: resolvedOperationName, context: graphQLContext, response: safeResponse });
       }
 
@@ -111,6 +114,9 @@ export function createRemoteExecutor(options: CreateRemoteExecutorOptions): Exec
         await onError({ remoteName, operationName: resolvedOperationName, context: graphQLContext, error: normalized });
       }
       throw normalized;
+    }
+    finally {
+      executionDepth--;
     }
   };
 }
