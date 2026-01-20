@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.2
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.1...v0.5.2)
+
+### 🩹 Fixes
+
+- Fragment type suffix ([b023514](https://github.com/lewebsimple/nuxt-graphql/commit/b023514))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.1
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.0...v0.5.1)
