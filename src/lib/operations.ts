@@ -28,9 +28,45 @@ export async function renderOperationsTemplate({ schema, documents }: Operations
     schema: schema as unknown as DocumentNode,
     documents,
     plugins: [
-      { typescript: {} },
-      { typescriptOperations: {} },
-      { typedDocumentNode: {} },
+      {
+        typescript: {
+          avoidOptionals: true,
+          defaultScalarType: "never",
+          enumsAsTypes: true,
+          immutableTypes: true,
+          maybeValue: "T | null",
+          preResolveTypes: false,
+          strictScalars: true,
+          useTypeImports: true,
+        },
+      },
+      {
+        typescriptOperations: {
+          avoidOptionals: true,
+          defaultScalarType: "never",
+          enumsAsTypes: true,
+          exportFragmentSpreadSubTypes: true,
+          immutableTypes: true,
+          inlineFragmentTypes: "combine",
+          maybeValue: "T | null",
+          operationResultSuffix: "Result",
+          operationVariablesSuffix: "Variables",
+          preResolveTypes: false,
+          skipTypename: true,
+          strictScalars: true,
+          useTypeImports: true,
+        },
+      },
+      {
+        typedDocumentNode: {
+          documentVariableSuffix: "Document",
+          operationResultSuffix: "Result",
+          operationVariablesSuffix: "Variables",
+          optimizeDocumentNode: true,
+          useTypeImports: true,
+
+        },
+      },
     ],
     pluginMap: {
       typescript: typescriptPlugin,
@@ -38,18 +74,7 @@ export async function renderOperationsTemplate({ schema, documents }: Operations
       typedDocumentNode: typedDocumentNodePlugin,
     },
     config: {
-      defaultScalarType: "never",
-      documentMode: "documentNode",
-      documentVariableSuffix: "Document",
-      enumsAsTypes: true,
-      inlineFragmentTypes: "combine",
-      omitOperationSuffix: true,
-      operationResultSuffix: "Result",
-      operationVariablesSuffix: "Variables",
-      preResolveTypes: false,
-      skipTypename: true,
-      strictScalars: true,
-      useTypeImports: true,
+
     },
   });
 
