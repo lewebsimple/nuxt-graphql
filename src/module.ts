@@ -326,7 +326,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // GraphQL Yoga server endpoint
     addServerHandler({ route: "/api/graphql", handler: resolveModule("./runtime/server/api/graphql") });
     nuxt.hook("listen", (_, { url }) => {
-      logger.success(`GraphQL Yoga ready: ${cyan}${url.replace(/\/$/, "")} / api / graphql${reset}`);
+      logger.success(`GraphQL Yoga ready: ${cyan}${url.replace(/\/$/, "")}/api/graphql${reset}`);
     });
 
     // GraphQL client plugins
