@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.1
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.0...v0.5.1)
+
+### 🩹 Fixes
+
+- Auto-imported server helpers ([68d6be9](https://github.com/lewebsimple/nuxt-graphql/commit/68d6be9))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.0
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.4.0...v0.5.0)
