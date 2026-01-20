@@ -1,0 +1,13 @@
+fragment Films on FilmsConnection {
+  films {
+    title
+    director
+    releaseDate
+  }
+}
+
+query AllFilms {
+  allFilms {
+    ...Films
+  }
+}

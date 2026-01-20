@@ -1,4 +1,9 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ["@nuxt/eslint"],
+  graphql: {
+    client: {
+      documents: "./src/**/*.gql",
+    },
+    saveConfig: ".nuxt/graphql.config.json",
+    saveSDL: ".nuxt/schema.graphql",
+  },
 });

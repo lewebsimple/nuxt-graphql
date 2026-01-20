@@ -1,30 +1,37 @@
 import type { H3Event } from "h3";
-// @ts-expect-error Types available at runtime
-import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
-import { executeServerGraphQL, type ExecuteServerGraphQLOptions } from "../lib/execute-server-graphql";
-import { mergeHeaders } from "../../shared/lib/headers";
+import type { MutationName, VariablesOf, ResultOf } from "#graphql/registry";
+import { executeGraphQLSchema } from "../lib/execute-schema";
+import { normalizeError, type SafeResult } from "../../shared/lib/error";
+import type { IsEmptyObject } from "../../shared/lib/utils";
 
-export interface ServerMutateOptions {
-  headers?: HeadersInit;
-}
-
-export function useServerGraphQLMutation<N extends MutationName>(
+/**
+ * Execute a GraphQL mutation against the local stitched schema (server-side).
+ *
+ * - Schema execution only (no HTTP)
+ * - Context comes from the H3 event
+ * - Errors are normalized
+ *
+ * @param event H3 event used to create context.
+ * @param operationName Operation name from the registry.
+ * @param variables Operation variables.
+ * @returns SafeResult containing data or a normalized error.
+ */
+export async function useServerGraphQLMutation<TName extends MutationName>(
   event: H3Event,
-  operationName: N,
-  options?: ExecuteServerGraphQLOptions,
-) {
-  async function mutate(
-    ...args: IsEmptyObject<MutationVariables<N>> extends true
-      ? [variables?: MutationVariables<N>, mutateOptions?: ServerMutateOptions]
-      : [variables: MutationVariables<N>, mutateOptions?: ServerMutateOptions]
-  ): Promise<MutationResult<N>> {
-    const [variables, mutateOptions] = args;
-
-    return executeServerGraphQL(event, mutations[operationName], variables, {
-      ...options,
-      headers: mergeHeaders(options?.headers, mutateOptions?.headers),
-    }) as Promise<MutationResult<N>>;
+  operationName: TName,
+  ...args: IsEmptyObject<VariablesOf<TName>> extends true
+    ? [variables?: VariablesOf<TName>]
+    : [variables: VariablesOf<TName>]
+): Promise<SafeResult<ResultOf<TName>>> {
+  try {
+    const [variables] = args;
+    const data = await executeGraphQLSchema(event, operationName, variables as VariablesOf<TName>);
+    return { data, error: null };
   }
-
-  return { mutate };
+  catch (err) {
+    return {
+      data: null,
+      error: normalizeError(err),
+    };
+  }
 }

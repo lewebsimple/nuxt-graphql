@@ -1,48 +1,36 @@
-import { ref, useNuxtApp } from "#imports";
-// @ts-expect-error Types available at runtime
-import { mutations, type MutationName, type MutationResult, type MutationVariables } from "#graphql/registry";
-import { normalizeGraphQLError } from "../../shared/lib/graphql-error";
-import { mergeHeaders } from "../../shared/lib/headers";
-
-// useGraphQLMutation composable options
-export interface UseGraphQLMutationOptions {
-  headers?: HeadersInit;
-}
-
-// Mutate function options
-export interface MutateOptions {
-  headers?: HeadersInit;
-}
+import { ref } from "#imports";
+import type { MutationName, ResultOf, VariablesOf } from "#graphql/registry";
+import { executeGraphQLHTTP, type ExecuteGraphQLHTTPOptions } from "../lib/execute-http";
+import { normalizeError, type SafeResult } from "../../shared/lib/error";
+import type { IsEmptyObject } from "../../shared/lib/utils";
 
 /**
- * GraphQL mutation composable
+ * GraphQL mutation composable with pending state.
  *
- * @param operationName Name of the GraphQL mutation operation in the registry
- * @returns Mutation handler
+ * @param operationName Operation name from the registry.
+ * @param options HTTP options including headers.
+ * @returns Mutation helpers and pending ref.
  */
-export function useGraphQLMutation<N extends MutationName>(
-  operationName: N,
-  options?: UseGraphQLMutationOptions,
+export function useGraphQLMutation<TName extends MutationName>(
+  operationName: TName,
+  options?: ExecuteGraphQLHTTPOptions,
 ) {
-  const { $getGraphQLClient } = useNuxtApp();
-  const document = mutations[operationName];
   const pending = ref(false);
 
-  // Mutation handler
+  // Execute the mutation and normalize errors.
   async function mutate(
-    ...args: IsEmptyObject<MutationVariables<N>> extends true
-      ? [variables?: MutationVariables<N>, mutateOptions?: MutateOptions]
-      : [variables: MutationVariables<N>, mutateOptions?: MutateOptions]
-  ) {
-    pending.value = true;
+    ...args: IsEmptyObject<VariablesOf<TName>> extends true
+      ? [variables?: VariablesOf<TName>]
+      : [variables: VariablesOf<TName>]
+  ): Promise<SafeResult<ResultOf<TName>>> {
+    const [variables] = args;
     try {
-      const [variables, mutateOptions] = args;
-      const headers = mergeHeaders(options?.headers, mutateOptions?.headers);
-      const data = await $getGraphQLClient().request<MutationResult<N>>(document, variables, headers);
+      pending.value = true;
+      const data = await executeGraphQLHTTP<TName>(operationName, variables, options);
       return { data, error: null };
     }
     catch (error) {
-      return { data: null, error: normalizeGraphQLError(error) };
+      return { data: null, error: normalizeError(error) };
     }
     finally {
       pending.value = false;

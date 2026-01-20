@@ -1,25 +1,30 @@
+import { defineNuxtPlugin, useRequestHeaders, useRequestURL, useRuntimeConfig } from "#app";
 import { GraphQLClient } from "graphql-request";
-import { defineNuxtPlugin, useRequestEvent, useRequestURL } from "#app";
-import { normalizeGraphQLError } from "../../shared/lib/graphql-error";
-import { getClientForwardHeaders } from "../../shared/lib/headers";
 
-export default defineNuxtPlugin((nuxtApp) => {
+/**
+ * Nuxt plugin that provides a configured graphql-request client.
+ *
+ * @returns Nuxt plugin with GraphQL client provider.
+ */
+export default defineNuxtPlugin(() => {
   const { origin } = useRequestURL();
-  const event = useRequestEvent();
-  const headers = event ? getClientForwardHeaders(event) : undefined;
+  const { public: { graphql: { ssrForwardHeaders } } } = useRuntimeConfig();
 
-  // Create GraphQL client instance
-  function getGraphQLClient() {
-    return new GraphQLClient(`${origin}/api/graphql`, {
-      headers,
-      responseMiddleware: (response, _request) => {
-        // Invoke graphql:error hook on errors
-        if (response instanceof Error) {
-          nuxtApp.callHook("graphql:error", normalizeGraphQLError(response));
-          return;
-        }
-      },
+  // Build SSR-forwarded headers for the GraphQL request.
+  function getHeaders() {
+    const headers = new Headers();
+    if (!import.meta.server) return headers;
+    Object.entries(useRequestHeaders()).forEach(([key, value]) => {
+      if (value !== undefined && ssrForwardHeaders.includes(key.toLowerCase())) {
+        headers.set(key, value);
+      }
     });
+    return headers;
+  }
+
+  // Create a GraphQLClient bound to the Nuxt GraphQL endpoint.
+  function getGraphQLClient() {
+    return new GraphQLClient(`${origin}/api/graphql`, { headers: getHeaders });
   }
 
   return { provide: { getGraphQLClient } };

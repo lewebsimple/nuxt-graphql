@@ -5,13 +5,16 @@ export default defineNuxtConfig({
     NuxtGraphQL,
   ],
   graphql: {
-    schemas: {
-      local: {
-        type: "local",
-        path: "server/graphql/schema.ts",
+    client: {
+      documents: "test/**/*.gql",
+    },
+    yoga: {
+      schemas: {
+        local: {
+          type: "local",
+          path: "~~/server/graphql/schema",
+        },
       },
     },
-    documents: "tests/**/**/*.gql",
-    saveConfig: ".nuxt/graphql/graphql.config.json",
   },
 });

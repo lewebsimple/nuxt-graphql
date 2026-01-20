@@ -1,49 +1,28 @@
-import type { H3Event } from "h3";
-import { getRequestHeader } from "h3";
+/**
+ * Header map where:
+ * - string  → set / override header
+ * - null    → delete header
+ */
+export type HeadersInput = Record<string, string | null>;
 
-// Extract forwardable headers from H3 event (server only)
-export function getClientForwardHeaders(event: H3Event): HeadersInit | undefined {
-  if (import.meta.client) return undefined;
-  const allowedHeaders = [
-    "accept-language",
-    "authorization",
-    "cookie",
-    "user-agent",
-    "x-forwarded-for",
-    "x-forwarded-host",
-    "x-forwarded-proto",
-    "x-request-id",
-  ];
-
+/**
+ * Merge multiple header inputs into a single Headers instance.
+ *
+ * @param inputs Header input objects (later inputs override earlier).
+ * @returns Merged Headers instance.
+ */
+export function mergeHeaders(...inputs: Array<HeadersInput | undefined>): Headers {
   const headers = new Headers();
-  let hasHeaders = false;
-  for (const header of allowedHeaders) {
-    const value = getRequestHeader(event, header);
-    if (value) {
-      headers.set(header, Array.isArray(value) ? value.join(", ") : value);
-      hasHeaders = true;
+  for (const input of inputs) {
+    if (!input) continue;
+    for (const [key, value] of Object.entries(input)) {
+      if (value === null) {
+        headers.delete(key);
+      }
+      else {
+        headers.set(key, value);
+      }
     }
   }
-
-  return hasHeaders ? headers : undefined;
-}
-
-// Merge multiple HeadersInit into one
-export function mergeHeaders(...headers: Array<HeadersInit | undefined>): HeadersInit | undefined {
-  const present = headers.filter(Boolean) as HeadersInit[];
-  if (present.length === 0) return undefined;
-  if (present.length === 1) return present[0];
-
-  if (typeof Headers === "undefined") {
-    throw new TypeError("mergeHeaders: Node 18+ is required (global Headers is not available).");
-  }
-
-  const merged = new Headers();
-  for (const headerInit of present) {
-    for (const [key, value] of new Headers(headerInit).entries()) {
-      merged.set(key, value);
-    }
-  }
-
-  return merged;
+  return headers;
 }

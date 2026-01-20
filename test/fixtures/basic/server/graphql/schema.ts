@@ -3,12 +3,12 @@ import { createSchema } from "graphql-yoga";
 export const schema = createSchema({
   typeDefs: /* GraphQL */ `
     type Query {
-      hello: String!
+      hello(name: String): String!
     }
   `,
   resolvers: {
     Query: {
-      hello: () => "Hello world!",
+      hello: (_parent, { name }) => `Hello ${name || "world"}!!`,
     },
   },
 });

@@ -1,52 +1,42 @@
+import type { QueryName } from "#graphql/registry";
 import { clearNuxtData, useRuntimeConfig } from "#imports";
-import { getCacheKeyParts } from "../lib/graphql-cache";
+import { getCacheKeyParts } from "../lib/cache";
 import { deletePersistedByPrefix, deletePersistedEntry } from "../lib/persisted";
 
-export type InvalidateCacheLayer = "both" | "memory" | "persisted";
-
-export interface InvalidateCacheOptions {
-  layer?: InvalidateCacheLayer;
-}
-
+/**
+ * GraphQL cache helper composable.
+ *
+ * @returns Cache config and invalidation helper.
+ */
 export function useGraphQLCache() {
   const { public: { graphql: { cacheConfig } } } = useRuntimeConfig();
 
-  async function invalidateByKey(operationName: string, variables: unknown, options?: InvalidateCacheOptions) {
-    const cacheLayer = options?.layer ?? "both";
-    const { key } = getCacheKeyParts(cacheConfig, operationName, variables);
-    if (cacheLayer === "both" || cacheLayer === "memory") {
-      clearNuxtData(key);
+  // Invalidate cached query results.
+  async function invalidate(options?: { operation: QueryName; variables?: unknown }) {
+    // Invalidate everything
+    if (!options) {
+      const { keyPrefix, keyVersion } = cacheConfig;
+      const prefix = `${keyPrefix}:${keyVersion}:`;
+      clearNuxtData((k) => k.startsWith(prefix));
+      await deletePersistedByPrefix(prefix);
+      return;
     }
-    if (cacheLayer === "both" || cacheLayer === "persisted") {
-      await deletePersistedEntry(key);
-    }
-  }
 
-  async function invalidateByOperation(operationName: string, options?: InvalidateCacheOptions) {
-    const cacheLayer = options?.layer ?? "both";
-    const { opPrefix } = getCacheKeyParts(cacheConfig, operationName, {});
-    if (cacheLayer === "both" || cacheLayer === "memory") {
+    const { operation, variables } = options;
+
+    if (variables === undefined) {
+      // Invalidate all entries for an operation
+      const { opPrefix } = getCacheKeyParts(cacheConfig, operation, {});
       clearNuxtData((k) => k.startsWith(opPrefix));
-    }
-    if (cacheLayer === "both" || cacheLayer === "persisted") {
       await deletePersistedByPrefix(opPrefix);
+      return;
     }
+
+    // Invalidate a single cache entry (exact)
+    const { key } = getCacheKeyParts(cacheConfig, operation, variables);
+    clearNuxtData(key);
+    await deletePersistedEntry(key);
   }
 
-  async function invalidateAll(options?: InvalidateCacheOptions) {
-    const cacheLayer = options?.layer ?? "both";
-    if (cacheLayer === "both" || cacheLayer === "memory") {
-      clearNuxtData((k) => k.startsWith(`${cacheConfig.keyPrefix}:${cacheConfig.cacheVersion}:`));
-    }
-    if (cacheLayer === "both" || cacheLayer === "persisted") {
-      await deletePersistedByPrefix(`${cacheConfig.keyPrefix}:${cacheConfig.cacheVersion}:`);
-    }
-  }
-
-  return {
-    cacheConfig,
-    invalidateByKey,
-    invalidateByOperation,
-    invalidateAll,
-  } as const;
+  return { cacheConfig, invalidate } as const;
 }

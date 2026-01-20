@@ -13,12 +13,12 @@ Opinionated Nuxt module that wires a typed GraphQL server + client into your app
 ## Features
 
 - 🧘 **GraphQL Yoga** server at `/api/graphql` (**GraphiQL** in dev) + **SSE subscriptions**
-- 🪡 **Stitched schema** from local and/or remote schemas (remote introspection at build time)
-- 🪄 Code generation from `.gql` documents → **typed documents nodes**
-- 🧠 **Type-safe GraphQL helpers** for **queries, mutations, and subscriptions**, driven by **operation names** and shared across **client + server routes**
-- 🧊 **SSR-friendly** by default: request header/cookie forwarding + no-HTTP server execution helpers
-- 🚀 **Query caching** for `useGraphQLQuery` (cache policies + optional persistence in localStorage)
-- 🪝 **Optional hooks**: Yoga middleware + per-remote executor middleware + client error hook (`graphql:error`)
+- 🪡 **Stitched schema** from local and/or remote schemas (remote introspection at build time; subscriptions stripped)
+- 🪄 Code generation from `.gql` documents → **typed operation documents** + **registry**
+- 🧠 **Type-safe helpers** for **queries, mutations, and subscriptions**, shared across **client + server**
+- 🧊 **SSR-friendly** by default: request header forwarding + server-side schema execution helpers
+- 🚀 **Client-side cache** for `useAsyncGraphQLQuery` (cache policies + optional persistence in localStorage)
+- 🧯 **Unified error model** via `SafeResult` and `NormalizedError`
 
 
 ## Getting started
@@ -26,80 +26,83 @@ Opinionated Nuxt module that wires a typed GraphQL server + client into your app
 Install the module to your Nuxt application with one command:
 
 ```bash
-pnpx nuxi module add @lewebsimple/nuxt-graphql
+pnpx nuxt module add @lewebsimple/nuxt-graphql
 ```
 
 
 ### Configuration
 
-Declare your schemas, context, documents glob and any optional middleware in `nuxt.config.ts`:
+Declare your schemas, context, documents glob and optional client cache in [nuxt.config.ts](nuxt.config.ts):
 
 ```ts
 export default defineNuxtConfig({
   modules: ["@lewebsimple/nuxt-graphql"],
   graphql: {
-    // Schemas to stitch together (local and/or remote)
-    schemas: {
-      local: {
-        type: "local",
-        path: "server/graphql/schema.ts",
-      },
-      // Remote schema example
-      swapi: {
-        type: "remote",
-        url: "https://swapi-graphql.netlify.app/graphql",
-        // Optional: static headers for this remote
-        headers: {
-          "X-Static-Header": "static-header-value",
+    yoga: {
+      // Schemas to stitch together (local and/or remote)
+      schemas: {
+        local: {
+          type: "local",
+          path: "server/graphql/schema.ts",
         },
-        // Optional: per-remote execution middleware (onRequest / onResponse / onError hooks)
-        middleware: "server/graphql/swapi-middleware.ts",
+        // Remote schema example
+        swapi: {
+          type: "remote",
+          url: "https://swapi-graphql.netlify.app/graphql",
+          // Optional: static headers for this remote
+          headers: {
+            "X-Static-Header": "static-header-value",
+          },
+          // Optional: per-remote execution hooks
+          hooks: ["server/graphql/swapi-hooks.ts"],
+        },
+      },
+
+      // Optional: custom GraphQL context factories (defaults to [])
+      context: ["server/graphql/context.ts"],
+    },
+
+    client: {
+      // Optional: documents glob (defaults to **/*.gql)
+      documents: "**/*.gql",
+
+      // Optional: headers forwarded from SSR to graphql-request (defaults to ["authorization", "cookie"])
+      ssrForwardHeaders: ["authorization", "cookie"],
+
+      // Optional: query caching (client-side only, for useAsyncGraphQLQuery)
+      cache: {
+        policy: "cache-first", // "no-cache" | "cache-first" | "network-first" | "swr"
+        keyVersion: "1",
+        keyPrefix: "gql",
+        // Persist cache entries in localStorage with TTL in seconds
+        // - 0 = never expires
+        // - undefined = persistence disabled
+        ttl: 60,
       },
     },
-    
-    // Optional: custom GraphQL context (defaults to {})
-    context: "server/graphql/context.ts",
 
-    // Optional: documents glob (defaults to **/*.gql)
-    documents: "**/*.gql",
+    // Optional: save path for the stitched SDL (defaults to "server/graphql/schema.graphql")
+    saveSDL: "server/graphql/schema.graphql",
 
-    // Optional: Yoga middleware (onRequest / onResponse hooks)
-    middleware: "server/graphql/yoga-middleware.ts",
-
-    // Optional: query caching (client-side only)
-    // - In-memory cache uses Nuxt `useAsyncData`/`useNuxtData`
-    // - Persistence in localStorage is enabled when `ttl` is set
-    // - Version / prefix allow cache invalidation accross deployments
-    cache: {
-      cachePolicy: "cache-first", // "no-cache" | "cache-first" | "network-first" | "swr"
-      cacheVersion: "1",
-      keyPrefix: "gql",
-      // Persist cache entries in localStorage with TTL in seconds
-      // - 0 = never expires
-      // - undefined = persistence disabled
-      ttl: 60,
-    },
-
-    // Optional: save path for the generated stitched SDL (defaults to .nuxt/graphql/schema.graphql)
-    sdl: "server/graphql/schema.graphql",
+    // Optional: save path for the generated GraphQL config (defaults to "graphql.config.json")
+    saveConfig: "graphql.config.json",
   },
 });
 ```
 
 
-### Define your schema(s) (local and/or remote)
+### Define schema(s) (local and/or remote)
 
-**Local schemas** must be located inside `server/` and export an executable `GraphQLSchema` using the tool of your choice (graphql-yoga, Pothos, etc).
+**Local schemas** must live under `server/` and export a `GraphQLSchema` as `schema`. You can use the provided `defineGraphQLSchema` helper for type-safety.
 
-⚠️ Using auto-imported utilities or importing from aliases might break code generation.
-
-For the example configuration above, create `server/graphql/schema.ts`:
+For the example configuration above, create [server/graphql/schema.ts](server/graphql/schema.ts):
 
 ```ts
 import { createSchema } from "graphql-yoga";
+import { defineGraphQLSchema } from "@lewebsimple/nuxt-graphql";
 import type { GraphQLContext } from "#graphql/context";
 
-export const schema = createSchema<GraphQLContext>({
+const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
     type Query {
       hello: String!
@@ -130,19 +133,21 @@ export const schema = createSchema<GraphQLContext>({
     },
   },
 });
+
+export default defineGraphQLSchema({ schema });
 ```
 
-**Remote schemas** are introspected at build time from the required endpoint URL. Each remote can be configured with optional static headers and remote execution middleware (see configuration above).
+**Remote schemas** are introspected at build time from the required endpoint URL and executed via an HTTP executor at runtime. Subscriptions are stripped from remote schemas.
 
 
-### Define a type-safe GraphQL context (optional)
+### Define GraphQL context factories (optional)
 
-The GraphQL context can be user-defined with the provided `defineGraphQLContext` helper. This ensures proper server-side typing by inferring the type from the return value of the context creation function. The `GraphQLContext` type can be imported from the `#graphql/context` server alias.
+Context factories are optional and run on the server in order. Their return types are merged into a single `GraphQLContext` type.
 
-For example, providing the user from the `nuxt-auth-utils` session with the configuration above, create `server/graphql/context.ts`:
+For example, create [server/graphql/context.ts](server/graphql/context.ts):
 
 ```ts
-import { defineGraphQLContext } from "@lewebsimple/nuxt-graphql/helpers";
+import { defineGraphQLContext } from "@lewebsimple/nuxt-graphql";
 import { getUserSession } from "nuxt-auth-utils";
 
 export default defineGraphQLContext(async (event) => {
@@ -154,19 +159,20 @@ export default defineGraphQLContext(async (event) => {
 ```
 
 
-### Write GraphQL documents (`.gql`)
+### Write GraphQL documents (.gql)
 
-Write operations in `.gql` document files; operation names become registry keys like `useGraphQLQuery("HelloWorld")`.
+Write operations in `.gql` files; operation names become registry keys like `useGraphQLQuery("HelloWorld")`.
 
 ⚠️ Operation names are required and must be unique.
 
 By default, the module scans `**/*.gql` and generates:
 
-- Typed documents in `#graphql/typed-documents`
-- Operation registry by name in `#graphql/registry` (used internally)
-- A `graphql.config.json` at the project root (editor tooling)
+- Typed documents and types in virtual modules under the `#graphql/operations` alias (internal)
+- Operation registry in virtual modules under the `#graphql/registry` alias (internal)
+- Fragment types in virtual modules under the `#graphql/fragments` alias
 
-Example document files (filenaming convention can vary):
+Example document files:
+
 ```graphql
 # app/graphql/HelloWorld.query.gql
 query HelloWorld {
@@ -190,15 +196,14 @@ subscription Time {
 
 That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
 
+
 ### Fragments
 
 Fragments are fully supported and are the recommended way to share selection sets across operations.
 
 - Fragment names must be unique across all `.gql` files (duplicates throw during generation).
-- Fragments are generated into `#graphql/typed-documents` by GraphQL Codegen:
-  - a TypeScript type like `TheFilmFragment`
-  - and a document constant like `TheFilmFragmentDoc`
-- Fragments are **not executable by themselves** (GraphQL requires an operation), and they are **not part of the `#graphql/registry`**. The auto-imported composables and server utilities only accept operation names (`query` / `mutation` / `subscription`).
+- Fragment types are re-exported from `#graphql/fragments`.
+- Fragments are not executable by themselves and are not part of the registry.
 
 Example with a fragment:
 
@@ -218,108 +223,92 @@ query SwapiFilms {
 }
 ```
 
-From TypeScript, you can also use fragment types explicitly when you need them:
+From TypeScript, you can also use fragment types explicitly when needed:
 
 ```ts
-import type { TheFilmFragment } from "#graphql/typed-documents";
+import type { TheFilmFragment } from "#graphql/fragments";
 ```
 
 
 ### Use the auto-imported composables
 
-The auto-imported operation composables allow executing **queries**, **mutations** and **subscriptions** based on their registry name with full type-safety (variables and return value).
+The auto-imported composables allow executing queries, mutations, and subscriptions based on their registry name with full type-safety (variables and return value).
 
 ```ts
-// Query (useAsyncData under the hood)
-const { data, pending, error, refresh } = await useGraphQLQuery(
-  "HelloWorld", // Registry name, i.e. "query HelloWorld { hello }"
-  undefined, // Type-safe variables
+// Cached query via useAsyncData
+const { data, pending, error, refresh } = await useAsyncGraphQLQuery(
+  "HelloWorld",
+  undefined,
   {
-    // Custom request headers
     headers: {
-      "X-Request-Header": "request-header-value"
+      "X-Request-Header": "request-header-value",
     },
-    // Additional useAsyncData options
-    // lazy: true,
   },
 );
 
-// Mutation
-const { mutate } = useGraphQLMutation("Ping", {
-  // Custom request headers
+// Direct HTTP query (SafeResult)
+const { data: queryData, error: queryError } = await useGraphQLQuery("HelloWorld");
+
+// Mutation (SafeResult)
+const { mutate, pending: mutationPending } = useGraphQLMutation("Ping", {
   headers: {
-    "X-Request-Header": "request-header-value"
+    "X-Request-Header": "request-header-value",
   },
 });
-const { data, pending, error } = await mutate({ message: "Hello from ping mutation!" }, {
-  // Each `mutate` call may send additional headers
-  headers: {
-    "X-Mutate-Header": "mutate-header-value",
-  },
-});
+const { data: mutationData, error: mutationError } = await mutate({ message: "Hello!" });
 
 // Subscription (client-only, SSE)
 const { data, error, start, stop } = useGraphQLSubscription("Time");
-// data and error are shallowRef
 ```
+
 
 ### Use the auto-imported server-side utilities
 
-In server routes, you can execute **queries** and **mutations** directly against the stitched schema (no HTTP roundtrip):
+In server routes, you can execute queries and mutations directly against the stitched schema (no HTTP roundtrip):
 
 ```ts
 export default defineEventHandler(async (event) => {
   // Server-side GraphQL query example
-  const { hello } = await useServerGraphQLQuery(event, "HelloWorld", undefined, {
-    headers: {
-      "X-Server-Header": "server-header-value",
-    },
-  });
+  const { data: queryData, error: queryError } = await useServerGraphQLQuery(
+    event,
+    "HelloWorld",
+  );
 
   // Server-side GraphQL mutation example
-  const { mutate } = useServerGraphQLMutation(event, "Ping", {
-    headers: {
-      "X-Server-Header": "server-header-value",
-    },
-  });
-  const { ping } = await mutate({ message: hello }, {
-    headers: {
-      "X-Mutation-Header": "mutation-header-value",
-    },
-  });
+  const { data: mutationData } = await useServerGraphQLMutation(
+    event,
+    "Ping",
+    { message: queryData?.hello ?? "fallback" },
+  );
 
-  return { ping };
+  return { queryData, mutationData, queryError };
 });
 ```
 
-The function signature is almost identical to the auto-imported composables, except you need to pass `event` as the first argument (and of course queries don't rely on `useAsyncData`).
-
-Also, resulting data is returned directly from `useServerGraphQLQuery` and `mutate` (throws an error on failure).
+Server helpers return a `SafeResult` in the same format as the client helpers.
 
 
 ### Query caching (client-side only)
 
-`useGraphQLQuery` can cache **query results** based on the global cache configuration (see configuration above) and per-query overrides (see below).
+`useAsyncGraphQLQuery` can cache query results based on the global cache configuration and per-query overrides.
 
-- In-flight requests are **deduplicated** (same operation + variables → one network call).
-- **In-memory** cache uses Nuxt `useAsyncData`/`useNuxtData`.
-- **Persisted** cache stores entries in `localStorage` for `ttl` seconds (`0` = never expires).
+- In-flight requests are deduplicated (same operation + variables → one network call).
+- In-memory cache uses Nuxt `useAsyncData`/`useNuxtData`.
+- Persisted cache stores entries in localStorage for ttl seconds (0 = never expires).
 
 #### Cache policies
 
-- `"no-cache"`: always fetches from the network (still dedupes in-flight).
-- `"cache-first"`: returns cached value when present, otherwise fetches.
-- `"network-first"`: tries the network first, falls back to cached value on error.
-- `"swr"` (stale-while-revalidate): returns cached value immediately (when present) and refreshes in the background.
+- "no-cache": always fetches from the network (still dedupes in-flight).
+- "cache-first": returns cached value when present, otherwise fetches.
+- "network-first": tries the network first, falls back to cached value on error.
+- "swr": returns cached value immediately and refreshes in the background.
 
 #### Per-query overrides
 
-Caching configuration can be overridden per-query:
-
 ```ts
-const { data } = await useGraphQLQuery("HelloWorld", undefined, {
+const { data } = await useAsyncGraphQLQuery("HelloWorld", undefined, {
   cache: {
-    cachePolicy: "network-first",
+    policy: "network-first",
     ttl: undefined, // disable persistence for this call
   },
 });
@@ -327,89 +316,46 @@ const { data } = await useGraphQLQuery("HelloWorld", undefined, {
 
 #### Manual invalidation
 
-On the client, `useGraphQLCache()` is used to invalidate in-memory and/or persisted entries:
+On the client, `useGraphQLCache()` can invalidate in-memory and persisted entries:
 
 ```ts
-const { invalidateByKey, invalidateByOperation, invalidateAll } = useGraphQLCache();
+const { invalidate } = useGraphQLCache();
 
 // Invalidate a single entry (operation + variables)
-await invalidateByKey("HelloWorld", {});
+await invalidate({ operation: "HelloWorld", variables: {} });
 
-// Invalidate all entries for an operation (all variables)
-await invalidateByOperation("HelloWorld");
-
-// Optional: target a specific layer
-await invalidateByOperation("HelloWorld", { layer: "persisted" });
+// Invalidate all entries for an operation
+await invalidate({ operation: "HelloWorld" });
 
 // Invalidate all entries
-await invalidateAll();
+await invalidate();
 ```
 
 
-### Yoga middleware (optional)
+### Remote executor hooks (optional, per remote)
 
-You can define custom logic around the Yoga event handler by using the provided `defineYogaMiddleware` helper with the following hooks:
-- `onRequest` runs before Yoga handles the request;
-- `onResponse` runs after and can replace the outgoing `Response` via `setResponse`.
+You can define custom logic around the remote executor for each remote schema by using the provided `defineRemoteExecutorHooks` helper.
 
-For the example configuration above, create `server/graphql/yoga-middleware.ts`:
+For the example configuration above, create [server/graphql/swapi-hooks.ts](server/graphql/swapi-hooks.ts):
 
 ```ts
-import { defineYogaMiddleware } from "@lewebsimple/nuxt-graphql/helpers";
-import { getUserSession } from "nuxt-auth-utils";
+import { defineRemoteExecutorHooks } from "@lewebsimple/nuxt-graphql";
 
-export default defineYogaMiddleware({
-  async onRequest({ event, context, request }) {
-    const session = await getUserSession(event);
-    if (!session?.user) {
-      throw createError({ statusCode: 401, message: "Unauthorized" });
-    }
+export default defineRemoteExecutorHooks({
+  onRequest(request) {
+    // Dynamically inject headers
+    request.extensions ??= {};
+    request.extensions.headers = {
+      ...request.extensions.headers,
+      "X-Remote-Exec-Request-Header": "custom-value",
+    };
   },
-  async onResponse({ event, context, request, response, setResponse }) {
-    setHeader(event, "X-Custom-Yoga-Middleware-Response-Header", "my-custom-value");
+  onResult(result) {
+    console.log("Remote result", result);
   },
-});
-```
-
-### Remote executor middleware (optional, per remote)
-
-You can define custom logic around the remote executor (from `@graphql-tools/utils`) for each one of your remote schema by using the provided `defineRemoteExecMiddleware` helper with the following hooks:
-- `onRequest` runs before the fetch (headers are mutable);
-- `onResponse` runs after an OK response before JSON parsing (cloned response);
-- `onError` runs for non-2xx responses, GraphQL errors returned in the payload, JSON parse failures, or network errors (the `response` can be `undefined` in that last case).
-
-⚠️ Remote executor middlewares don't have access to the H3 `event` handled by Yoga since they are executed in the context of the delegated subschema resolution.
-
-For the example configuration above, create `server/graphql/swapi-middleware.ts`:
-
-```ts
-import { defineRemoteExecMiddleware } from "@lewebsimple/nuxt-graphql";
-
-export default defineRemoteExecMiddleware({
-  onRequest({ remoteName, operationName, context, fetchOptions }) {
-    console.log(`SWAPI Request Middleware [${remoteName} - ${operationName}]`);
-    fetchOptions.headers.set("X-Remote-Exec-Request-Header", "custom-value");
+  onError(error) {
+    console.error("Remote error", error);
   },
-  onResponse({ remoteName, operationName, context, response }) {
-    console.log(`SWAPI Response Middleware [${remoteName} - ${operationName}]`);
-  },
-  onError({ remoteName, operationName, error }) {
-    console.error(`SWAPI Error Middleware [${remoteName} - ${operationName}]:`, error);
-  },
-});
-```
-
-### Client error hook (optional)
-
-Handle normalized GraphQL errors globally on the client (toast, logging, etc.).
-
-The client calls the `graphql:error` Nuxt hook when a `graphql-request` response contains errors:
-
-```ts
-export default defineNuxtPlugin((nuxtApp) => {
-  nuxtApp.hook("graphql:error", (error) => {
-    console.error("GraphQL error", error);
-  });
 });
 ```
 

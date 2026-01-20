@@ -6,13 +6,21 @@ type PersistedPayload<T> = {
   expiresAt: number | null;
 };
 
-// Check if persisted storage (localStorage) is available
+/**
+ * Determine whether localStorage-backed persistence is available.
+ *
+ * @returns True when localStorage is available on the client.
+ */
 function isPersistedStorageAvailable(): boolean {
   return import.meta.client && typeof window.localStorage !== "undefined";
 }
 
-// Lazy initialization of persisted storage
 let storage: ReturnType<typeof createStorage> | null = null;
+/**
+ * Lazily create the persisted storage instance.
+ *
+ * @returns Storage instance or null when unavailable.
+ */
 function getPersistedStorage(): ReturnType<typeof createStorage> | null {
   if (!storage && isPersistedStorageAvailable()) {
     try {
@@ -27,7 +35,12 @@ function getPersistedStorage(): ReturnType<typeof createStorage> | null {
   return storage;
 }
 
-// Get persisted entry by key
+/**
+ * Retrieve a persisted cache entry.
+ *
+ * @param key Cache key.
+ * @returns Cached value or undefined when missing/expired.
+ */
 export async function getPersistedEntry<T>(key: string): Promise<T | undefined> {
   const ps = getPersistedStorage();
   if (!ps) {
@@ -49,7 +62,14 @@ export async function getPersistedEntry<T>(key: string): Promise<T | undefined> 
   }
 }
 
-// Set persisted entry with key, value and TTL in seconds
+/**
+ * Persist a cache entry with TTL.
+ *
+ * @param key Cache key.
+ * @param value Value to store.
+ * @param ttl Time to live in seconds (0 = never expires).
+ * @returns Resolves when the entry is stored.
+ */
 export async function setPersistedEntry<T>(key: string, value: T, ttl: number): Promise<void> {
   const ps = getPersistedStorage();
   if (!ps) {
@@ -65,7 +85,12 @@ export async function setPersistedEntry<T>(key: string, value: T, ttl: number): 
   }
 }
 
-// Delete persisted entry by key
+/**
+ * Delete a persisted cache entry by key.
+ *
+ * @param key Cache key.
+ * @returns Resolves when the entry is removed.
+ */
 export async function deletePersistedEntry(key: string): Promise<void> {
   const ps = getPersistedStorage();
   if (!ps) {
@@ -79,7 +104,12 @@ export async function deletePersistedEntry(key: string): Promise<void> {
   }
 }
 
-// Delete persisted entries by prefix
+/**
+ * Delete all persisted cache entries by key prefix.
+ *
+ * @param prefix Cache key prefix.
+ * @returns Resolves when matching entries are removed.
+ */
 export async function deletePersistedByPrefix(prefix: string): Promise<void> {
   const ps = getPersistedStorage();
   if (!ps) {

@@ -1,26 +1,23 @@
-import { defineNuxtConfig } from "nuxt/config";
-
 export default defineNuxtConfig({
-  modules: ["../src/module"],
+  modules: ["@lewebsimple/nuxt-graphql"],
   devtools: { enabled: true },
-  compatibilityDate: "2026-01-09",
+  compatibilityDate: "latest",
   graphql: {
-    context: "server/graphql/context.ts",
-    schemas: {
-      local: {
-        type: "local",
-        path: "server/graphql/schema.ts",
-      },
-      swapi: {
-        type: "remote",
-        url: "https://swapi-graphql.netlify.app/graphql",
-        headers: {
-          "X-Static-Header": "static-header-value",
+    yoga: {
+      context: ["~~/server/graphql/context"],
+      schemas: {
+        local: {
+          type: "local",
+          path: "~~/server/graphql/schema",
         },
-        middleware: "server/graphql/swapi-middleware.ts",
+        swapi: {
+          type: "remote",
+          url: "https://swapi-graphql.netlify.app/graphql",
+          hooks: [
+            "~~/server/graphql/swapi-hooks",
+          ],
+        },
       },
     },
-    saveSdl: "server/graphql/schema.graphql",
-    middleware: "server/graphql/yoga-middleware.ts",
   },
 });

@@ -1,18 +1,14 @@
 {
   "name": "@lewebsimple/nuxt-graphql",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Opinionated Nuxt module for using GraphQL",
   "repository": "lewebsimple/nuxt-graphql",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "exports": {
     ".": {
       "types": "./dist/types.d.mts",
       "import": "./dist/module.mjs"
-    },
-    "./helpers": {
-      "types": "./dist/helpers.d.mts",
-      "import": "./dist/helpers.mjs"
     }
   },
   "main": "./dist/module.mjs",
@@ -20,48 +16,47 @@
     "*": {
       ".": [
         "./dist/types.d.mts"
-      ],
-      "helpers": [
-        "./dist/helpers.d.mts"
       ]
     }
   },
   "files": [
     "dist"
   ],
+  "workspaces": [
+    "playground"
+  ],
   "scripts": {
     "prepack": "nuxt-module-build build",
-    "dev": "npm run dev:prepare && nuxi dev playground",
-    "dev:build": "export PLAYGROUND_MODULE_BUILD=true && nuxi build playground",
-    "dev:prepare": "export PLAYGROUND_MODULE_BUILD=true && nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare playground",
-    "release": "npm run lint && npm run test && npm run prepack && changelogen --release --push && npm publish",
+    "dev": "pnpm run dev:prepare && nuxt dev playground",
+    "dev:build": "nuxt build playground",
+    "dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxt prepare playground",
+    "release": "pnpm run lint && pnpm run test && pnpm run prepack && changelogen --release --push && pnpm publish",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
+    "test:types": "pnpm dev:prepare && vue-tsc --noEmit && cd playground && vue-tsc --noEmit"
   },
   "dependencies": {
-    "@graphql-codegen/cli": "^6.1.1",
+    "@graphql-codegen/core": "^5.0.0",
     "@graphql-codegen/typed-document-node": "^6.1.5",
     "@graphql-codegen/typescript": "^5.0.7",
     "@graphql-codegen/typescript-operations": "^5.0.7",
     "@graphql-tools/delegate": "^12.0.4",
+    "@graphql-tools/executor-http": "^3.1.0",
+    "@graphql-tools/graphql-file-loader": "^8.1.9",
+    "@graphql-tools/load": "^8.1.8",
     "@graphql-tools/stitch": "^10.1.8",
-    "@graphql-typed-document-node/core": "^3.2.0",
     "@nuxt/kit": "^4.2.2",
     "graphql": "^16.12.0",
-    "graphql-codegen-typescript-validation-schema": "^0.18.1",
     "graphql-request": "^7.4.0",
     "graphql-sse": "^2.6.0",
     "graphql-yoga": "^5.18.0",
     "jiti": "^2.6.1",
     "ohash": "^2.0.11",
-    "tinyglobby": "^0.2.15",
-    "unstorage": "^1.17.3"
+    "unstorage": "^1.17.4"
   },
   "devDependencies": {
     "@nuxt/devtools": "^3.1.1",
-    "@nuxt/eslint": "1.12.1",
     "@nuxt/eslint-config": "^1.12.1",
     "@nuxt/module-builder": "^1.0.2",
     "@nuxt/schema": "^4.2.2",
@@ -73,13 +68,5 @@
     "typescript": "~5.9.3",
     "vitest": "^4.0.17",
     "vue-tsc": "^3.2.2"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "changelog": {
-    "types": {
-      "chore": false
-    }
   }
 }

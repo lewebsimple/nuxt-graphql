@@ -1,3 +1,0 @@
-mutation Ping($message: String!) {
-  ping(message: $message)
-}

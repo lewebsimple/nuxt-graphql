@@ -250,10 +250,6 @@ type FilmsEdge {
   node: Film
 }
 
-type Mutation {
-  ping(message: String!): String!
-}
-
 """An object with an ID"""
 interface Node {
   """The id of the object."""
@@ -648,9 +644,8 @@ type Query {
   allSpecies(after: String, before: String, first: Int, last: Int): SpeciesConnection
   allStarships(after: String, before: String, first: Int, last: Int): StarshipsConnection
   allVehicles(after: String, before: String, first: Int, last: Int): VehiclesConnection
-  currentTime: String!
   film(filmID: ID, id: ID): Film
-  hello: String!
+  hello(name: String): String!
 
   """Fetches an object given its ID"""
   node(
@@ -1002,10 +997,6 @@ type StarshipsEdge {
 
   """The item at the end of the edge"""
   node: Starship
-}
-
-type Subscription {
-  time: String!
 }
 
 """A single transport craft that does not have hyperdrive capability"""
