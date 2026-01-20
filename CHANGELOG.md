@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.5.3
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.2...v0.5.3)
+
+### 🩹 Fixes
+
+- Typo in GraphQL Yoga ready message ([80bea8e](https://github.com/lewebsimple/nuxt-graphql/commit/80bea8e))
+- App / server / shared types generation ([eeba7a3](https://github.com/lewebsimple/nuxt-graphql/commit/eeba7a3))
+- Codegen plugins config ([d943206](https://github.com/lewebsimple/nuxt-graphql/commit/d943206))
+- Registry template ([6f7ca65](https://github.com/lewebsimple/nuxt-graphql/commit/6f7ca65))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.2
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.1...v0.5.2)
