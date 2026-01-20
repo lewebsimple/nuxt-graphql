@@ -21,7 +21,7 @@ export async function renderFragmentsTemplate({ documents }: FragmentsTemplateIn
 
   return [
     `export type {`,
-    ...fragments.map((name) => `  ${name},`),
+    ...fragments.map((name) => `  ${name} as ${name}Fragment,`),
     `} from "./operations";`,
   ].join("\n");
 }

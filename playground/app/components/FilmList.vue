@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Films } from "#graphql/fragments";
+import type { FilmsFragment } from "#graphql/fragments";
 
-defineProps<Films>();
+defineProps<FilmsFragment>();
 </script>
 
 <template>
