@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addTemplate, createResolver, defineNuxtModule, useLogger } from "@nuxt/kit";
+import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addServerTemplate, addTemplate, addTypeTemplate, createResolver, defineNuxtModule, useLogger } from "@nuxt/kit";
+import { defu } from "defu";
 import type { GraphQLSchema } from "graphql";
 import type { Source } from "@graphql-tools/utils";
 import { hash } from "ohash";
@@ -11,7 +12,7 @@ import { renderFragmentsTemplate } from "./lib/fragments";
 import { renderOperationsTemplate } from "./lib/operations";
 import { renderRegistryTemplate } from "./lib/registry";
 import { loadStitchedSchema, printSchemaSDL, renderLocalSchemaTemplate, renderRemoteSchemaTemplate, renderStitchedSchemaTemplate, type SchemaDef } from "./lib/schemas";
-import { renderTypesTemplate } from "./lib/types";
+import { renderAppTypesTemplate, renderServerTypesTemplate, renderSharedTypesTemplate } from "./lib/types";
 import { resolveCacheConfig, type CacheConfig } from "./runtime/shared/lib/cache-config";
 
 // Nuxt GraphQL module options
@@ -84,6 +85,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // Build-time logger
     const logger = useLogger("graphql");
 
+    // Build resolver
+    const { resolve: resolveBuild } = createResolver(nuxt.options.buildDir);
+
     // Module runtime resolver
     const { resolve: resolveModule } = createResolver(import.meta.url);
 
@@ -116,10 +120,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     // Nuxt aliases
     nuxt.options.alias ||= {};
-    nuxt.options.alias["#graphql"] = resolve(nuxt.options.buildDir, "graphql");
-
-    // Nitro aliases
-    const nitroAlias: Record<string, string> = {};
+    nuxt.options.alias["#graphql"] ||= resolveBuild("graphql");
 
     // #endregion
 
@@ -134,12 +135,8 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       resolveModule("./runtime/server/lib/default-context"),
       ...await Promise.all((options.yoga?.context || []).map((path) => resolveRootPath(path, true))),
     ];
-    const contextTemplate = addTemplate({
-      filename: "graphql/context.ts",
-      getContents: () => renderContextTemplate({ contextModules }),
-      write: true,
-    });
-    nitroAlias["#graphql/context"] = contextTemplate.dst;
+    addTemplate({ filename: "graphql/context.ts", getContents: () => renderContextTemplate({ contextModules }), write: true });
+    addServerTemplate({ filename: "#graphql/#context.ts", getContents: () => renderContextTemplate({ contextModules }) });
 
     // #endregion
 
@@ -148,18 +145,14 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // Generate user schema(s) modules
     const schemaDefs: Record<string, SchemaDef> = {};
     for (const [schemaName, schemaDef] of Object.entries(options.yoga?.schemas || {})) {
-      let schemaTemplate;
       if (schemaDef.type === "local") {
         const localSchemaDef = {
           ...schemaDef,
           path: await resolveRootPath(schemaDef.path, true),
         };
         schemaDefs[schemaName] = localSchemaDef;
-        schemaTemplate = addTemplate({
-          filename: `graphql/schemas/${schemaName}.ts`,
-          getContents: async () => renderLocalSchemaTemplate({ ...localSchemaDef }),
-          write: true,
-        });
+        addTemplate({ filename: `graphql/schemas/${schemaName}.ts`, getContents: async () => renderLocalSchemaTemplate({ ...localSchemaDef }), write: true });
+        addServerTemplate({ filename: `#graphql/schemas/${schemaName}.ts`, getContents: async () => renderLocalSchemaTemplate({ ...localSchemaDef }) });
       }
       else if (schemaDef.type === "remote") {
         const remoteSchemaDef = {
@@ -168,27 +161,17 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
           remoteExecutorModule: resolveModule("./runtime/server/lib/remote-executor"),
         };
         schemaDefs[schemaName] = remoteSchemaDef;
-        schemaTemplate = addTemplate({
-          filename: `graphql/schemas/${schemaName}.ts`,
-          getContents: async () => await renderRemoteSchemaTemplate({ ...remoteSchemaDef }),
-          write: true,
-        });
+        addTemplate({ filename: `graphql/schemas/${schemaName}.ts`, getContents: async () => await renderRemoteSchemaTemplate({ ...remoteSchemaDef }), write: true });
+        addServerTemplate({ filename: `#graphql/schemas/${schemaName}.ts`, getContents: async () => await renderRemoteSchemaTemplate({ ...remoteSchemaDef }) });
       }
       else {
         throw new Error(`Unknown schema type for schema "${schemaName}"`);
       }
-      nitroAlias[`#graphql/schemas/${schemaName}`] = schemaTemplate.dst;
     }
 
     // Generate stitched schema module
-    const schemaTemplate = addTemplate({
-      filename: "graphql/schema.ts",
-      getContents: () => renderStitchedSchemaTemplate({
-        schemaNames: Object.keys(options.yoga?.schemas || {}),
-      }),
-      write: true,
-    });
-    nitroAlias["#graphql/schema"] = schemaTemplate.dst;
+    addTemplate({ filename: "graphql/schema.ts", getContents: () => renderStitchedSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }), write: true });
+    addServerTemplate({ filename: "#graphql/schema.ts", getContents: () => renderStitchedSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }) });
 
     // #endregion
 
@@ -258,6 +241,14 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     // #endregion
 
+    // #region Type injection
+
+    addTypeTemplate({ filename: "types/nuxt-graphql.app.d.ts", getContents: () => renderAppTypesTemplate() }, { nuxt: true });
+    addTypeTemplate({ filename: "types/nuxt-graphql.server.d.ts", getContents: () => renderServerTypesTemplate() }, { nitro: true });
+    addTypeTemplate({ filename: "types/nuxt-graphql.shared.d.ts", getContents: () => renderSharedTypesTemplate() }, { nuxt: true, nitro: true });
+
+    // #endregion
+
     // #region GraphQL artifacts
 
     // Save graphql.config.json
@@ -269,15 +260,6 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     // #endregion
 
-    // #region GraphQL types
-    const typesTemplate = addTemplate({
-      filename: "graphql/types.d.ts",
-      getContents: () => renderTypesTemplate(),
-      write: true,
-    });
-
-    // #endregion
-
     // ─────────────────────────────────────────────────────────────
     // Bootstrap & runtime integration
     // ─────────────────────────────────────────────────────────────
@@ -285,25 +267,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // #region Runtime configuration
 
     // Expose module options to runtime
-    nuxt.options.runtimeConfig.public.graphql = {
+    nuxt.options.runtimeConfig.public.graphql = defu(nuxt.options.runtimeConfig.public.graphql, {
       cacheConfig: resolveCacheConfig(options.client?.cache),
       ssrForwardHeaders: options.client?.ssrForwardHeaders || ["authorization", "cookie"],
-    };
-
-    // #endregion
-
-    // #region Runtime aliases
-
-    // Register generated files
-    nuxt.hook("prepare:types", ({ sharedReferences }) => {
-      sharedReferences.push({ path: typesTemplate.dst });
-      sharedReferences.push({ path: resolveModule("./runtime/shared/types/nuxt-graphql.d.ts") });
-    });
-
-    // Register Nitro aliases
-    nuxt.hook("nitro:config", (nitroConfig) => {
-      nitroConfig.alias ||= {};
-      Object.assign(nitroConfig.alias, nitroAlias);
     });
 
     // #endregion

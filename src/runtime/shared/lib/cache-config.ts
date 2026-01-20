@@ -1,6 +1,6 @@
 type GraphQLCachePolicy = "no-cache" | "cache-first" | "network-first" | "swr";
 
-export interface CacheConfig {
+export type CacheConfig = {
   /**
    * Prefix used for all persisted cache keys.
    *
@@ -35,7 +35,7 @@ export interface CacheConfig {
    * - > 0       → expires after TTL
    */
   ttl?: number;
-}
+};
 
 // Default GraphQL cache configuration
 const defaultCacheConfig: CacheConfig = {
