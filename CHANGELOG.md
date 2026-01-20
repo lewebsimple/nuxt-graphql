@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.5.0
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.4.0...v0.5.0)
+
+### 💅 Refactors
+
+- ⚠️  Complete rewrite of the module ([5212c6d](https://github.com/lewebsimple/nuxt-graphql/commit/5212c6d))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Complete rewrite of the module ([5212c6d](https://github.com/lewebsimple/nuxt-graphql/commit/5212c6d))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.4.0
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.3.5...v0.4.0)
