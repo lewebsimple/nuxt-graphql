@@ -1,22 +1,7 @@
-import type { ExecutionRequest, ExecutionResult, Executor } from "@graphql-tools/utils";
+import type { ExecutionRequest, Executor } from "@graphql-tools/utils";
 import { buildHTTPExecutor } from "@graphql-tools/executor-http";
 import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
-
-export interface GraphQLRemoteExecHooks {
-  onRequest?: (request: ExecutionRequest) => void | Promise<void>;
-  onResult?: (result: ExecutionResult) => void | Promise<void>;
-  onError?: (error: unknown) => void | Promise<void>;
-}
-
-/**
- * Define remote executor hooks with proper typing.
- *
- * @param hooks Hooks implementation.
- * @returns The same hooks object.
- */
-export function defineRemoteExecutorHooks(hooks: GraphQLRemoteExecHooks): GraphQLRemoteExecHooks {
-  return hooks;
-}
+import type { GraphQLRemoteExecHooks } from "../utils/defineRemoteExecutorHooks";
 
 // Create a remote executor for a given remote schema definition
 type CreateRemoteExecutorInput = {

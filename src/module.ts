@@ -71,10 +71,6 @@ export interface NuxtGraphQLModuleOptions {
   };
 }
 
-// Re-export definition helpers
-export { defineGraphQLContext } from "./runtime/server/lib/context";
-export { defineRemoteExecutorHooks } from "./runtime/server/lib/remote-executor";
-
 // Nuxt GraphQL module
 export default defineNuxtModule<NuxtGraphQLModuleOptions>({
   meta: {

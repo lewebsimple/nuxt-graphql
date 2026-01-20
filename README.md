@@ -93,13 +93,12 @@ export default defineNuxtConfig({
 
 ### Define schema(s) (local and/or remote)
 
-**Local schemas** must live under `server/` and export a `GraphQLSchema` as `schema`. You can use the provided `defineGraphQLSchema` helper for type-safety.
+**Local schemas** must live under `server/` and export a `GraphQLSchema` as `schema`. You can use the auto-imported `defineGraphQLSchema` helper for type-safety.
 
 For the example configuration above, create [server/graphql/schema.ts](server/graphql/schema.ts):
 
 ```ts
 import { createSchema } from "graphql-yoga";
-import { defineGraphQLSchema } from "@lewebsimple/nuxt-graphql";
 import type { GraphQLContext } from "#graphql/context";
 
 const schema = createSchema<GraphQLContext>({
@@ -142,12 +141,11 @@ export default defineGraphQLSchema({ schema });
 
 ### Define GraphQL context factories (optional)
 
-Context factories are optional and run on the server in order. Their return types are merged into a single `GraphQLContext` type.
+Context factories are optional and run on the server in order. Their return types are merged into a single `GraphQLContext` type. You can use the auto-imported `defineGraphQLContext` helper for type-safety.
 
 For example, create [server/graphql/context.ts](server/graphql/context.ts):
 
 ```ts
-import { defineGraphQLContext } from "@lewebsimple/nuxt-graphql";
 import { getUserSession } from "nuxt-auth-utils";
 
 export default defineGraphQLContext(async (event) => {
@@ -334,13 +332,11 @@ await invalidate();
 
 ### Remote executor hooks (optional, per remote)
 
-You can define custom logic around the remote executor for each remote schema by using the provided `defineRemoteExecutorHooks` helper.
+You can define custom logic around the remote executor for each remote schema by using the auto-imported `defineRemoteExecutorHooks` helper.
 
 For the example configuration above, create [server/graphql/swapi-hooks.ts](server/graphql/swapi-hooks.ts):
 
 ```ts
-import { defineRemoteExecutorHooks } from "@lewebsimple/nuxt-graphql";
-
 export default defineRemoteExecutorHooks({
   onRequest(request) {
     // Dynamically inject headers

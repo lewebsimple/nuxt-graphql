@@ -1,5 +1,5 @@
 import { createSchema } from "graphql-yoga";
-import { defineGraphQLSchema } from "./schemas";
+import { defineGraphQLSchema } from "../utils/defineGraphQLSchema";
 
 /**
  * Default hello-world schema for development scaffolding.

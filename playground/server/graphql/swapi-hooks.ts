@@ -1,4 +1,4 @@
-import { defineRemoteExecutorHooks } from "../../../src/runtime/server/lib/remote-executor";
+import { defineRemoteExecutorHooks } from "../../../src/runtime/server/utils/defineRemoteExecutorHooks";
 
 export default defineRemoteExecutorHooks({
   onRequest(request) {

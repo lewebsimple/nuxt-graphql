@@ -1,4 +1,4 @@
-import { defineGraphQLContext } from "./context";
+import { defineGraphQLContext } from "../utils/defineGraphQLContext";
 
 /**
  * Default empty GraphQL context factory.
