@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.5.5
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.4...v0.5.5)
+
+### 🩹 Fixes
+
+- Registry template typo ([e6c55c0](https://github.com/lewebsimple/nuxt-graphql/commit/e6c55c0))
+- #graphql/context types generation ([8441b33](https://github.com/lewebsimple/nuxt-graphql/commit/8441b33))
+- Generated schema types ([2ed77ce](https://github.com/lewebsimple/nuxt-graphql/commit/2ed77ce))
+
+### 💅 Refactors
+
+- Better type generation, documents / schemas caching and mjs runtime ([fe5f4f1](https://github.com/lewebsimple/nuxt-graphql/commit/fe5f4f1))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.4
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.3...v0.5.4)
