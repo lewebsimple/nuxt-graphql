@@ -1,15 +1,14 @@
 import { useAsyncData, useNuxtData, useRuntimeConfig, type AsyncDataOptions } from "#app";
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
 import { computed, toValue, type MaybeRefOrGetter } from "#imports";
-import { getCacheKeyParts } from "../lib/cache";
 import { executeGraphQLHTTP, type ExecuteGraphQLHTTPOptions } from "../lib/execute-http";
 import { getInFlightRequests } from "../lib/in-flight";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
-import { resolveCacheConfig, type CacheConfig } from "../../shared/lib/cache-config";
+import { getCacheKeyParts, resolveCacheConfig } from "../../shared/lib/cache";
 import type { IsEmptyObject } from "../../shared/lib/utils";
 
 type UseAsyncGraphQLQueryOptions<TName extends QueryName> = ExecuteGraphQLHTTPOptions
-  & { cache?: Partial<CacheConfig> }
+  & { cache?: Partial<GraphQLCacheConfig> }
   & AsyncDataOptions<ResultOf<TName>>;
 
 /**

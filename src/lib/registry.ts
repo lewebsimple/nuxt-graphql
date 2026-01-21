@@ -14,52 +14,39 @@ type RegistryTemplateInput = {
  */
 export async function renderRegistryTemplate({ documents }: RegistryTemplateInput): Promise<string> {
   const operations = collectOperations(documents);
+  return `
+import type { DocumentNode } from "graphql";,
+import {
+${operations.map(({ name }) => `  ${name}Document, type ${name}QueryVariables, type ${name}QueryResult,`).join("\n")},
+} from "./operations";
 
-  return [
-    `import type { DocumentNode } from "graphql";`,
-    `import {`,
-    ...operations.map(({ name }) =>
-      `  ${name}Document, type ${name}QueryVariables, type ${name}QueryResult,`,
-    ),
-    `} from "./operations";`,
-    ``,
+// Operation entry
+export interface OperationEntry<TVariables, TResult, TKind extends "query" | "mutation" | "subscription"> {
+  kind: TKind;
+  variables: TVariables;
+  result: TResult;
+  document: DocumentNode;
+}
 
-    // Operation entry
-    `export interface OperationEntry<TVariables, TResult, TKind extends "query" | "mutation" | "subscription"> {`,
-    `  kind: TKind;`,
-    `  variables: TVariables;`,
-    `  result: TResult;`,
-    `  document: DocumentNode;`,
-    `}`,
-    ``,
+// Operation registry type
+export type OperationRegistry = {
+${operations.map(({ name, kind }) => `  ${name}: OperationEntry<${name}QueryVariables, ${name}QueryResult, "${kind}">;`).join("\n")}
+};
 
-    // Operation registry type
-    `export type OperationRegistry = {`,
-    ...operations.map(({ name, kind }) =>
-      `  ${name}: OperationEntry<${name}QueryVariables, ${name}QueryResult, "${kind}">;`,
-    ),
-    `};`,
-    ``,
+// Operation name types
+export type QueryName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "query" ? K : never }[keyof OperationRegistry];
+export type MutationName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "mutation" ? K : never }[keyof OperationRegistry];
+export type SubscriptionName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "subscription" ? K : never }[keyof OperationRegistry];
 
-    // Operation name types
-    `export type QueryName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "query" ? K : never }[keyof OperationRegistry];`,
-    `export type MutationName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "mutation" ? K : never }[keyof OperationRegistry];`,
-    `export type SubscriptionName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "subscription" ? K : never }[keyof OperationRegistry];`,
-    ``,
+// Projection helpers (variables / result)
+export type VariablesOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["variables"];
+export type ResultOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["result"];
 
-    // Projection helpers (variables / result)
-    `export type VariablesOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["variables"];`,
-    `export type ResultOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["result"];`,
-    ``,
 
-    // Runtime registry (document + kind only)
-    `export const registry: { [K in keyof OperationRegistry]: { kind: OperationRegistry[K]["kind"]; document: DocumentNode; }; } = {`,
-    ...operations.map(({ name, kind }) =>
-      `  ${name}: { kind: "${kind}", document: ${name}Document },`,
-    ),
-    `};`,
-    ``,
-  ].join("\n");
+// Runtime registry (document + kind only)
+export const registry: { [K in keyof OperationRegistry]: { kind: OperationRegistry[K]["kind"]; document: DocumentNode; }; } = {
+  ${operations.map(({ name, kind }) => `  ${name}: { kind: "${kind}", document: ${name}Document}}, `).join("\n")}
+};`.trim();
 }
 
 type OperationMeta = {

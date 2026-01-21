@@ -6,7 +6,7 @@ type FragmentsTemplateInput = {
 };
 
 /**
- * Render the fragment types module from GraphQL documents.
+ * Render the GraphQL fragments types module.
  *
  * @param {FragmentsTemplateInput} options Fragments template input.
  * @param options.documents Parsed GraphQL documents.
@@ -14,16 +14,12 @@ type FragmentsTemplateInput = {
  */
 export async function renderFragmentsTemplate({ documents }: FragmentsTemplateInput): Promise<string> {
   const fragments = collectFragments(documents);
-
-  if (fragments.length === 0) {
-    return `export { }`;
-  }
-
-  return [
-    `export type {`,
-    ...fragments.map((name) => `  ${name}Fragment,`),
-    `} from "./operations";`,
-  ].join("\n");
+  return fragments.length === 0
+    ? "export { }"
+    : `
+export type {
+${fragments.map((name) => `  ${name}Fragment,`).join("\n")}
+} from "./operations";`.trim();
 }
 
 /**

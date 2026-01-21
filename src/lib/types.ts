@@ -1,5 +1,9 @@
+// ─────────────────────────────────────────────────────────────
+// App types template
+// ─────────────────────────────────────────────────────────────
+
 export function renderAppTypesTemplate() {
-  return `// Nuxt GraphQL types (app)
+  return `
 import type { GraphQLClient } from "graphql-request";
 import type { Client as SSEClient } from "graphql-sse";
 
@@ -18,15 +22,29 @@ declare module "#app" {
 }
 
 export {};
-`;
+`.trim();
 }
 
-export function renderServerTypesTemplate() {
-  return `// Nuxt GraphQL types (server)
+// ─────────────────────────────────────────────────────────────
+// Server types template
+// ─────────────────────────────────────────────────────────────
+
+type ServerTemplateInput = {
+  contextModules: string[];
+};
+
+export function renderServerTypesTemplate({ contextModules }: ServerTemplateInput) {
+  const contextImports = contextModules.map((module, index) => `import createContext${index} from ${JSON.stringify(module)};`);
+  const contextTypes = ["{}", ...contextModules.map((_, index) => `Awaited<ReturnType<typeof createContext${index}>>`)];
+
+  return `
 import type { GraphQLSchema } from "graphql";
+import type { H3Event } from "h3";
+${contextImports.join("\n")}
 
 declare module "#graphql/context" {
-  export type { GraphQLContext };
+  export type GraphQLContext = ${contextTypes.join(" & ")};
+  export async function createContext(event: H3Event): Promise<GraphQLContext>;
 }
 
 declare module "#graphql/schema" {
@@ -40,23 +58,37 @@ declare module "h3" {
 }
 
 export {};
-`;
+`.trim();
 }
 
+// ─────────────────────────────────────────────────────────────
+// Shared types template
+// ─────────────────────────────────────────────────────────────
+
 export function renderSharedTypesTemplate() {
-  return `// Nuxt GraphQL types (shared)
+  return `
 import type { DocumentNode } from "graphql";
 import type { CacheConfig } from "nuxt-graphql/runtime/shared/lib/cache-config";
+
+declare global {
+  type GraphQLCacheConfig = {
+    policy: "no-cache" | "cache-first" | "network-first" | "swr";
+    ttl?: number;
+    keyPrefix: string;
+    keyVersion: string | number;
+  };;
+}
 
 declare module "nuxt/schema" {
   interface PublicRuntimeConfig {
     graphql: {
-      cacheConfig?: CacheConfig;
+      cacheConfig?: GraphQLCacheConfig;
       ssrForwardHeaders: string[];
     };
   }
 }
 
-export {};
-`;
+export { };
+
+`.trim();
 }

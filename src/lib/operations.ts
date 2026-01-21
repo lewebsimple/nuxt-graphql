@@ -22,7 +22,7 @@ type OperationsTemplateInput = {
  */
 export async function renderOperationsTemplate({ schema, documents }: OperationsTemplateInput): Promise<string> {
   // Run codegen (in-memory)
-  const output = await codegen({
+  return await codegen({
     filename: "operations.ts",
     // @graphql-codegen/core codegen supports GraphQLSchema at runtime, but types expect DocumentNode
     schema: schema as unknown as DocumentNode,
@@ -77,6 +77,4 @@ export async function renderOperationsTemplate({ schema, documents }: Operations
 
     },
   });
-
-  return output;
 }

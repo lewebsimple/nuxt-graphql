@@ -1,5 +1,22 @@
+// Default GraphQL cache configuration
 import { hash } from "ohash";
-import type { CacheConfig } from "../../shared/lib/cache-config";
+
+const defaultCacheConfig: GraphQLCacheConfig = {
+  keyPrefix: "gql",
+  keyVersion: "1",
+  policy: "no-cache",
+  ttl: undefined,
+};
+
+/**
+ * Merge the default cache config with user overrides.
+ *
+ * @param overrides Partial cache config overrides.
+ * @returns Resolved cache configuration.
+ */
+export function resolveCacheConfig(...overrides: Array<Partial<GraphQLCacheConfig> | undefined>): GraphQLCacheConfig {
+  return Object.assign({}, defaultCacheConfig, ...overrides);
+}
 
 type CacheKeyParts = {
   key: string;
@@ -9,7 +26,7 @@ type CacheKeyParts = {
 /**
  * Build cache key parts from config, operation name, and variables.
  *
- * @param {CacheConfig} options Cache configuration.
+ * @param {GraphQLCacheConfig} options Cache configuration.
  * @param options.keyPrefix Cache key prefix.
  * @param options.keyVersion Cache key version.
  * @param operationName Operation name.
@@ -18,7 +35,7 @@ type CacheKeyParts = {
  * @returns Key parts including full key and operation prefix.
  */
 export function getCacheKeyParts(
-  { keyPrefix, keyVersion }: CacheConfig,
+  { keyPrefix, keyVersion }: GraphQLCacheConfig,
   operationName: string,
   variables: unknown,
   scope?: string,

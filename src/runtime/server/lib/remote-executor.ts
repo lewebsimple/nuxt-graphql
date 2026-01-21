@@ -2,11 +2,10 @@ import type { ExecutionRequest, Executor } from "@graphql-tools/utils";
 import { buildHTTPExecutor } from "@graphql-tools/executor-http";
 import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
 import type { GraphQLRemoteExecHooks } from "../utils/defineRemoteExecutorHooks";
+import type { RemoteSchemaDef } from "../../../lib/schemas";
 
 // Create a remote executor for a given remote schema definition
-type CreateRemoteExecutorInput = {
-  url: string;
-  headers?: HeadersInput;
+type CreateRemoteExecutorInput = Pick<RemoteSchemaDef, "url" | "headers"> & {
   hooks: GraphQLRemoteExecHooks[];
 };
 

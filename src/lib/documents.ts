@@ -3,7 +3,7 @@ import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import type { Source } from "@graphql-tools/utils";
 
 /**
- * Load GraphQL documents from a glob pattern while ignoring build artifacts.
+ * Load GraphQL documents from a glob pattern.
  *
  * @param documents Glob pattern for .gql files.
  * @returns Parsed GraphQL sources (empty on errors).
