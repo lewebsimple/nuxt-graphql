@@ -117,7 +117,7 @@ type StitchedSchemaTemplateInput = {
  *
  * @returns TypeScript source for the stitched schema module.
  */
-export function renderStitchedSchemaTemplate({ schemaNames }: StitchedSchemaTemplateInput): string {
+export function renderSchemaTemplate({ schemaNames }: StitchedSchemaTemplateInput): string {
   const importSchemas = schemaNames.map((name) => `import { schema as ${name}Schema } from ${JSON.stringify(`./schemas/${name}`)};`);
   const schemas = schemaNames.map((name) => `${name}Schema`);
   return `
@@ -127,6 +127,21 @@ ${importSchemas.join("\n")}
 export const schema = stitchSchemas({
   subschemas: [${schemas.join(", ")}],
 });`.trim();
+}
+
+/**
+ * Render GraphQL schema type declarations.
+ *
+ * @returns .d.ts source for the schema module.
+ */
+export function renderSchemaTypesTemplate() {
+  return `
+import type { GraphQLSchema } from "graphql";
+
+declare module "#graphql/schema" {
+  export const schema: GraphQLSchema;
+}
+`.trim();
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

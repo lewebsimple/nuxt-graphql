@@ -12,7 +12,7 @@ import { loadDocuments } from "./lib/documents";
 import { renderFragmentsTemplate } from "./lib/fragments";
 import { renderOperationsTemplate } from "./lib/operations";
 import { renderRegistryTemplate } from "./lib/registry";
-import { introspectRemoteSchema, loadLocalSchema, printSchemaSDL, renderLocalSchemaTemplate, renderRemoteSchemaTemplate, renderStitchedSchemaTemplate, type SchemaDef } from "./lib/schemas";
+import { introspectRemoteSchema, loadLocalSchema, printSchemaSDL, renderLocalSchemaTemplate, renderRemoteSchemaTemplate, renderSchemaTemplate, renderSchemaTypesTemplate, type SchemaDef } from "./lib/schemas";
 import { renderAppTypesTemplate, renderServerTypesTemplate, renderSharedTypesTemplate } from "./lib/types";
 import { resolveCacheConfig } from "./runtime/shared/lib/cache";
 
@@ -196,8 +196,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
       return schema;
     });
-    addTemplate({ filename: "graphql/schema.mjs", getContents: () => renderStitchedSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }), write: true });
-    addServerTemplate({ filename: "#graphql/schema.mjs", getContents: () => renderStitchedSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }) });
+    addTemplate({ filename: "graphql/schema.mjs", getContents: () => renderSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }), write: true });
+    addTemplate({ filename: "graphql/schema.d.ts", getContents: () => renderSchemaTypesTemplate(), write: true });
+    addServerTemplate({ filename: "#graphql/schema.mjs", getContents: () => renderSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }) });
 
     // ────────────────────────────────────────────────────────────────────────────
     // GraphQL operations, fragments & registry
