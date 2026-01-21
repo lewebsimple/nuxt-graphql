@@ -5,9 +5,9 @@ type GraphQLContextFactory<TContext extends Record<string, unknown>> = (event: H
 /**
  * Define a GraphQL context factory with proper typing.
  *
- * @param factory Context factory function.
+ * @param createContext Context factory function.
  * @returns The same factory, typed for inference.
  */
-export function defineGraphQLContext<TContext extends Record<string, unknown>>(factory: GraphQLContextFactory<TContext>): GraphQLContextFactory<TContext> {
-  return factory;
+export function defineGraphQLContext<TContext extends Record<string, unknown>>(createContext: GraphQLContextFactory<TContext>): { createContext: GraphQLContextFactory<TContext> } {
+  return { createContext };
 }
