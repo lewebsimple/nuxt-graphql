@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.4
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.3...v0.5.4)
+
+### 🩹 Fixes
+
+- Inline default context ([6871012](https://github.com/lewebsimple/nuxt-graphql/commit/6871012))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.3
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.2...v0.5.3)
