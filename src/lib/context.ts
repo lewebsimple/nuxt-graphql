@@ -18,5 +18,5 @@ ${contextImports.join("\n")}
 export async function createContext(event) {
   const parts = await Promise.all([${contexts.join(", ")}]);
   return Object.assign({}, ...parts);
-}`;
+}`.trim();
 }

@@ -1,6 +1,6 @@
 import type { QueryName } from "#graphql/registry";
 import { clearNuxtData, useRuntimeConfig } from "#imports";
-import { getCacheKeyParts } from "../lib/cache";
+import { getCacheKeyParts } from "../../shared/lib/cache";
 import { deletePersistedByPrefix, deletePersistedEntry } from "../lib/persisted";
 
 /**

@@ -44,7 +44,7 @@ ${contextImports.join("\n")}
 
 declare module "#graphql/context" {
   export type GraphQLContext = ${contextTypes.join(" & ")};
-  export async function createContext(event: H3Event): Promise<GraphQLContext>;
+  export function createContext(event: H3Event): Promise<GraphQLContext>;
 }
 
 declare module "#graphql/schema" {
@@ -82,7 +82,7 @@ declare global {
 declare module "nuxt/schema" {
   interface PublicRuntimeConfig {
     graphql: {
-      cacheConfig?: GraphQLCacheConfig;
+      cacheConfig: GraphQLCacheConfig;
       ssrForwardHeaders: string[];
     };
   }

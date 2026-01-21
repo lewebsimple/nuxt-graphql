@@ -15,9 +15,9 @@ type RegistryTemplateInput = {
 export async function renderRegistryTemplate({ documents }: RegistryTemplateInput): Promise<string> {
   const operations = collectOperations(documents);
   return `
-import type { DocumentNode } from "graphql";,
+import type { DocumentNode } from "graphql";
 import {
-${operations.map(({ name }) => `  ${name}Document, type ${name}QueryVariables, type ${name}QueryResult,`).join("\n")},
+${operations.map(({ name }) => `  ${name}Document, type ${name}QueryVariables, type ${name}QueryResult,`).join("\n")}
 } from "./operations";
 
 // Operation entry
@@ -34,6 +34,7 @@ ${operations.map(({ name, kind }) => `  ${name}: OperationEntry<${name}QueryVari
 };
 
 // Operation name types
+export type OperationName = keyof OperationRegistry;
 export type QueryName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "query" ? K : never }[keyof OperationRegistry];
 export type MutationName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "mutation" ? K : never }[keyof OperationRegistry];
 export type SubscriptionName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "subscription" ? K : never }[keyof OperationRegistry];
@@ -45,7 +46,7 @@ export type ResultOf<TName extends keyof OperationRegistry> = OperationRegistry[
 
 // Runtime registry (document + kind only)
 export const registry: { [K in keyof OperationRegistry]: { kind: OperationRegistry[K]["kind"]; document: DocumentNode; }; } = {
-  ${operations.map(({ name, kind }) => `  ${name}: { kind: "${kind}", document: ${name}Document}}, `).join("\n")}
+  ${operations.map(({ name, kind }) => `  ${name}: { kind: "${kind}", document: ${name}Document}, `).join("\n")}
 };`.trim();
 }
 
