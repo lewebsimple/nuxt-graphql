@@ -2,19 +2,19 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { defu } from "defu";
 import type { GraphQLSchema } from "graphql";
-import { hash } from "ohash";
-import type { Source } from "@graphql-tools/utils";
+import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
+import { loadDocuments } from "@graphql-tools/load";
 import { stitchSchemas } from "@graphql-tools/stitch";
+import type { Source } from "@graphql-tools/utils";
 import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addServerTemplate, addTemplate, addTypeTemplate, createResolver, defineNuxtModule, useLogger } from "@nuxt/kit";
 import { cyan, reset } from "./lib/colors";
 import { renderContextTemplate, renderContextTypesTemplate } from "./lib/context";
-import { loadDocuments } from "./lib/documents";
-import { renderFragmentsTemplate } from "./lib/fragments";
 import { renderOperationsTemplate } from "./lib/operations";
 import { renderRegistryTemplate } from "./lib/registry";
 import { introspectRemoteSchema, loadLocalSchema, printSchemaSDL, renderLocalSchemaTemplate, renderRemoteSchemaTemplate, renderSchemaTemplate, renderSchemaTypesTemplate, type SchemaDef } from "./lib/schemas";
 import { renderAppTypesTemplate, renderServerTypesTemplate, renderSharedTypesTemplate } from "./lib/types";
 import { resolveCacheConfig } from "./runtime/shared/lib/cache";
+import { hash } from "ohash";
 
 // Nuxt GraphQL module options
 export interface NuxtGraphQLModuleOptions {
@@ -124,7 +124,25 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     nuxt.options.alias ||= {};
     nuxt.options.alias["#graphql"] ||= resolveBuild("graphql");
 
-    type BuildCache<T> = { key: string; data: T };
+    // Build cache helpers
+    type BuildCache<TData> = { key: string; data: TData };
+    const buildCache = new Map<string, BuildCache<unknown>>();
+
+    function cachedLoader<TData, TArgs extends unknown[] = []>(
+      baseKey: string,
+      loader: (...args: TArgs) => Promise<TData>,
+    ) {
+      return async (...args: TArgs): Promise<TData> => {
+        const key = `${baseKey}:${hash(args)}`;
+        const cached = buildCache.get(key);
+        if (cached?.key === key) {
+          return cached.data as TData;
+        }
+        const data = await loader(...args);
+        buildCache.set(key, { key, data });
+        return data;
+      };
+    }
 
     // ────────────────────────────────────────────────────────────────────────────────
     // GraphQL context
@@ -139,36 +157,22 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // GraphQL schemas
     // ────────────────────────────────────────────────────────────────────────────────
 
-    // Cached schema loader
-    const schemasCache = new Map<string, BuildCache<GraphQLSchema> | null>([]);
-    function cachedSchemaLoader(schemaDef: SchemaDef | { type: "stitched" }, loader: () => Promise<GraphQLSchema>) {
-      return async () => {
-        const key = `schemaDef:${hash(schemaDef)}`;
-        const cached = schemasCache.get(key);
-        if (cached?.key === key) return cached.data;
-        const schema = await loader();
-        schemasCache.set(key, { key, data: schema });
-        return schema;
-      };
-    }
-
-    // Resolve schema definitions / loaders
     const remoteExecutorModule = resolveModule("./runtime/server/lib/remote-executor");
-    const schemaLoaders: Record<string, () => Promise<GraphQLSchema>> = {};
+    const schemaCachedLoaders: Record<string, () => Promise<GraphQLSchema>> = {};
     for (const [schemaName, schemaDef] of Object.entries(options.yoga?.schemas || {})) {
       if (schemaDef.type === "local") {
         const schemaModule = await resolveRootPath(schemaDef.path, true);
-        schemaLoaders[schemaName] = cachedSchemaLoader(schemaDef, async () => await loadLocalSchema({ schemaModule }));
+        schemaCachedLoaders[schemaName] = cachedLoader<GraphQLSchema>(`schema:local:${schemaName}`, async () => await loadLocalSchema({ schemaModule }));
         addTemplate({ filename: `graphql/schemas/${schemaName}.mjs`, getContents: async () => renderLocalSchemaTemplate({ schemaModule }), write: true });
         addServerTemplate({ filename: `#graphql/schemas/${schemaName}.mjs`, getContents: async () => renderLocalSchemaTemplate({ schemaModule }) });
       }
       else if (schemaDef.type === "remote") {
-        schemaLoaders[schemaName] = cachedSchemaLoader(schemaDef, async () => await introspectRemoteSchema(schemaDef));
+        schemaCachedLoaders[schemaName] = cachedLoader<GraphQLSchema>(`schema:remote:${schemaName}`, async () => await introspectRemoteSchema(schemaDef));
         const input = {
           remoteExecutorModule,
           hooksModules: await Promise.all((schemaDef.hooks || []).map((hookPath) => resolveRootPath(hookPath, true))),
           schemaDef,
-          schemaLoader: schemaLoaders[schemaName],
+          schemaLoader: schemaCachedLoaders[schemaName],
         };
         addTemplate({ filename: `graphql/schemas/${schemaName}.mjs`, getContents: async () => await renderRemoteSchemaTemplate(input), write: true });
         addServerTemplate({ filename: `#graphql/schemas/${schemaName}.mjs`, getContents: async () => await renderRemoteSchemaTemplate(input) });
@@ -183,9 +187,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // ────────────────────────────────────────────────────────────────────────────────
 
     const sdlPath = resolveRoot(options.saveSDL || "server/graphql/schema.graphql");
-    const loadStitchedSchema = cachedSchemaLoader({ type: "stitched" }, async () => {
+    const loadCachedSchema = cachedLoader<GraphQLSchema>("schema:stitched", async () => {
       const schema = stitchSchemas({
-        subschemas: await Promise.all(Object.values(schemaLoaders).map((loader) => loader())),
+        subschemas: await Promise.all(Object.values(schemaCachedLoaders).map((loader) => loader())),
       });
 
       // Save stitched GraphQL SDL every time the schema is loaded
@@ -196,51 +200,65 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
       return schema;
     });
+
     addTemplate({ filename: "graphql/schema.mjs", getContents: () => renderSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }), write: true });
     addTemplate({ filename: "graphql/schema.d.ts", getContents: () => renderSchemaTypesTemplate(), write: true });
     addServerTemplate({ filename: "#graphql/schema.mjs", getContents: () => renderSchemaTemplate({ schemaNames: Object.keys(options.yoga?.schemas || {}) }) });
 
     // ────────────────────────────────────────────────────────────────────────────
-    // GraphQL operations, fragments & registry
+    // GraphQL operations
     // ────────────────────────────────────────────────────────────────────────────
 
-    const documentsGlob = options.client?.documents || "**/*.gql";
-
-    // Documents cache
-    let documentsCache: BuildCache<Source[]> | null = null;
-    async function loadDocumentsCached(glob: string): Promise<Source[]> {
-      const key = `documents:${glob}`;
-      if (documentsCache?.key === key) return documentsCache.data;
-      const documents = await loadDocuments(glob);
-      documentsCache = { key, data: documents };
-      return documents;
-    }
-
-    // Generate operations module
-    addTemplate({
-      filename: "graphql/operations.ts",
-      getContents: async () => await renderOperationsTemplate({
-        schema: await loadStitchedSchema(),
-        documents: await loadDocumentsCached(documentsGlob),
-      }),
-      write: true,
+    // Load documents with caching
+    const loadCachedDocuments = cachedLoader<Source[], [string]>("documents", async (documentsGlob) => {
+      try {
+        return await loadDocuments([
+          documentsGlob,
+          "!**/.cache/**",
+          "!**/.nuxt/**",
+          "!**/.output/**",
+          "!**/dist/**",
+          "!**/node_modules/**",
+        ], { loaders: [new GraphQLFileLoader()] });
+      }
+      catch {
+        return [];
+      }
     });
 
-    // Generate fragments module
-    addTemplate({
-      filename: "graphql/fragments.ts",
-      getContents: async () => await renderFragmentsTemplate({
-        documents: await loadDocumentsCached(documentsGlob),
-      }),
-      write: true,
+    // Generate operations module
+    const loadCachedOperations = cachedLoader<{ module: string; types: string }, [string]>("operations", async (documentsGlob) => {
+      const schema = await loadCachedSchema();
+      const documents = await loadCachedDocuments(documentsGlob);
+      return await renderOperationsTemplate({ schema, documents });
+    });
+
+    addTemplate({ filename: "graphql/operations.mjs", getContents: async () => (await loadCachedOperations(options.client?.documents || "**/*.gql")).module, write: true });
+    addServerTemplate({ filename: "#graphql/operations.mjs", getContents: async () => (await loadCachedOperations(options.client?.documents || "**/*.gql")).module });
+    addTemplate({ filename: "graphql/operations.d.ts", getContents: async () => (await loadCachedOperations(options.client?.documents || "**/*.gql")).types, write: true });
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // GraphQL registry
+    // ────────────────────────────────────────────────────────────────────────────
+
+    const loadCachedRegistry = cachedLoader<{ module: string; types: string }, [string]>("registry", async (documentsGlob) => {
+      const documents = await loadCachedDocuments(documentsGlob);
+      return await renderRegistryTemplate({ documents });
     });
 
     // Generate registry module
     addTemplate({
-      filename: "graphql/registry.ts",
-      getContents: async () => await renderRegistryTemplate({
-        documents: await loadDocumentsCached(documentsGlob),
-      }),
+      filename: "graphql/registry.mjs",
+      getContents: async () => (await loadCachedRegistry(options.client?.documents || "**/*.gql")).module,
+      write: true,
+    });
+    addServerTemplate({
+      filename: "#graphql/registry.mjs",
+      getContents: async () => (await loadCachedRegistry(options.client?.documents || "**/*.gql")).module,
+    });
+    addTemplate({
+      filename: "graphql/registry.d.ts",
+      getContents: async () => (await loadCachedRegistry(options.client?.documents || "**/*.gql")).types,
       write: true,
     });
 
@@ -249,7 +267,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // ────────────────────────────────────────────────────────────────────────────
 
     const configPath = resolveRoot(options.saveConfig || "graphql.config.json");
-    const config = { schema: getRelativePath(sdlPath), documents: documentsGlob };
+    const config = { schema: getRelativePath(sdlPath), documents: options.client?.documents || "**/*.gql" };
     mkdirSync(dirname(configPath), { recursive: true });
     writeFileSync(configPath, JSON.stringify(config, null, 2), { encoding: "utf-8" });
     logger.info(`GraphQL config saved to: ${cyan}${getRelativePath(configPath)}${reset}`);
@@ -279,7 +297,8 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       nuxt.hook("builder:watch", async (_event, changedPath) => {
         if (changedPath.endsWith(".gql")) {
           logger.info(`Documents change detected: ${cyan}${getRelativePath(changedPath)}${reset}`);
-          documentsCache = null;
+          buildCache.delete("documents");
+          buildCache.delete("operations");
         }
       });
     }

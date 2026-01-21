@@ -20,11 +20,9 @@ type OperationsTemplateInput = {
  * @param options.documents Parsed GraphQL documents.
  * @returns Generated TypeScript source code.
  */
-export async function renderOperationsTemplate({ schema, documents }: OperationsTemplateInput): Promise<string> {
-  // Run codegen (in-memory)
-  return await codegen({
+export async function renderOperationsTemplate({ schema, documents }: OperationsTemplateInput): Promise<{ module: string; types: string }> {
+  const content = await codegen({
     filename: "operations.ts",
-    // @graphql-codegen/core codegen supports GraphQLSchema at runtime, but types expect DocumentNode
     schema: schema as unknown as DocumentNode,
     documents,
     plugins: [
@@ -73,8 +71,35 @@ export async function renderOperationsTemplate({ schema, documents }: Operations
       typescriptOperations: typescriptOperationsPlugin,
       typedDocumentNode: typedDocumentNodePlugin,
     },
-    config: {
-
-    },
+    config: {},
   });
+
+  const docs = splitDocuments(content);
+  const module = docs.map(({ name, object }) => `export const ${name} = ${object};`).join("\n");
+  const types = `${content.replace(/export const \w+ = [\s\S]*?;\n?/g, "")}
+declare module "#graphql/operations" {
+  ${docs.map(({ name, type }) => `export type ${name} = ${type};`).join("\n  ")}
+}`.trim();
+
+  return { module, types };
+}
+
+type SplitDocument = {
+  name: string;
+  type: string;
+  object: string;
+};
+
+function splitDocuments(content: string): SplitDocument[] {
+  const documents: SplitDocument[] = [];
+  const documentRegex = /export const (\w+) = ([\s\S]*?) as unknown as (DocumentNode<[^>]+>);/g;
+  let match: RegExpExecArray | null;
+  while ((match = documentRegex.exec(content))) {
+    const [, name, object, type] = match;
+    if (!name || !object || !type) {
+      throw new Error("Invalid typed document matched while splitting documents.");
+    }
+    documents.push({ name, object: object.trim(), type });
+  }
+  return documents;
 }

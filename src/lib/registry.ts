@@ -1,23 +1,37 @@
 import { Kind } from "graphql";
 import type { Source } from "@graphql-tools/utils";
 
+// ────────────────────────────────────────────────────────────────────────────────
+// Registry template
+// ────────────────────────────────────────────────────────────────────────────────
+
 type RegistryTemplateInput = {
   documents: Source[];
 };
 
 /**
- * Render the operation registry module from GraphQL documents.
+ * Render the operation registry module / types from GraphQL documents.
  *
  * @param {RegistryTemplateInput} options Registry template input.
  * @param options.documents Parsed GraphQL documents.
  * @returns Generated TypeScript source for the registry module.
  */
-export async function renderRegistryTemplate({ documents }: RegistryTemplateInput): Promise<string> {
+export async function renderRegistryTemplate({ documents }: RegistryTemplateInput): Promise<{ module: string; types: string }> {
   const operations = collectOperations(documents);
-  return `
-import type { DocumentNode } from "graphql";
+
+  const module = `
 import {
-${operations.map(({ name }) => `  ${name}Document, type ${name}QueryVariables, type ${name}QueryResult,`).join("\n")}
+  ${operations.map(({ name }) => `${name}Document`).join(",\n  ")}
+} from "./operations";
+
+export const registry = {
+  ${operations.map(({ name, kind }) => `${name}: { kind: "${kind}", document: ${name}Document },`).join("\n  ")}
+};`.trim();
+
+  const types = `
+import type { DocumentNode } from "graphql";
+import type {
+  ${operations.map(({ name, kind }) => `${name}${capitalize(kind)}Variables, ${name}${capitalize(kind)}Result,`).join("\n  ")}
 } from "./operations";
 
 // Operation entry
@@ -30,7 +44,7 @@ export interface OperationEntry<TVariables, TResult, TKind extends "query" | "mu
 
 // Operation registry type
 export type OperationRegistry = {
-${operations.map(({ name, kind }) => `  ${name}: OperationEntry<${name}QueryVariables, ${name}QueryResult, "${kind}">;`).join("\n")}
+  ${operations.map(({ name, kind }) => `${name}: OperationEntry<${name}${capitalize(kind)}Variables, ${name}${capitalize(kind)}Result, "${kind}">;`).join("\n  ")}
 };
 
 // Operation name types
@@ -43,12 +57,17 @@ export type SubscriptionName = { [K in keyof OperationRegistry]: OperationRegist
 export type VariablesOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["variables"];
 export type ResultOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["result"];
 
+declare module "#graphql/registry" {
+  export const registry: { [K in keyof OperationRegistry]: { kind: OperationRegistry[K]["kind"]; document: DocumentNode; }; };
+  export type { OperationRegistry, OperationName, QueryName, MutationName, SubscriptionName, VariablesOf, ResultOf };
+}`.trim();
 
-// Runtime registry (document + kind only)
-export const registry: { [K in keyof OperationRegistry]: { kind: OperationRegistry[K]["kind"]; document: DocumentNode; }; } = {
-  ${operations.map(({ name, kind }) => `  ${name}: { kind: "${kind}", document: ${name}Document}, `).join("\n")}
-};`.trim();
+  return { module, types };
 }
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Registry helpers
+// ────────────────────────────────────────────────────────────────────────────────
 
 type OperationMeta = {
   name: string;
@@ -75,11 +94,13 @@ function collectOperations(documents: Source[]): OperationMeta[] {
       if (operations.has(name)) {
         throw new Error(`Duplicate GraphQL operation name "${name}"`);
       }
-      operations.set(name, {
-        name,
-        kind: def.operation,
-      });
+      operations.set(name, { name, kind: def.operation });
     }
   }
-  return [...operations.values()];
+  return Array.from(operations.values());
+}
+
+function capitalize(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FilmsFragment } from "#graphql/fragments";
+import type { FilmsFragment } from "#graphql/operations";
 
 defineProps<FilmsFragment>();
 </script>

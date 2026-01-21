@@ -250,6 +250,10 @@ type FilmsEdge {
   node: Film
 }
 
+type Mutation {
+  ping: String!
+}
+
 """An object with an ID"""
 interface Node {
   """The id of the object."""
