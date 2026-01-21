@@ -132,7 +132,6 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     // Generate context module
     const contextModules: string[] = [
-      resolveModule("./runtime/server/lib/default-context"),
       ...await Promise.all((options.yoga?.context || []).map((path) => resolveRootPath(path, true))),
     ];
     addTemplate({ filename: "graphql/context.ts", getContents: () => renderContextTemplate({ contextModules }), write: true });
