@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.6
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.5...v0.5.6)
+
+### 💅 Refactors
+
+- Operations / registry .mjs + .d.ts ([2fd7237](https://github.com/lewebsimple/nuxt-graphql/commit/2fd7237))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.5
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.4...v0.5.5)
