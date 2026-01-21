@@ -29,28 +29,8 @@ export {};
 // Server types template
 // ─────────────────────────────────────────────────────────────
 
-type ServerTemplateInput = {
-  contextModules: string[];
-};
-
-export function renderServerTypesTemplate({ contextModules }: ServerTemplateInput) {
-  const contextImports = contextModules.map((module, index) => `import createContext${index} from ${JSON.stringify(module)};`);
-  const contextTypes = ["{}", ...contextModules.map((_, index) => `Awaited<ReturnType<typeof createContext${index}>>`)];
-
+export function renderServerTypesTemplate() {
   return `
-import type { GraphQLSchema } from "graphql";
-import type { H3Event } from "h3";
-${contextImports.join("\n")}
-
-declare module "#graphql/context" {
-  export type GraphQLContext = ${contextTypes.join(" & ")};
-  export function createContext(event: H3Event): Promise<GraphQLContext>;
-}
-
-declare module "#graphql/schema" {
-  export const schema: GraphQLSchema;
-}
-
 declare module "h3" {
   interface H3EventContext {
     _graphqlInFlightRequestsMap?: Map<string, Promise<unknown>>;

@@ -7,7 +7,7 @@ import type { Source } from "@graphql-tools/utils";
 import { stitchSchemas } from "@graphql-tools/stitch";
 import { addImportsDir, addPlugin, addServerHandler, addServerImportsDir, addServerTemplate, addTemplate, addTypeTemplate, createResolver, defineNuxtModule, useLogger } from "@nuxt/kit";
 import { cyan, reset } from "./lib/colors";
-import { renderContextTemplate } from "./lib/context";
+import { renderContextTemplate, renderContextTypesTemplate } from "./lib/context";
 import { loadDocuments } from "./lib/documents";
 import { renderFragmentsTemplate } from "./lib/fragments";
 import { renderOperationsTemplate } from "./lib/operations";
@@ -132,6 +132,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     const contextModules: string[] = await Promise.all((options.yoga?.context || []).map((path) => resolveRootPath(path, true)));
     addTemplate({ filename: "graphql/context.mjs", getContents: () => renderContextTemplate({ contextModules }), write: true });
+    addTemplate({ filename: "graphql/context.d.ts", getContents: () => renderContextTypesTemplate({ contextModules }), write: true });
     addServerTemplate({ filename: "#graphql/context.mjs", getContents: () => renderContextTemplate({ contextModules }) });
 
     // ────────────────────────────────────────────────────────────────────────────────
@@ -257,8 +258,8 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // ────────────────────────────────────────────────────────────────────────────
 
     addTypeTemplate({ filename: "types/nuxt-graphql.app.d.ts", getContents: () => renderAppTypesTemplate() }, { nuxt: true });
-    addTypeTemplate({ filename: "types/nuxt-graphql.server.d.ts", getContents: () => renderServerTypesTemplate({ contextModules }) }, { nitro: true });
-    addTypeTemplate({ filename: "types/nuxt-graphql.shared.d.ts", getContents: () => renderSharedTypesTemplate() }, { nuxt: true, nitro: true });
+    addTypeTemplate({ filename: "types/nuxt-graphql.server.d.ts", getContents: () => renderServerTypesTemplate() }, { nitro: true, node: true });
+    addTypeTemplate({ filename: "types/nuxt-graphql.shared.d.ts", getContents: () => renderSharedTypesTemplate() }, { nuxt: true, nitro: true, node: true });
 
     // ─────────────────────────────────────────────────────────────
     // Runtime configuration
