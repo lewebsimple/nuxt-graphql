@@ -28,7 +28,7 @@ export async function createContext(event) {
  * @returns .d.ts source for the generated context types module.
  */
 export function renderContextTypesTemplate({ contextModules }: ContextTemplateInput): string {
-  const contextImports = contextModules.map((module, index) => `import createContext${index} from ${JSON.stringify(module)};`);
+  const contextImports = contextModules.map((module, index) => `import { createContext as createContext${index} } from ${JSON.stringify(module)};`);
   const contextTypes = ["{}", ...contextModules.map((_, index) => `Awaited<ReturnType<typeof createContext${index}>>`)];
 
   return `
