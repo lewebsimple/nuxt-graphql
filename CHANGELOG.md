@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.8
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.7...v0.5.8)
+
+### 🩹 Fixes
+
+- Context types template ([a9d38ec](https://github.com/lewebsimple/nuxt-graphql/commit/a9d38ec))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.7
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.6...v0.5.7)
