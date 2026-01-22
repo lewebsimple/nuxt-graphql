@@ -122,7 +122,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     // Nuxt aliases
     nuxt.options.alias ||= {};
-    nuxt.options.alias["#graphql"] ||= resolveBuild("graphql");
+    nuxt.options.alias["#graphql"] = resolveBuild("graphql");
 
     // Build cache helpers
     type BuildCache<TData> = { key: string; data: TData };
@@ -299,8 +299,11 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       nuxt.hook("builder:watch", async (_event, changedPath) => {
         if (changedPath.endsWith(".gql")) {
           logger.info(`Documents change detected: ${cyan}${getRelativePath(changedPath)}${reset}`);
-          buildCache.delete("documents");
-          buildCache.delete("operations");
+          for (const key of buildCache.keys()) {
+            if (key.startsWith("documents:") || key.startsWith("operations:") || key.startsWith("registry:")) {
+              buildCache.delete(key);
+            }
+          }
         }
       });
     }
