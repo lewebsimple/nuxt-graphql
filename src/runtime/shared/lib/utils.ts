@@ -1,1 +1,1 @@
-export type IsEmptyObject<T> = T extends Record<string, never> ? true : keyof T extends never ? true : false;
+export type IsEmptyObject<T> = [T] extends [never] ? true : T extends object ? keyof T extends never ? true : false : false;
