@@ -163,9 +163,8 @@ Write operations in `.gql` files; operation names become registry keys like `use
 
 By default, the module scans `**/*.gql` and generates:
 
-- Typed documents and types in virtual modules under the `#graphql/operations` alias (internal)
+- Typed documents and operations / fragments types in virtual modules under the `#graphql/operations` alias (internal)
 - Operation registry in virtual modules under the `#graphql/registry` alias (internal)
-- Fragment types in virtual modules under the `#graphql/fragments` alias
 
 Example document files:
 
@@ -198,7 +197,7 @@ That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
 Fragments are fully supported and are the recommended way to share selection sets across operations.
 
 - Fragment names must be unique across all `.gql` files (duplicates throw during generation).
-- Fragment types are re-exported from `#graphql/fragments`.
+- Fragment types are re-exported from `#graphql/operations`.
 - Fragments are not executable by themselves and are not part of the registry.
 
 Example with a fragment:
@@ -222,7 +221,7 @@ query SwapiFilms {
 From TypeScript, you can also use fragment types explicitly when needed:
 
 ```ts
-import type { TheFilmFragment } from "#graphql/fragments";
+import type { TheFilmFragment } from "#graphql/operations";
 ```
 
 
