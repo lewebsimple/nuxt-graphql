@@ -221,7 +221,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
           "!**/node_modules/**",
         ], { loaders: [new GraphQLFileLoader()] });
       }
-      catch {
+      catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(`Failed to load documents: ${message}`);
         return [];
       }
     });
