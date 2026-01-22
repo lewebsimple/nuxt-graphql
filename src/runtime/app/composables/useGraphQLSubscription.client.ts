@@ -16,7 +16,7 @@ type UseGraphQLSubscriptionReturn<TName extends SubscriptionName> = {
  * GraphQL subscription composable (client-side only).
  *
  * @param operationName Subscription operation name.
- * @param variables Subscription variables.
+ * @param args Operation variables (if any).
  * @returns Object with reactive data, error, and start/stop helpers.
  */
 export function useGraphQLSubscription<TName extends SubscriptionName>(

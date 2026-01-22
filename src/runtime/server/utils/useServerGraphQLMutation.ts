@@ -13,7 +13,7 @@ import type { IsEmptyObject } from "../../shared/lib/utils";
  *
  * @param event H3 event used to create context.
  * @param operationName Operation name from the registry.
- * @param variables Operation variables.
+ * @param args Operation variables (if any).
  * @returns SafeResult containing data or a normalized error.
  */
 export async function useServerGraphQLMutation<TName extends MutationName>(
@@ -23,9 +23,9 @@ export async function useServerGraphQLMutation<TName extends MutationName>(
     ? [variables?: VariablesOf<TName>]
     : [variables: VariablesOf<TName>]
 ): Promise<SafeResult<ResultOf<TName>>> {
+  const [variables] = args;
   try {
-    const [variables] = args;
-    const data = await executeGraphQLSchema(event, operationName, variables as VariablesOf<TName>);
+    const data = await executeGraphQLSchema<TName>(event, operationName, variables as VariablesOf<TName>);
     return { data, error: null };
   }
   catch (err) {

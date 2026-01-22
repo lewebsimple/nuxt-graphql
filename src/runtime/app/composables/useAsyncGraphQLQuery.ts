@@ -15,8 +15,7 @@ type UseAsyncGraphQLQueryOptions<TName extends QueryName> = ExecuteGraphQLHTTPOp
  * Async GraphQL query composable with caching support.
  *
  * @param operationName Operation name from the registry.
- * @param variables Operation variables (ref or getter).
- * @param options HTTP and cache options.
+ * @param args Operation variables (if any) and optional HTTP headers.
  * @returns Nuxt AsyncData wrapper for the query result.
  */
 export function useAsyncGraphQLQuery<TName extends QueryName>(

@@ -8,6 +8,7 @@ import type { IsEmptyObject } from "../../shared/lib/utils";
  * Execute a GraphQL query over HTTP with in-flight deduplication.
  *
  * @param operationName Operation name from the registry.
+ * @param args Operation variables (if any) and optional HTTP headers.
  * @returns SafeResult containing data or a normalized error.
  */
 export async function useGraphQLQuery<TName extends QueryName>(
@@ -28,7 +29,7 @@ export async function useGraphQLQuery<TName extends QueryName>(
   // Execute GraphQL HTTP request with error normalization
   const promise = (async (): Promise<SafeResult<ResultOf<TName>>> => {
     try {
-      const data = await executeGraphQLHTTP(operationName, variables, options);
+      const data = await executeGraphQLHTTP<TName>(operationName, variables, options);
       return { data, error: null };
     }
     catch (err) {
