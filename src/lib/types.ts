@@ -48,7 +48,6 @@ export {};
 export function renderSharedTypesTemplate() {
   return `
 import type { DocumentNode } from "graphql";
-import type { CacheConfig } from "nuxt-graphql/runtime/shared/lib/cache-config";
 
 declare global {
   type GraphQLCacheConfig = {
@@ -69,6 +68,5 @@ declare module "nuxt/schema" {
 }
 
 export { };
-
 `.trim();
 }
