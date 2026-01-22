@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.9
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.8...v0.5.9)
+
+### 🩹 Fixes
+
+- Proper context export from #graphql/context with defineGraphQLContext ([60e7dfa](https://github.com/lewebsimple/nuxt-graphql/commit/60e7dfa))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.8
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.7...v0.5.8)

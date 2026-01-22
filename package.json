@@ -1,6 +1,6 @@
 {
   "name": "@lewebsimple/nuxt-graphql",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "description": "Opinionated Nuxt module for using GraphQL",
   "repository": "lewebsimple/nuxt-graphql",
   "license": "AGPL-3.0-only",
