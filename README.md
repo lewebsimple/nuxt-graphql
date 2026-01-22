@@ -93,7 +93,7 @@ export default defineNuxtConfig({
 
 ### Define schema(s) (local and/or remote)
 
-**Local schemas** must live under `server/` and export a `GraphQLSchema` as `schema`. You can use the auto-imported `defineGraphQLSchema` helper for type-safety.
+**Local schemas** must live under `server/` and export a `GraphQLSchema` as `schema`.
 
 For the example configuration above, create [server/graphql/schema.ts](server/graphql/schema.ts):
 
@@ -101,7 +101,7 @@ For the example configuration above, create [server/graphql/schema.ts](server/gr
 import { createSchema } from "graphql-yoga";
 import type { GraphQLContext } from "#graphql/context";
 
-const schema = createSchema<GraphQLContext>({
+export const schema = createSchema<GraphQLContext>({
   typeDefs: /* GraphQL */ `
     type Query {
       hello: String!
@@ -132,8 +132,6 @@ const schema = createSchema<GraphQLContext>({
     },
   },
 });
-
-export default defineGraphQLSchema({ schema });
 ```
 
 **Remote schemas** are introspected at build time from the required endpoint URL and executed via an HTTP executor at runtime. Subscriptions are stripped from remote schemas.

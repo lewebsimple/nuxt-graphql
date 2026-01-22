@@ -1,10 +1,9 @@
 import { createSchema } from "graphql-yoga";
-import { defineGraphQLSchema } from "../utils/defineGraphQLSchema";
 
 /**
  * Default hello-world schema for development scaffolding.
  */
-const schema = createSchema({
+export const schema = createSchema({
   typeDefs: /* GraphQL */ `
     type Query {
       hello(name: String): String!
@@ -16,8 +15,3 @@ const schema = createSchema({
     },
   },
 });
-
-/**
- * Export the default schema definition wrapper.
- */
-export default defineGraphQLSchema({ schema });
