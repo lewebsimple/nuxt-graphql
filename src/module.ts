@@ -192,11 +192,13 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
         subschemas: await Promise.all(Object.values(schemaCachedLoaders).map((loader) => loader())),
       });
 
-      // Save stitched GraphQL SDL every time the schema is loaded
-      const sdl = await printSchemaSDL(schema);
-      mkdirSync(dirname(sdlPath), { recursive: true });
-      writeFileSync(sdlPath, sdl, { encoding: "utf-8" });
-      logger.info(`GraphQL SDL saved to: ${cyan}${getRelativePath(sdlPath)}${reset}`);
+      // Save stitched GraphQL SDL every time the schema is loaded (dev-only)
+      if (nuxt.options.dev) {
+        const sdl = await printSchemaSDL(schema);
+        mkdirSync(dirname(sdlPath), { recursive: true });
+        writeFileSync(sdlPath, sdl, { encoding: "utf-8" });
+        logger.info(`GraphQL SDL saved to: ${cyan}${getRelativePath(sdlPath)}${reset}`);
+      }
 
       return schema;
     });
