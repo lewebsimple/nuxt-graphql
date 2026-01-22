@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.5.11
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.10...v0.5.11)
+
+### 🚀 Enhancements
+
+- Save SDL in dev only ([f3ec340](https://github.com/lewebsimple/nuxt-graphql/commit/f3ec340))
+
+### 🩹 Fixes
+
+- Edge-case with IsEmptyObject type ([3705a43](https://github.com/lewebsimple/nuxt-graphql/commit/3705a43))
+- Docblock for spread arguments ([3e6458b](https://github.com/lewebsimple/nuxt-graphql/commit/3e6458b))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.10
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.9...v0.5.10)
