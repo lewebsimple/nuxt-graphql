@@ -78,7 +78,7 @@ export async function renderOperationsTemplate({ schema, documents }: Operations
   const module = docs.map(({ name, object }) => `export const ${name} = ${object};`).join("\n");
   const types = `${content.replace(/export const \w+ = [\s\S]*?;\n?/g, "")}
 declare module "#graphql/operations" {
-  ${docs.map(({ name, type }) => `export type ${name} = ${type};`).join("\n  ")}
+  ${docs.map(({ name, type }) => `export const ${name}: ${type};`).join("\n  ")}
 }`.trim();
 
   return { module, types };
