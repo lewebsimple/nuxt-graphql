@@ -1,4 +1,11 @@
 {
   "schema": "./playground/server/graphql/schema.graphql",
-  "documents": "playground/**/*.gql"
+  "documents": [
+    "playground/**/*.gql",
+    "!**/.nuxt/**",
+    "!**/.output/**",
+    "!**/dist/**",
+    "!**/node_modules/**",
+    "!**/test/**"
+  ]
 }
