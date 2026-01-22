@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.5.10
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.9...v0.5.10)
+
+### 🚀 Enhancements
+
+- Warn on document loading error ([795fb5f](https://github.com/lewebsimple/nuxt-graphql/commit/795fb5f))
+
+### 🩹 Fixes
+
+- #graphql/operations export const documents instead of type ([8a65929](https://github.com/lewebsimple/nuxt-graphql/commit/8a65929))
+- Update README.md concerning fragments types ([71693f3](https://github.com/lewebsimple/nuxt-graphql/commit/71693f3))
+- Typo in generated types ([dc3d2a2](https://github.com/lewebsimple/nuxt-graphql/commit/dc3d2a2))
+- Module graphql.config.json ([a7f9192](https://github.com/lewebsimple/nuxt-graphql/commit/a7f9192))
+- .gql file watcher rebuils documents / operations / registry ([6430b2b](https://github.com/lewebsimple/nuxt-graphql/commit/6430b2b))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.9
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.8...v0.5.9)
