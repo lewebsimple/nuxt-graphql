@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.5.12
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.11...v0.5.12)
+
+### 🩹 Fixes
+
+- Missing registry alias ([99397a5](https://github.com/lewebsimple/nuxt-graphql/commit/99397a5))
+- Remove-executor's headers input ([76b954f](https://github.com/lewebsimple/nuxt-graphql/commit/76b954f))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.11
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.10...v0.5.11)
