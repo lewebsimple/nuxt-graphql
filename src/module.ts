@@ -244,8 +244,10 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     };
 
     // Generate registry module
-    addTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)), write: true });
+    const registryDst = addTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)), write: true }).dst;
     addServerTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)) });
+    nuxtAliases["#graphql/registry"] = registryDst;
+    nitroAliases["#graphql/registry"] = registryDst;
 
     // ────────────────────────────────────────────────────────────────────────────
     // GraphQL config
