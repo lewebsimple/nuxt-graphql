@@ -3,16 +3,16 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   compatibilityDate: "latest",
   graphql: {
-    yoga: {
+    server: {
       context: ["~~/server/graphql/context"],
-      schemas: {
+      schema: {
         local: {
           type: "local",
           path: "~~/server/graphql/schema",
         },
         swapi: {
           type: "remote",
-          url: "https://swapi-graphql.netlify.app/graphql",
+          endpoint: "https://swapi-graphql.netlify.app/graphql",
           hooks: [
             "~~/server/graphql/swapi-hooks",
           ],

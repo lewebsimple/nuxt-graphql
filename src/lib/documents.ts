@@ -1,17 +1,17 @@
-import { loadDocuments as graphqlLoadDocuments } from "@graphql-tools/load";
+import { loadDocuments } from "@graphql-tools/load";
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import type { Source } from "@graphql-tools/utils";
 
 /**
- * Load GraphQL documents from a glob pattern.
+ * Load GraphQL documents from a glob pattern (cached).
  *
- * @param documents Glob pattern for .gql files.
+ * @param documentsGlob Glob pattern for .gql files.
  * @returns Parsed GraphQL sources (empty on errors).
  */
-export async function loadDocuments(documents: string): Promise<Source[]> {
+export async function getDocuments(documentsGlob: string): Promise<Source[]> {
   try {
-    return await graphqlLoadDocuments([
-      documents,
+    return await loadDocuments([
+      documentsGlob,
       "!**/.cache/**",
       "!**/.nuxt/**",
       "!**/.output/**",
@@ -19,7 +19,10 @@ export async function loadDocuments(documents: string): Promise<Source[]> {
       "!**/node_modules/**",
     ], { loaders: [new GraphQLFileLoader()] });
   }
-  catch {
-    return [];
+  catch (error) {
+    if (typeof error === "object" && error !== null && "name" in error && error.name === "NoTypeDefinitionsFound") {
+      return [];
+    }
+    throw error;
   }
-}
+};

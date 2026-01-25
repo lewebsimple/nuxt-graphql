@@ -1,42 +1,59 @@
-type ContextTemplateInput = {
-  contextModules: string[];
+// ────────────────────────────────────────────────────────────────────────────────
+// Context template
+// ────────────────────────────────────────────────────────────────────────────────
+
+export type ContextInput = {
+  importPaths: string[];
 };
 
 /**
- * Render the GraphQL context runtime module.
- *
- * @param {ContextTemplateInput} options Context template input.
- * @param options.contextModules Absolute module paths to context factories.
- * @returns .mjs source for the generated context module.
+ * Render the GraphQL context factory template
+ * @param {ContextInput} input Context template input.
+ * @returns .ts, .mjs and .d.ts source code
  */
-export function renderContextTemplate({ contextModules }: ContextTemplateInput): string {
-  const contextImports = contextModules.map((contextModule, index) => `import createContext${index} from '${contextModule}';`);
-  const contexts = contextModules.map((_, index) => `createContext${index}(event)`);
-  return `
-${contextImports.join("\n")}
+export function getContextTemplate({ importPaths }: ContextInput): { ts: string; mjs: string; dts: string } {
+  const contextImports = importPaths.map((importPath, index) => `import context${index} from ${JSON.stringify(importPath)};`);
+  const contextTypes = ["{}", ...importPaths.map((_, index) => `Awaited<ReturnType<typeof context${index}>>`)];
+  const contextTsArray = ["(event: H3Event) => ({})", ...importPaths.map((_, index) => `context${index}`)];
+  const contextMjsArray = ["(event) => ({})", ...importPaths.map((_, index) => `context${index}`)];
 
-export async function createContext(event) {
-  const parts = await Promise.all([${contexts.join(", ")}]);
-  return Object.assign({}, ...parts);
-}`.trim();
-}
-
-/**
- * Render the GraphQL context types module.
- * @param {ContextTemplateInput} options Context template input.
- * @param options.contextModules Absolute module paths to context factories.
- * @returns .d.ts source for the generated context types module.
- */
-export function renderContextTypesTemplate({ contextModules }: ContextTemplateInput): string {
-  const contextImports = contextModules.map((module, index) => `import createContext${index} from ${JSON.stringify(module)};`);
-  const contextTypes = ["{}", ...contextModules.map((_, index) => `Awaited<ReturnType<typeof createContext${index}>>`)];
-
-  return `
+  const types = `
 import type { H3Event } from "h3";
 ${contextImports.join("\n")}
 
-declare module "#graphql/context" {
-  export type GraphQLContext = ${contextTypes.join(" & ")};
-  export function createContext(event: H3Event): Promise<GraphQLContext>;
+export type GraphQLContext = ${contextTypes.join(" & ")};
+  `.trim();
+
+  const ts = `
+${types}
+
+const contextFactories = [${contextTsArray.join(", ")}];
+
+export async function createContext(event: H3Event): Promise<GraphQLContext> {
+  return Object.assign(
+    {},
+    ...await Promise.all(contextFactories.map((factory) => factory(event)))
+  )
 }`.trim();
+
+  const mjs = `
+${contextImports.join("\n")}
+
+const contextFactories = [${contextMjsArray.join(", ")}];
+
+export async function createContext(event) {
+  return Object.assign(
+    {},
+    ...await Promise.all(contextFactories.map((factory) => factory(event)))
+  )
+}
+  `.trim();
+
+  const dts = `
+${types}
+
+export async function createContext(event: H3Event): Promise<GraphQLContext>;
+  `.trim();
+
+  return { ts, mjs, dts };
 }

@@ -8,8 +8,8 @@ export default defineNuxtConfig({
     client: {
       documents: "test/**/*.gql",
     },
-    yoga: {
-      schemas: {
+    server: {
+      schema: {
         local: {
           type: "local",
           path: "~~/server/graphql/schema",

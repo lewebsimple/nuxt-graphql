@@ -7,24 +7,27 @@ import * as typescriptPlugin from "@graphql-codegen/typescript";
 import * as typescriptOperationsPlugin from "@graphql-codegen/typescript-operations";
 import * as typedDocumentNodePlugin from "@graphql-codegen/typed-document-node";
 
-type OperationsTemplateInput = {
-  schema: GraphQLSchema;
-  documents: Source[];
+// ────────────────────────────────────────────────────────────────────────────────
+// Operations template (cached GraphQL Codegen)
+// ────────────────────────────────────────────────────────────────────────────────
+
+export type OperationsInput = {
+  loadSchema: () => Promise<GraphQLSchema>;
+  loadDocuments: (documentGlob: string) => Promise<Source[]>;
+  documentGlob: string;
 };
 
 /**
- * Render the typed operations template using GraphQL Codegen.
+ * Render typed operations template using GraphQL Codegen.
  *
- * @param {OperationsTemplateInput} options Operations template input.
- * @param options.schema Stitched GraphQL schema.
- * @param options.documents Parsed GraphQL documents.
+ * @param {OperationsInput} input Operations template input.
  * @returns Generated TypeScript source code.
  */
-export async function renderOperationsTemplate({ schema, documents }: OperationsTemplateInput): Promise<{ module: string; types: string }> {
+export async function getOperationsTemplate({ loadSchema, loadDocuments, documentGlob }: OperationsInput): Promise<string> {
   const content = await codegen({
     filename: "operations.ts",
-    schema: schema as unknown as DocumentNode,
-    documents,
+    schema: await loadSchema() as unknown as DocumentNode,
+    documents: await loadDocuments(documentGlob),
     plugins: [
       {
         typescript: {
@@ -73,33 +76,5 @@ export async function renderOperationsTemplate({ schema, documents }: Operations
     },
     config: {},
   });
-
-  const docs = splitDocuments(content);
-  const module = docs.map(({ name, object }) => `export const ${name} = ${object};`).join("\n");
-  const types = `${content.replace(/export const \w+ = [\s\S]*?;\n?/g, "")}
-declare module "#graphql/operations" {
-  ${docs.map(({ name, type }) => `export const ${name}: ${type};`).join("\n  ")}
-}`.trim();
-
-  return { module, types };
-}
-
-type SplitDocument = {
-  name: string;
-  type: string;
-  object: string;
-};
-
-function splitDocuments(content: string): SplitDocument[] {
-  const documents: SplitDocument[] = [];
-  const documentRegex = /export const (\w+) = ([\s\S]*?) as unknown as (DocumentNode<[^>]+>);/g;
-  let match: RegExpExecArray | null;
-  while ((match = documentRegex.exec(content))) {
-    const [, name, object, type] = match;
-    if (!name || !object || !type) {
-      throw new Error("Invalid typed document matched while splitting documents.");
-    }
-    documents.push({ name, object: object.trim(), type });
-  }
-  return documents;
+  return content;
 }

@@ -1,9 +1,4 @@
 export default defineNuxtConfig({
-  typescript: {
-    nodeTsConfig: {
-      include: ["./.nuxt/types/nuxt-graphql.*"],
-    },
-  },
   graphql: {
     client: {
       documents: "./src/**/*.gql",
