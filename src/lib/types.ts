@@ -2,7 +2,7 @@
 // App types template
 // ─────────────────────────────────────────────────────────────
 
-export function renderAppTypesTemplate() {
+export function getAppTypesTemplate() {
   return `
 import type { GraphQLClient } from "graphql-request";
 import type { Client as SSEClient } from "graphql-sse";
@@ -29,7 +29,7 @@ export {};
 // Server types template
 // ─────────────────────────────────────────────────────────────
 
-export function renderServerTypesTemplate() {
+export function getServerTypesTemplate() {
   return `
 declare module "h3" {
   interface H3EventContext {
@@ -45,7 +45,7 @@ export {};
 // Shared types template
 // ─────────────────────────────────────────────────────────────
 
-export function renderSharedTypesTemplate() {
+export function getSharedTypesTemplate() {
   return `
 import type { DocumentNode } from "graphql";
 

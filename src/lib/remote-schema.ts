@@ -1,5 +1,6 @@
 import { GraphQLSchema, buildClientSchema, getIntrospectionQuery } from "graphql";
 import { getSchemaSDL } from "./schema";
+import { splitModule } from "./split-module";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Remote schema template
@@ -13,12 +14,12 @@ export type RemoteSchemaInput = {
 /**
  * Render remote GraphQL schema template.
  * @param {RemoteSchemaInput} input Remote schema template input.
- * @returns TypeScript source code.
+ * @returns .ts / .mjs source code.
  */
-export async function getRemoteSchemaTemplate({ endpoint, loadSchema }: RemoteSchemaInput): Promise<string> {
+export async function getRemoteSchemaTemplate({ endpoint, loadSchema }: RemoteSchemaInput): Promise<{ ts: string; mjs: string; dts: string }> {
   const schema = await loadSchema();
   const sdl = getSchemaSDL(schema);
-  return `
+  const ts = `
 import { buildSchema } from "graphql";
 import { buildHTTPExecutor } from "@graphql-tools/executor-http";
 
@@ -35,6 +36,8 @@ export const schema = {
   executor,
 }
   `.trim();
+
+  return { ts, ...splitModule(ts) };
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

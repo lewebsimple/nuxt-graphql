@@ -1,5 +1,6 @@
 import { Kind } from "graphql";
 import type { Source } from "@graphql-tools/utils";
+import { splitModule } from "./split-module";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Registry template
@@ -14,9 +15,9 @@ export type RegistryInput = {
  * Render the operation registry module / types from GraphQL documents.
  *
  * @param {RegistryInput} input Registry template input.
- * @returns Generated TypeScript source for the registry module.
+ * @returns Generated .ts / .mjs / .d.ts source for the registry module.
  */
-export async function getRegistryTemplate({ loadDocuments, documentGlob }: RegistryInput): Promise<string> {
+export async function getRegistryTemplate({ loadDocuments, documentGlob }: RegistryInput): Promise<{ ts: string; mjs: string; dts: string }> {
   const documents = await loadDocuments(documentGlob);
   const operations = collectOperations(documents);
 
@@ -57,7 +58,8 @@ export type ResultOf<TName extends keyof OperationRegistry> = OperationRegistry[
 export const registry: { [K in keyof OperationRegistry]: { kind: OperationRegistry[K]["kind"]; document: DocumentNode; }; } = {
   ${operations.map(({ name, kind }) => `${name}: { kind: "${kind}", document: ${name}Document },`).join("\n  ")}
 };`.trim();
-  return ts;
+
+  return { ts, ...splitModule(ts) };
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

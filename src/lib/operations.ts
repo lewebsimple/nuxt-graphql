@@ -6,6 +6,7 @@ import type { Source } from "@graphql-tools/utils";
 import * as typescriptPlugin from "@graphql-codegen/typescript";
 import * as typescriptOperationsPlugin from "@graphql-codegen/typescript-operations";
 import * as typedDocumentNodePlugin from "@graphql-codegen/typed-document-node";
+import { splitModule } from "./split-module";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Operations template (cached GraphQL Codegen)
@@ -21,10 +22,10 @@ export type OperationsInput = {
  * Render typed operations template using GraphQL Codegen.
  *
  * @param {OperationsInput} input Operations template input.
- * @returns Generated TypeScript source code.
+ * @returns Generated .ts / .mjs / .d.ts source code.
  */
-export async function getOperationsTemplate({ loadSchema, loadDocuments, documentGlob }: OperationsInput): Promise<string> {
-  const content = await codegen({
+export async function getOperationsTemplate({ loadSchema, loadDocuments, documentGlob }: OperationsInput): Promise<{ ts: string; mjs: string; dts: string }> {
+  const ts = await codegen({
     filename: "operations.ts",
     schema: await loadSchema() as unknown as DocumentNode,
     documents: await loadDocuments(documentGlob),
@@ -76,5 +77,5 @@ export async function getOperationsTemplate({ loadSchema, loadDocuments, documen
     },
     config: {},
   });
-  return content;
+  return { ts, ...splitModule(ts) };
 }

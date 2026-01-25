@@ -22,7 +22,7 @@ import { getContextTemplate, type ContextInput } from "./lib/context";
 import { getRelativePath, removeExtension } from "./lib/path";
 import { getRemoteSchemaTemplate, introspectRemoteSchema, type RemoteSchemaInput } from "./lib/remote-schema";
 import { getDefaultSchema, getSchemaSDL, getSchemaTemplate, loadLocalSchema, type SchemaDef, type SchemaInput } from "./lib/schema";
-import { renderAppTypesTemplate, renderServerTypesTemplate, renderSharedTypesTemplate } from "./lib/types";
+import { getAppTypesTemplate, getServerTypesTemplate, getSharedTypesTemplate } from "./lib/types";
 import { resolveCacheConfig } from "./runtime/shared/lib/cache";
 import { getDocuments } from "./lib/documents";
 import { getOperationsTemplate, type OperationsInput } from "./lib/operations";
@@ -127,12 +127,10 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // @see https://github.com/nuxt/nuxt/discussions/34154
     let contextDst: string;
     if (nuxt.options.dev || process.env.NUXT_MODULE_PREPARE) {
-      logger.info("Development mode detected: using TypeScript GraphQL context template.");
       contextDst = addTemplate({ filename: "graphql/context.ts", getContents: () => getContextTemplate(contextInput).ts, write: true }).dst;
       addServerTemplate({ filename: "graphql/context.mjs", getContents: () => getContextTemplate(contextInput).mjs });
     }
     else {
-      logger.info("Production mode detected: using MJS GraphQL context template.");
       contextDst = addTemplate({ filename: "graphql/context.mjs", getContents: () => getContextTemplate(contextInput).mjs, write: true }).dst;
       addServerTemplate({ filename: "graphql/context.mjs", getContents: () => getContextTemplate(contextInput).mjs });
       addTypeTemplate({ filename: "graphql/context.d.ts", getContents: () => getContextTemplate(contextInput).dts });
@@ -167,9 +165,15 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
           endpoint,
           loadSchema: getCachedLoader<GraphQLSchema>(`schema:remote:${schemaName}`, async () => await introspectRemoteSchema({ endpoint })),
         };
-        const filename = `graphql/schemas/${schemaName}.ts`;
-        addTemplate({ filename, getContents: async () => await getRemoteSchemaTemplate(remoteSchemaInput), write: true });
-        addServerTemplate({ filename, getContents: async () => await getRemoteSchemaTemplate(remoteSchemaInput) });
+        if (nuxt.options.dev) {
+          addTemplate({ filename: `graphql/schemas/${schemaName}.ts`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).ts, write: true });
+          addServerTemplate({ filename: `graphql/schemas/${schemaName}.ts`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).ts });
+        }
+        else {
+          addTemplate({ filename: `graphql/schemas/${schemaName}.mjs`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).mjs, write: true });
+          addServerTemplate({ filename: `graphql/schemas/${schemaName}.mjs`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).mjs });
+          addTypeTemplate({ filename: `graphql/schemas/${schemaName}.d.ts`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).dts });
+        }
         schemaInput.remote[schemaName] = { importPath: `./schemas/${schemaName}` };
         schemaLoaders[schemaName] = remoteSchemaInput.loadSchema;
       }
@@ -181,8 +185,8 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     }
 
     // Stitched schema
-    const schemaDst = addTemplate({ filename: `graphql/schema.ts`, getContents: () => getSchemaTemplate(schemaInput), write: true }).dst;
-    addServerTemplate({ filename: `graphql/schema.ts`, getContents: () => getSchemaTemplate(schemaInput) });
+    const schemaDst = addTemplate({ filename: `graphql/schema.ts`, getContents: () => getSchemaTemplate(schemaInput).ts, write: true }).dst;
+    addServerTemplate({ filename: `graphql/schema.ts`, getContents: () => getSchemaTemplate(schemaInput).ts });
     nuxtAliases["#graphql/schema"] = schemaDst;
     nitroAliases["#graphql/schema"] = schemaDst;
 
@@ -229,8 +233,16 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       documentGlob: options.client?.documents || "**/*.gql",
     };
 
-    const operationsDst = addTemplate({ filename: "graphql/operations.ts", getContents: async () => (await getOperationsTemplate(operationsInput)), write: true }).dst;
-    addServerTemplate({ filename: "graphql/operations.ts", getContents: async () => (await getOperationsTemplate(operationsInput)) });
+    let operationsDst: string;
+    if (nuxt.options.dev || process.env.NUXT_MODULE_PREPARE) {
+      operationsDst = addTemplate({ filename: "graphql/operations.ts", getContents: async () => (await getOperationsTemplate(operationsInput)).ts, write: true }).dst;
+      addServerTemplate({ filename: "graphql/operations.ts", getContents: async () => (await getOperationsTemplate(operationsInput)).ts });
+    }
+    else {
+      operationsDst = addTemplate({ filename: "graphql/operations.mjs", getContents: async () => (await getOperationsTemplate(operationsInput)).mjs, write: true }).dst;
+      addServerTemplate({ filename: "graphql/operations.mjs", getContents: async () => (await getOperationsTemplate(operationsInput)).mjs });
+      addTypeTemplate({ filename: "graphql/operations.d.ts", getContents: async () => (await getOperationsTemplate(operationsInput)).dts });
+    }
     nuxtAliases["#graphql/operations"] = operationsDst;
     nitroAliases["#graphql/operations"] = operationsDst;
 
@@ -244,8 +256,16 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     };
 
     // Generate registry module
-    const registryDst = addTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)), write: true }).dst;
-    addServerTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)) });
+    let registryDst: string;
+    if (nuxt.options.dev || process.env.NUXT_MODULE_PREPARE) {
+      registryDst = addTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)).ts, write: true }).dst;
+      addServerTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)).ts });
+    }
+    else {
+      registryDst = addTemplate({ filename: "graphql/registry.mjs", getContents: async () => (await getRegistryTemplate(registryInput)).mjs, write: true }).dst;
+      addServerTemplate({ filename: "graphql/registry.mjs", getContents: async () => (await getRegistryTemplate(registryInput)).mjs });
+      addTypeTemplate({ filename: "graphql/registry.d.ts", getContents: async () => (await getRegistryTemplate(registryInput)).dts });
+    }
     nuxtAliases["#graphql/registry"] = registryDst;
     nitroAliases["#graphql/registry"] = registryDst;
 
@@ -275,9 +295,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // Types injection
     // ────────────────────────────────────────────────────────────────────────────
 
-    addTypeTemplate({ filename: "types/nuxt-graphql.app.d.ts", getContents: () => renderAppTypesTemplate() }, { nuxt: true });
-    addTypeTemplate({ filename: "types/nuxt-graphql.server.d.ts", getContents: () => renderServerTypesTemplate() }, { nitro: true, node: true });
-    addTypeTemplate({ filename: "types/nuxt-graphql.shared.d.ts", getContents: () => renderSharedTypesTemplate() }, { nuxt: true, nitro: true, node: true });
+    addTypeTemplate({ filename: "types/nuxt-graphql.app.d.ts", getContents: () => getAppTypesTemplate() }, { nuxt: true });
+    addTypeTemplate({ filename: "types/nuxt-graphql.server.d.ts", getContents: () => getServerTypesTemplate() }, { nitro: true, node: true });
+    addTypeTemplate({ filename: "types/nuxt-graphql.shared.d.ts", getContents: () => getSharedTypesTemplate() }, { nuxt: true, nitro: true, node: true });
 
     // ─────────────────────────────────────────────────────────────
     // Runtime configuration

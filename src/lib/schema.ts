@@ -1,6 +1,7 @@
 import type { GraphQLSchema } from "graphql";
 import { buildSchema, lexicographicSortSchema, printSchema } from "graphql";
 import type { HeadersInput } from "../runtime/shared/lib/headers";
+import { splitModule } from "./split-module";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Schema definitions (local / remote)
@@ -24,7 +25,7 @@ export type SchemaInput = {
  * @param {SchemaInput} input Schema template input.
  * @returns TypeScript source code.
  */
-export function getSchemaTemplate({ local, remote }: SchemaInput): string {
+export function getSchemaTemplate({ local, remote }: SchemaInput): { ts: string; mjs: string; dts: string } {
   const localImports = Object.entries(local).map(([name, { importPath }]) => `import { schema as ${name}LocalSchema } from ${JSON.stringify(importPath)};`);
   const localSchemas = Object.keys(local).map((name) => `${name}LocalSchema`);
   const mergedSchema = `mergeSchemas({ schemas: [${localSchemas.join(", ")}] })`;
@@ -45,7 +46,7 @@ export const schema = stitchSchemas({
 });
   `.trim();
 
-  return ts;
+  return { ts, ...splitModule(ts) };
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
