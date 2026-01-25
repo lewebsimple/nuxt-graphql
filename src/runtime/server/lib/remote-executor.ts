@@ -2,10 +2,10 @@ import type { ExecutionRequest, Executor } from "@graphql-tools/utils";
 import { buildHTTPExecutor } from "@graphql-tools/executor-http";
 import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
 import type { GraphQLRemoteExecHooks } from "../utils/defineRemoteExecutorHooks";
-import type { RemoteSchemaDef } from "../../../lib/schemas";
+import type { RemoteSchemaDef } from "../../../lib/schema";
 
 // Create a remote executor for a given remote schema definition
-type CreateRemoteExecutorInput = Pick<RemoteSchemaDef, "url" | "headers"> & {
+type CreateRemoteExecutorInput = Pick<RemoteSchemaDef, "endpoint" | "headers"> & {
   hooks: GraphQLRemoteExecHooks[];
 };
 
@@ -18,7 +18,7 @@ type CreateRemoteExecutorInput = Pick<RemoteSchemaDef, "url" | "headers"> & {
  * @param options.hooks Per-operation hooks.
  * @returns Executor function for GraphQL Tools.
  */
-export function createRemoteExecutor({ url, headers, hooks }: CreateRemoteExecutorInput): Executor {
+export function createRemoteExecutor({ endpoint, headers, hooks }: CreateRemoteExecutorInput): Executor {
   // Merge static and request-provided headers.
   function getHeaders(request?: ExecutionRequest): Record<string, string> {
     const extHeaders: HeadersInput = request?.extensions?.headers || {};
@@ -27,7 +27,7 @@ export function createRemoteExecutor({ url, headers, hooks }: CreateRemoteExecut
   }
 
   const executor = buildHTTPExecutor({
-    endpoint: url,
+    endpoint,
     headers: (request) => getHeaders(request),
     fetch: globalThis.fetch,
   });

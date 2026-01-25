@@ -1,12 +1,13 @@
 import type { GraphQLSchema } from "graphql";
 import { buildSchema, lexicographicSortSchema, printSchema } from "graphql";
+import type { HeadersInput } from "../runtime/shared/lib/headers";
 
 // ────────────────────────────────────────────────────────────────────────────────
 // Schema definitions (local / remote)
 // ────────────────────────────────────────────────────────────────────────────────
 
 export type LocalSchemaDef = { type: "local"; path: string };
-export type RemoteSchemaDef = { type: "remote"; endpoint: string };
+export type RemoteSchemaDef = { type: "remote"; endpoint: string; headers?: HeadersInput };
 export type SchemaDef = LocalSchemaDef | RemoteSchemaDef;
 
 // ────────────────────────────────────────────────────────────────────────────────

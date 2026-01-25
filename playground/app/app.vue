@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { data, error } = await useGraphQLQuery("AllFilms");
+const { data, error } = await useGraphQLQuery("AllFilms", {});
 if (error) throw new Error(error.message);
 </script>
 
