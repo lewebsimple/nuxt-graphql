@@ -27,7 +27,6 @@ import { resolveCacheConfig } from "./runtime/shared/lib/cache";
 import { getDocuments } from "./lib/documents";
 import { getOperationsTemplate, type OperationsInput } from "./lib/operations";
 import { getRegistryTemplate, type RegistryInput } from "./lib/registry";
-import { version } from "../package.json";
 
 // Nuxt GraphQL module options
 export interface NuxtGraphQLModuleOptions {
@@ -99,7 +98,6 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
     // Build-time logger
     const logger = useLogger("@lewebsimple/nuxt-graphql");
-    logger.info(`Initializing @lewebsimple/nuxt-graphql v${version}`);
 
     // Module resolver
     const { resolve: resolveModule } = createResolver(import.meta.url);
@@ -197,21 +195,21 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     const sdlPath = resolveRoot(options.saveSDL || "server/graphql/schema.graphql");
 
     const loadSchema = getCachedLoader<GraphQLSchema>("schema:stitched", async () => {
+      // Stitch subschemas
       const subschemas = await Promise.all(Object.values(schemaLoaders).map((loadSchema) => loadSchema()));
       if (subschemas.length === 0) {
         logger.warn(`No GraphQL schemas defined: using default empty schema.`);
         subschemas.push(getDefaultSchema());
       }
-      const schema = stitchSchemas({
-        subschemas,
-      });
+      const schema = stitchSchemas({ subschemas });
 
-      // Save SDL to file
-      const sdl = getSchemaSDL(schema);
-      mkdirSync(dirname(sdlPath), { recursive: true });
-      writeFileSync(sdlPath, sdl, { encoding: "utf-8" });
-      logger.info(`Stitched GraphQL SDL saved to: ${cyan}${getRelativePath(rootDir, sdlPath)}${reset}`);
-
+      // Save SDL to file (dev mode only)
+      if (nuxt.options.dev) {
+        const sdl = getSchemaSDL(schema);
+        mkdirSync(dirname(sdlPath), { recursive: true });
+        writeFileSync(sdlPath, sdl, { encoding: "utf-8" });
+        logger.info(`Stitched GraphQL SDL saved to: ${cyan}${getRelativePath(rootDir, sdlPath)}${reset}`);
+      }
       return schema;
     });
 
@@ -273,14 +271,16 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // GraphQL config
     // ────────────────────────────────────────────────────────────────────────────
 
-    const configPath = resolveRoot(options.saveConfig || "graphql.config.json");
-    const config = {
-      schema: getRelativePath(rootDir, sdlPath),
-      documents: options.client?.documents || "**/*.gql",
-    };
-    mkdirSync(dirname(configPath), { recursive: true });
-    writeFileSync(configPath, JSON.stringify(config, null, 2), { encoding: "utf-8" });
-    logger.info(`GraphQL config saved to: ${cyan}${getRelativePath(rootDir, configPath)}${reset}`);
+    if (nuxt.options.dev) {
+      const configPath = resolveRoot(options.saveConfig || "graphql.config.json");
+      const config = {
+        schema: getRelativePath(rootDir, sdlPath),
+        documents: options.client?.documents || "**/*.gql",
+      };
+      mkdirSync(dirname(configPath), { recursive: true });
+      writeFileSync(configPath, JSON.stringify(config, null, 2), { encoding: "utf-8" });
+      logger.info(`GraphQL config saved to: ${cyan}${getRelativePath(rootDir, configPath)}${reset}`);
+    }
 
     // ────────────────────────────────────────────────────────────────────────────
     // Nuxt / Nitro aliases
