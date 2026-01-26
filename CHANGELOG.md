@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.5.13
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.12...v0.5.13)
+
+### 🚀 Enhancements
+
+- Save sdl / graphql config in dev mode onle ([bfc1993](https://github.com/lewebsimple/nuxt-graphql/commit/bfc1993))
+
+### 🩹 Fixes
+
+- Templates as .ts / .mjs / .d.ts ([d227b69](https://github.com/lewebsimple/nuxt-graphql/commit/d227b69))
+- Remote executor headers / hooks ([a01b7a3](https://github.com/lewebsimple/nuxt-graphql/commit/a01b7a3))
+
+### 🏡 Chore
+
+- Update deps ([4b0a458](https://github.com/lewebsimple/nuxt-graphql/commit/4b0a458))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.12
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.11...v0.5.12)
