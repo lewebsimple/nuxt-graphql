@@ -1,6 +1,5 @@
 import type { GraphQLSchema } from "graphql";
 import { buildSchema, lexicographicSortSchema, printSchema } from "graphql";
-import type { HeadersInput } from "../runtime/shared/lib/headers";
 import { splitModule } from "./split-module";
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -8,7 +7,7 @@ import { splitModule } from "./split-module";
 // ────────────────────────────────────────────────────────────────────────────────
 
 export type LocalSchemaDef = { type: "local"; path: string };
-export type RemoteSchemaDef = { type: "remote"; endpoint: string; headers?: HeadersInput };
+export type RemoteSchemaDef = { type: "remote"; endpoint: string; headers?: HeadersInput; hooks?: string[] };
 export type SchemaDef = LocalSchemaDef | RemoteSchemaDef;
 
 // ────────────────────────────────────────────────────────────────────────────────

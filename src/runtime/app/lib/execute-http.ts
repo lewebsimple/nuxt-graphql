@@ -1,6 +1,6 @@
 import { useNuxtApp } from "#app";
 import type { QueryName, MutationName, ResultOf, VariablesOf } from "#graphql/registry";
-import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
+import { mergeHeaders } from "../../shared/lib/headers";
 import { getOperationDocument } from "../../shared/lib/registry";
 
 export type ExecuteGraphQLHTTPOptions = {

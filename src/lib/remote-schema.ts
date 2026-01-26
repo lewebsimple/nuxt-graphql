@@ -8,6 +8,8 @@ import { splitModule } from "./split-module";
 
 export type RemoteSchemaInput = {
   endpoint: string;
+  headers: HeadersInput;
+  hooks: { importPath: string }[];
   loadSchema: () => Promise<GraphQLSchema>;
 };
 
@@ -16,16 +18,21 @@ export type RemoteSchemaInput = {
  * @param {RemoteSchemaInput} input Remote schema template input.
  * @returns .ts / .mjs source code.
  */
-export async function getRemoteSchemaTemplate({ endpoint, loadSchema }: RemoteSchemaInput): Promise<{ ts: string; mjs: string; dts: string }> {
+export async function getRemoteSchemaTemplate({ endpoint, headers, hooks, loadSchema }: RemoteSchemaInput): Promise<{ ts: string; mjs: string; dts: string }> {
+  const hooksImports = hooks.map((hook, index) => `import hook${index} from ${JSON.stringify(hook.importPath)};`);
+  const hooksArray = hooks.map((_, index) => `hook${index}`);
   const schema = await loadSchema();
   const sdl = getSchemaSDL(schema);
+
   const ts = `
 import { buildSchema } from "graphql";
-import { buildHTTPExecutor } from "@graphql-tools/executor-http";
+import { createRemoteExecutor } from "#graphql/runtime/remote-executor";
+${hooksImports.join("\n")}
 
-const executor = buildHTTPExecutor({
+const executor = createRemoteExecutor({
   endpoint: "${endpoint}",
-  fetch: globalThis.fetch,
+  headers: ${JSON.stringify(headers)},
+  hooks: [${hooksArray.join(", ")}],
 });
 
 const sdl = \`${sdl.replace(/`/g, "\\`")}\`;

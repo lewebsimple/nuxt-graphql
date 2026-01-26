@@ -137,6 +137,13 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     nitroAliases["#graphql/context"] = contextDst;
 
     // ────────────────────────────────────────────────────────────────────────────────
+    // Runtime helpers
+    // ────────────────────────────────────────────────────────────────────────────────
+
+    nuxtAliases["#graphql/runtime/remote-executor"] = resolveModule("./runtime/server/lib/remote-executor");
+    nitroAliases["#graphql/runtime/remote-executor"] = resolveModule("./runtime/server/lib/remote-executor");
+
+    // ────────────────────────────────────────────────────────────────────────────────
     // GraphQL schema
     // ────────────────────────────────────────────────────────────────────────────────
 
@@ -161,6 +168,8 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
         const { endpoint } = schemaDef;
         const remoteSchemaInput: RemoteSchemaInput = {
           endpoint,
+          headers: schemaDef.headers || {},
+          hooks: await Promise.all((schemaDef.hooks || []).map(async (hookPath) => ({ importPath: await resolveRootPath(hookPath) }))),
           loadSchema: getCachedLoader<GraphQLSchema>(`schema:remote:${schemaName}`, async () => await introspectRemoteSchema({ endpoint })),
         };
         if (nuxt.options.dev) {

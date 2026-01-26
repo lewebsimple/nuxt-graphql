@@ -1,14 +1,7 @@
 import type { ExecutionRequest, Executor } from "@graphql-tools/utils";
 import { buildHTTPExecutor } from "@graphql-tools/executor-http";
-import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
-import type { GraphQLRemoteExecHooks } from "../utils/defineRemoteExecutorHooks";
-import type { RemoteSchemaDef } from "../../../lib/schema";
-
-// Create a remote executor for a given remote schema definition
-type CreateRemoteExecutorInput = Pick<RemoteSchemaDef, "endpoint" | "headers"> & {
-  hooks: GraphQLRemoteExecHooks[];
-};
-
+import { mergeHeaders } from "../../shared/lib/headers";
+import type { CreateRemoteExecutorInput } from "#graphql/runtime/remote-executor";
 /**
  * Create an HTTP executor for a remote GraphQL schema.
  *

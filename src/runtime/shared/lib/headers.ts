@@ -1,11 +1,4 @@
 /**
- * Header map where:
- * - string  → set / override header
- * - null    → delete header
- */
-export type HeadersInput = Record<string, string | null>;
-
-/**
  * Merge multiple header inputs into a single Headers instance.
  *
  * @param inputs Header input objects (later inputs override earlier).
