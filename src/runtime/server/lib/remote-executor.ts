@@ -1,8 +1,10 @@
 import { print } from "graphql";
 import type { ExecutionRequest, ExecutionResult } from "@graphql-tools/utils";
+import type { GraphQLContext } from "#graphql/context";
 import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
+import type { GraphQLVariables } from "../../shared/lib/types";
 
-type GraphQLExecutionRequest = ExecutionRequest & { extensions?: { headers?: HeadersInput } };
+type GraphQLExecutionRequest = ExecutionRequest<GraphQLVariables, GraphQLContext> & { extensions?: { headers?: HeadersInput } };
 type GraphQLExecutionResult<TData = unknown> = ExecutionResult<TData>;
 
 export type GraphQLRemoteExecHooks<TData = unknown> = {
