@@ -1,10 +1,7 @@
 import { createStorage } from "unstorage";
 import localStorageDriver from "unstorage/drivers/localstorage";
 
-type PersistedPayload<T> = {
-  value: T;
-  expiresAt: number | null;
-};
+type PersistedPayload<T> = { value: T; expiresAt: number | null };
 
 /**
  * Determine whether localStorage-backed persistence is available.
@@ -16,6 +13,7 @@ function isPersistedStorageAvailable(): boolean {
 }
 
 let storage: ReturnType<typeof createStorage> | null = null;
+
 /**
  * Lazily create the persisted storage instance.
  *

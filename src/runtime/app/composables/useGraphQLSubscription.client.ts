@@ -3,7 +3,7 @@ import { onScopeDispose, shallowRef, useNuxtApp, type Ref } from "#imports";
 import type { ResultOf, SubscriptionName, VariablesOf } from "#graphql/registry";
 import { normalizeError, type NormalizedError } from "../../shared/lib/error";
 import { getOperationDocument } from "../../shared/lib/registry";
-import type { IsEmptyObject } from "../../shared/lib/utils";
+import type { IsEmptyObject } from "../../shared/lib/types";
 
 type UseGraphQLSubscriptionReturn<TName extends SubscriptionName> = {
   data: Readonly<Ref<ResultOf<TName> | null>>;
@@ -25,9 +25,9 @@ export function useGraphQLSubscription<TName extends SubscriptionName>(
     ? [variables?: VariablesOf<TName>]
     : [variables: VariablesOf<TName>]
 ): UseGraphQLSubscriptionReturn<TName> {
+  const { $getGraphQLSSEClient } = useNuxtApp();
   const [variables] = args;
 
-  const { $getGraphQLSSEClient } = useNuxtApp();
   const document = getOperationDocument(operationName);
   const query = print(document);
 

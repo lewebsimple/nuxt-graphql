@@ -1,41 +1,31 @@
-import { ref } from "#imports";
+import { useNuxtApp } from "#app";
+import { ref } from "vue";
 import type { MutationName, ResultOf, VariablesOf } from "#graphql/registry";
-import { executeGraphQLHTTP, type ExecuteGraphQLHTTPOptions } from "../lib/execute-http";
-import { normalizeError, type SafeResult } from "../../shared/lib/error";
-import type { IsEmptyObject } from "../../shared/lib/utils";
+import type { ExecuteGraphQLResult, IsEmptyObject } from "../../shared/lib/types";
+import { getOperationDocument } from "../../shared/lib/registry";
 
-/**
- * GraphQL mutation composable with pending state.
- *
- * @param operationName Operation name from the registry.
- * @param options HTTP options including headers.
- * @returns Mutation helpers and pending ref.
- */
 export function useGraphQLMutation<TName extends MutationName>(
   operationName: TName,
-  options?: ExecuteGraphQLHTTPOptions,
 ) {
+  const { $executeGraphQL } = useNuxtApp();
+  const document = getOperationDocument(operationName);
   const pending = ref(false);
 
-  // Execute the mutation and normalize errors.
   async function mutate(
     ...args: IsEmptyObject<VariablesOf<TName>> extends true
       ? [variables?: VariablesOf<TName>]
       : [variables: VariablesOf<TName>]
-  ): Promise<SafeResult<ResultOf<TName>>> {
+  ): Promise<ExecuteGraphQLResult<ResultOf<TName>>> {
     const [variables] = args;
+
+    pending.value = true;
     try {
-      pending.value = true;
-      const data = await executeGraphQLHTTP<TName>(operationName, variables, options);
-      return { data, error: null };
-    }
-    catch (error) {
-      return { data: null, error: normalizeError(error) };
+      return await $executeGraphQL<ResultOf<TName>>({ query: document, variables, operationName });
     }
     finally {
       pending.value = false;
     }
-  }
+  };
 
-  return { mutate, pending };
-}
+  return { pending, mutate };
+};

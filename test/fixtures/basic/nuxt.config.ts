@@ -1,20 +1,7 @@
-import NuxtGraphQL from "../../../src/module";
+import MyModule from "../../../src/module";
 
 export default defineNuxtConfig({
   modules: [
-    NuxtGraphQL,
+    MyModule,
   ],
-  graphql: {
-    client: {
-      documents: "test/**/*.gql",
-    },
-    server: {
-      schema: {
-        local: {
-          type: "local",
-          path: "~~/server/graphql/schema",
-        },
-      },
-    },
-  },
 });

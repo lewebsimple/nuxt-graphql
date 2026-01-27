@@ -1,21 +1,9 @@
 import type { GraphQLError } from "graphql";
 
-/**
- * Safe result type.
- *
- * - On success, `data` contains the result and `error` is `null`.
- * - On failure, `data` is `null` and `error` contains a NormalizedError.
- */
-export type SafeResult<T> = | { data: T; error: null } | { data: null; error: NormalizedError };
-
 // ─────────────────────────────────────────────────────────────
 // Error codes (typed + extensible)
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Base GraphQL error codes.
- * Users may extend this interface via declaration merging.
- */
 export interface GraphQLErrorCodeMap {
   INTERNAL_ERROR: true;
   NETWORK_ERROR: true;
@@ -24,10 +12,6 @@ export interface GraphQLErrorCodeMap {
   FORBIDDEN: true;
 }
 
-/**
- * Typed GraphQL error code.
- * Extensible via interface augmentation.
- */
 type GraphQLErrorCode = keyof GraphQLErrorCodeMap;
 
 // ─────────────────────────────────────────────────────────────
@@ -87,29 +71,12 @@ function isGraphQLErrorArray(error: unknown): error is GraphQLError[] {
 }
 
 /**
- * Check if a value resembles graphql-request ClientError.
- *
- * @param error Unknown error value.
- * @returns True if the value is a ClientError-like object.
- */
-function isGraphQLClientError(error: unknown): error is {
-  message?: string;
-  response?: { errors?: GraphQLError[] };
-} {
-  return (
-    typeof error === "object"
-    && error !== null
-    && "response" in error
-  );
-}
-
-/**
  * Extract a typed error code from a GraphQLError.
  *
  * @param error GraphQL error.
  * @returns Parsed error code, if any.
  */
-function extractCode(error?: GraphQLError): GraphQLErrorCode | undefined {
+export function extractCode(error?: GraphQLError): GraphQLErrorCode | undefined {
   const code = error?.extensions?.code;
   return typeof code === "string"
     ? (code as GraphQLErrorCode)
@@ -139,22 +106,6 @@ export function normalizeError(error: unknown): NormalizedError {
       message: error.message,
       errors: [error],
       code: extractCode(error),
-    });
-  }
-
-  // graphql-request ClientError
-  if (isGraphQLClientError(error)) {
-    const errors = error.response?.errors;
-    if (errors && isGraphQLErrorArray(errors)) {
-      return new NormalizedError({
-        message: errors.map(({ message }) => message).join("\n"),
-        errors,
-        code: extractCode(errors[0]),
-      });
-    }
-    return new NormalizedError({
-      message: error.message ?? "GraphQL network error",
-      code: "NETWORK_ERROR",
     });
   }
 

@@ -1,5 +1,5 @@
-import type { GraphQLSchema } from "graphql";
-import { buildSchema, lexicographicSortSchema, printSchema } from "graphql";
+import { buildClientSchema, buildSchema, getIntrospectionQuery, lexicographicSortSchema, printSchema, GraphQLSchema } from "graphql";
+import type { HeadersInput } from "../runtime/shared/lib/headers";
 import { splitModule } from "./split-module";
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -19,11 +19,6 @@ export type SchemaInput = {
   remote: Record<string, { importPath: string }>;
 };
 
-/**
- * Render GraphQL schema template.
- * @param {SchemaInput} input Schema template input.
- * @returns TypeScript source code.
- */
 export function getSchemaTemplate({ local, remote }: SchemaInput): { ts: string; mjs: string; dts: string } {
   const localImports = Object.entries(local).map(([name, { importPath }]) => `import { schema as ${name}LocalSchema } from ${JSON.stringify(importPath)};`);
   const localSchemas = Object.keys(local).map((name) => `${name}LocalSchema`);
@@ -39,9 +34,7 @@ ${localImports.join("\n")}
 ${remoteImports.join("\n")}
 
 export const schema = stitchSchemas({
-  subschemas: [
-    ${[mergedSchema, ...remoteSchemas].join(",\n    ")}
-  ],
+  subschemas: [${[mergedSchema, ...remoteSchemas].join(", ")}],
 });
   `.trim();
 
@@ -70,6 +63,97 @@ export async function loadLocalSchema({ importPath }: LoadLocalSchemaInput): Pro
     throw new Error(`${importPath} must export a valid 'schema' of type GraphQLSchema.`);
   }
   return module.schema;
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Remote schema template
+// ────────────────────────────────────────────────────────────────────────────────
+
+export type RemoteSchemaInput = {
+  endpoint: string;
+  headers: HeadersInput;
+  hooks: { importPath: string }[];
+  loadSchema: () => Promise<GraphQLSchema>;
+};
+
+/**
+ * Render remote GraphQL schema template.
+ * @param {RemoteSchemaInput} input Remote schema template input.
+ * @returns .ts / .mjs source code.
+ */
+export async function getRemoteSchemaTemplate({ endpoint, headers, hooks, loadSchema }: RemoteSchemaInput): Promise<{ ts: string; mjs: string; dts: string }> {
+  const hooksImports = hooks.map((hook, index) => `import hook${index} from ${JSON.stringify(hook.importPath)};`);
+  const hooksArray = hooks.map((_, index) => `hook${index}`);
+  const schema = await loadSchema();
+  const sdl = getSchemaSDL(schema);
+
+  const ts = `
+import type { GraphQLSchema } from "graphql";
+import { buildSchema } from "graphql";
+import { getRemoteExecutor } from "#graphql/runtime/remote-executor";
+${hooksImports.join("\n")}
+
+const executor = getRemoteExecutor({
+  endpoint: "${endpoint}",
+  headers: ${JSON.stringify(headers)},
+  hooks: [${hooksArray.join(", ")}],
+});
+
+const sdl = \`${sdl.replace(/`/g, "\\`")}\`;
+
+// SubschemaConfig exported for stitching
+export const schema = {
+  schema: buildSchema(sdl),
+  executor,
+} as unknown as GraphQLSchema;
+  `.trim();
+
+  return { ts, ...splitModule(ts) };
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Remote schema introspection
+// ────────────────────────────────────────────────────────────────────────────────
+
+export type IntrospectRemoteSchemaInput = {
+  endpoint: string;
+};
+
+/**
+ * Introspect a remote GraphQL schema via introspection query.
+ * @param {IntrospectRemoteSchemaInput} input Introspection input.
+ * @returns GraphQLSchema instance.
+ */
+export async function introspectRemoteSchema({ endpoint }: IntrospectRemoteSchemaInput): Promise<GraphQLSchema> {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query: getIntrospectionQuery() }),
+  });
+  const json = await response.json();
+  if (json.errors) {
+    throw new Error(`Failed to fetch GraphQL schema from ${endpoint}: ${JSON.stringify(json.errors)} `);
+  }
+  const schema = buildClientSchema(json.data);
+  return stripSubscriptions(schema);
+}
+
+/**
+ * Strip subscription type from a GraphQL schema.
+ * @param {GraphQLSchema} schema Input schema.
+ * @returns {GraphQLSchema} Schema without subscription type.
+ */
+function stripSubscriptions(schema: GraphQLSchema): GraphQLSchema {
+  if (!schema.getSubscriptionType()) {
+    return schema;
+  }
+  return new GraphQLSchema({
+    query: schema.getQueryType() ?? undefined,
+    mutation: schema.getMutationType() ?? undefined,
+    subscription: undefined,
+    types: Object.values(schema.getTypeMap()),
+    directives: schema.getDirectives(),
+  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

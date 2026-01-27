@@ -1,10 +1,12 @@
+export type HeadersInput = Record<string, string | null>;
+
 /**
  * Merge multiple header inputs into a single Headers instance.
  *
  * @param inputs Header input objects (later inputs override earlier).
  * @returns Merged Headers instance.
  */
-export function mergeHeaders(...inputs: Array<HeadersInput | undefined>): Headers {
+export function mergeHeaders(...inputs: Array<HeadersInput | undefined>): HeadersInit {
   const headers = new Headers();
   for (const input of inputs) {
     if (!input) continue;
@@ -17,5 +19,5 @@ export function mergeHeaders(...inputs: Array<HeadersInput | undefined>): Header
       }
     }
   }
-  return headers;
+  return Object.fromEntries(headers.entries());
 }

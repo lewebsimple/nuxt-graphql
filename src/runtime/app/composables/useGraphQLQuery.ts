@@ -1,49 +1,25 @@
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
-import { executeGraphQLHTTP, type ExecuteGraphQLHTTPOptions } from "../lib/execute-http";
-import { normalizeError, type SafeResult } from "../../shared/lib/error";
-import { getInFlightKey, getInFlightRequests } from "../lib/in-flight";
-import type { IsEmptyObject } from "../../shared/lib/utils";
+import { useNuxtApp } from "#imports";
+import { normalizeError } from "../../shared/lib/error";
+import { getOperationDocument } from "../../shared/lib/registry";
+import type { ExecuteGraphQLResult, IsEmptyObject } from "../../shared/lib/types";
 
-/**
- * Execute a GraphQL query over HTTP with in-flight deduplication.
- *
- * @param operationName Operation name from the registry.
- * @param args Operation variables (if any) and optional HTTP headers.
- * @returns SafeResult containing data or a normalized error.
- */
 export async function useGraphQLQuery<TName extends QueryName>(
   operationName: TName,
   ...args: IsEmptyObject<VariablesOf<TName>> extends true
-    ? [variables?: VariablesOf<TName>, options?: ExecuteGraphQLHTTPOptions]
-    : [variables: VariablesOf<TName>, options?: ExecuteGraphQLHTTPOptions]
-): Promise<SafeResult<ResultOf<TName>>> {
-  const [variables, options] = args;
+    ? [variables?: VariablesOf<TName>]
+    : [variables: VariablesOf<TName>]
+): Promise<ExecuteGraphQLResult<ResultOf<TName>>> {
+  const { $executeGraphQL } = useNuxtApp();
+  const [variables] = args;
+  const document = getOperationDocument(operationName);
 
-  // Dedupe in-flight requests for queries
-  const inFlight = getInFlightRequests();
-  const key = getInFlightKey(operationName, variables);
-  if (inFlight.has(key)) {
-    return inFlight.get(key) as Promise<SafeResult<ResultOf<TName>>>;
+  try {
+    return await $executeGraphQL<ResultOf<TName>, VariablesOf<TName>>(
+      { query: document, variables, operationName },
+    );
   }
-
-  // Execute GraphQL HTTP request with error normalization
-  const promise = (async (): Promise<SafeResult<ResultOf<TName>>> => {
-    try {
-      const data = await executeGraphQLHTTP<TName>(operationName, variables, options);
-      return { data, error: null };
-    }
-    catch (err) {
-      return { data: null, error: normalizeError(err) };
-    }
-    finally {
-      inFlight.delete(key);
-    }
-  })();
-
-  // Store in-flight request
-  if (inFlight && key) {
-    inFlight.set(key, promise);
+  catch (error) {
+    return { data: null, error: normalizeError(error) };
   }
-
-  return promise;
 }

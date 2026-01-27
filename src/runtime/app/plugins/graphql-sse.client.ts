@@ -21,3 +21,15 @@ export default defineNuxtPlugin((_nuxtApp) => {
 
   return { provide: { getGraphQLSSEClient } };
 });
+
+declare module "#app/nuxt" {
+  interface NuxtApp {
+    $getGraphQLSSEClient: () => SSEClient;
+  }
+}
+
+declare module "#app" {
+  interface NuxtApp {
+    $getGraphQLSSEClient: () => SSEClient;
+  }
+}

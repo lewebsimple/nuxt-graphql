@@ -1,42 +1,48 @@
-import type { ExecutionRequest, Executor } from "@graphql-tools/utils";
-import { buildHTTPExecutor } from "@graphql-tools/executor-http";
-import { mergeHeaders } from "../../shared/lib/headers";
-import type { CreateRemoteExecutorInput } from "#graphql/runtime/remote-executor";
-/**
- * Create an HTTP executor for a remote GraphQL schema.
- *
- * @param {CreateRemoteExecutorInput} options Remote executor configuration.
- * @param options.url Remote GraphQL endpoint.
- * @param options.headers Static headers for all requests.
- * @param options.hooks Per-operation hooks.
- * @returns Executor function for GraphQL Tools.
- */
-export function createRemoteExecutor({ endpoint, headers, hooks }: CreateRemoteExecutorInput): Executor {
-  // Merge static and request-provided headers.
-  function getHeaders(request?: ExecutionRequest): Record<string, string> {
-    const extHeaders: HeadersInput = request?.extensions?.headers || {};
-    const mergedHeaders = mergeHeaders(headers, extHeaders);
-    return Object.fromEntries(mergedHeaders.entries());
-  }
+import { print } from "graphql";
+import type { ExecutionRequest, ExecutionResult } from "@graphql-tools/utils";
+import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
 
-  const executor = buildHTTPExecutor({
-    endpoint,
-    headers: (request) => getHeaders(request),
-    fetch: globalThis.fetch,
-  });
+type GraphQLExecutionRequest = ExecutionRequest & { extensions?: { headers?: HeadersInput } };
+type GraphQLExecutionResult<TData = unknown> = ExecutionResult<TData>;
 
-  return async (request: ExecutionRequest) => {
+export type GraphQLRemoteExecHooks<TData = unknown> = {
+  onRequest?: (request: GraphQLExecutionRequest) => void | Promise<void>;
+  onResult?: (result: GraphQLExecutionResult<TData>) => void | Promise<void>;
+  onError?: (error: unknown) => void | Promise<void>;
+};
+
+export type RemoteExecutorInput = {
+  endpoint: string;
+  headers: HeadersInput;
+  hooks: GraphQLRemoteExecHooks[];
+};
+
+export function getRemoteExecutor<TData = unknown>({ endpoint, headers, hooks }: RemoteExecutorInput) {
+  return async function execute(request: GraphQLExecutionRequest): Promise<GraphQLExecutionResult<TData>> {
     try {
       for (const hook of hooks) {
         await hook.onRequest?.(request);
       }
-      const result = await executor(request);
-      // HTTP executor never returns streams, but stay future-proof
-      if (!(Symbol.asyncIterator in result)) {
-        for (const hook of hooks) {
-          await hook.onResult?.(result);
-        }
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...mergeHeaders(headers, request?.extensions?.headers || {}),
+        },
+        body: JSON.stringify({ query: print(request.document), variables: request.variables }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GraphQL HTTP ${response.status}`);
       }
+
+      const result = (await response.json()) as GraphQLExecutionResult<TData>;
+
+      for (const hook of hooks) {
+        await hook.onResult?.(result);
+      }
+
       return result;
     }
     catch (error) {

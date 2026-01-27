@@ -4,100 +4,43 @@ import { defu } from "defu";
 import type { GraphQLSchema } from "graphql";
 import { stitchSchemas } from "@graphql-tools/stitch";
 import type { Source } from "@graphql-tools/utils";
-import {
-  addImportsDir,
-  addPlugin,
-  addServerHandler,
-  addServerImportsDir,
-  addServerTemplate,
-  addTemplate,
-  addTypeTemplate,
-  createResolver,
-  defineNuxtModule,
-  useLogger,
-} from "@nuxt/kit";
+import { defineNuxtModule, createResolver, useLogger, addServerHandler, addServerImportsDir, addImportsDir, addPlugin } from "@nuxt/kit";
 import { clearBuildCache, getCachedLoader } from "./lib/cached-loader";
 import { cyan, reset } from "./lib/colors";
 import { getContextTemplate, type ContextInput } from "./lib/context";
 import { getRelativePath, removeExtension } from "./lib/path";
-import { getRemoteSchemaTemplate, introspectRemoteSchema, type RemoteSchemaInput } from "./lib/remote-schema";
-import { getDefaultSchema, getSchemaSDL, getSchemaTemplate, loadLocalSchema, type SchemaDef, type SchemaInput } from "./lib/schema";
-import { getAppTypesTemplate, getServerTypesTemplate, getSharedTypesTemplate } from "./lib/types";
-import { resolveCacheConfig } from "./runtime/shared/lib/cache";
+import { getDefaultSchema, getRemoteSchemaTemplate, getSchemaSDL, getSchemaTemplate, introspectRemoteSchema, loadLocalSchema, type RemoteSchemaInput, type SchemaDef, type SchemaInput } from "./lib/schema";
+import { addUniversalTemplate } from "./lib/template";
+import { version } from "../package.json";
 import { getDocuments } from "./lib/documents";
 import { getOperationsTemplate, type OperationsInput } from "./lib/operations";
 import { getRegistryTemplate, type RegistryInput } from "./lib/registry";
+import { resolveCacheConfig, type CacheConfig } from "./runtime/app/lib/cache";
 
-// Nuxt GraphQL module options
 export interface NuxtGraphQLModuleOptions {
-  /**
-   * Client-side GraphQL configuration (HTTP + cache).
-   */
   client?: {
-    /**
-     * Global cache configuration for queries.
-     */
-    cache?: Partial<GraphQLCacheConfig>;
-
-    /**
-     * GraphQL documents glob pattern.
-     * Default: "**\/*.gql"
-     */
     documents?: string;
-
-    /**
-     * Headers forwarded from the SSR request to graphql-request.
-     * Default: ["authorization", "cookie"]
-     */
+    cache?: Partial<CacheConfig>;
     ssrForwardHeaders?: string[];
   };
-
-  /**
-   * Where to write graphql.config.json.
-   * Resolved from rootDir.
-   * Default: ./graphql.config.json
-   */
-  saveConfig?: string;
-
-  /**
-   * Where to write the stitched GraphQL SDL.
-   * Resolved from rootDir.
-   * Default: server/graphql/schema.graphql
-   */
-  saveSDL?: string;
-
-  /**
-   * Server-side GraphQL configuration (Yoga server + execution).
-   */
   server?: {
-    /**
-     * Paths to GraphQL server context factories relative to rootDir.
-     * export default defineGraphQLContext((event: H3Event) => Promise<Record<string, unknown>>)
-     */
     context?: string[];
-
-    /**
-     * GraphQL schema definition.
-     * Key = schemaName.
-     */
     schema?: Record<string, SchemaDef>;
   };
+  saveConfig?: string;
+  saveSDL?: string;
 }
 
-// Nuxt GraphQL module
 export default defineNuxtModule<NuxtGraphQLModuleOptions>({
   meta: {
-    name: "nuxt-graphql",
+    name: "@lewebsimple/nuxt-graphql",
     configKey: "graphql",
   },
   defaults: {},
   async setup(options, nuxt) {
-    // ────────────────────────────────────────────────────────────────────────────────
-    // Module logger and resolvers
-    // ────────────────────────────────────────────────────────────────────────────────
-
     // Build-time logger
     const logger = useLogger("@lewebsimple/nuxt-graphql");
+    logger.info(`@lewebsimple/nuxt-graphql v${version} loaded`);
 
     // Module resolver
     const { resolve: resolveModule } = createResolver(import.meta.url);
@@ -113,28 +56,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     const nuxtAliases: Record<string, string> = {};
     const nitroAliases: Record<string, string> = {};
 
-    // ────────────────────────────────────────────────────────────────────────────────
-    // GraphQL context
-    // ────────────────────────────────────────────────────────────────────────────────
-
-    const contextInput: ContextInput = {
-      importPaths: await Promise.all((options.server?.context || []).map((path) => resolveRootPath(path))),
-    };
-
-    // Choose between .ts / .mjs + .d.ts context templates based on dev / build mode
-    // @see https://github.com/nuxt/nuxt/discussions/34154
-    let contextDst: string;
-    if (nuxt.options.dev || process.env.NUXT_MODULE_PREPARE) {
-      contextDst = addTemplate({ filename: "graphql/context.ts", getContents: () => getContextTemplate(contextInput).ts, write: true }).dst;
-      addServerTemplate({ filename: "graphql/context.mjs", getContents: () => getContextTemplate(contextInput).mjs });
-    }
-    else {
-      contextDst = addTemplate({ filename: "graphql/context.mjs", getContents: () => getContextTemplate(contextInput).mjs, write: true }).dst;
-      addServerTemplate({ filename: "graphql/context.mjs", getContents: () => getContextTemplate(contextInput).mjs });
-      addTypeTemplate({ filename: "graphql/context.d.ts", getContents: () => getContextTemplate(contextInput).dts });
-    }
-    nuxtAliases["#graphql/context"] = contextDst;
-    nitroAliases["#graphql/context"] = contextDst;
+    const emitTs = Boolean(nuxt.options.dev) || Boolean(process.env.NUXT_MODULE_PREPARE);
 
     // ────────────────────────────────────────────────────────────────────────────────
     // Runtime helpers
@@ -143,9 +65,20 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     nuxtAliases["#graphql/runtime/remote-executor"] = resolveModule("./runtime/server/lib/remote-executor");
     nitroAliases["#graphql/runtime/remote-executor"] = resolveModule("./runtime/server/lib/remote-executor");
 
-    // ────────────────────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
+    // GraphQL conttext
+    // ────────────────────────────────────────────────────────────────────────────
+
+    const contextInput: ContextInput = {
+      importPaths: await Promise.all((options.server?.context || []).map((path) => resolveRootPath(path))),
+    };
+    const contextPath = addUniversalTemplate({ filename: "graphql/context", getContents: () => getContextTemplate(contextInput), emitTs });
+    nuxtAliases["#graphql/context"] = contextPath;
+    nitroAliases["#graphql/context"] = contextPath;
+
+    // ────────────────────────────────────────────────────────────────────────────
     // GraphQL schema
-    // ────────────────────────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
 
     const schemaInput: SchemaInput = { local: {}, remote: {} };
     const schemaLoaders: Record<string, () => Promise<GraphQLSchema>> = {};
@@ -159,30 +92,20 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       // Local schema
       if (schemaDef.type === "local") {
         const importPath = await resolveRootPath(schemaDef.path);
+        const loadSchema = getCachedLoader<GraphQLSchema>(`schema:local:${schemaName}`, async () => await loadLocalSchema({ importPath }));
         schemaInput.local[schemaName] = { importPath };
-        schemaLoaders[schemaName] = getCachedLoader<GraphQLSchema>(`schema:local:${schemaName}`, async () => await loadLocalSchema({ importPath }));
+        schemaLoaders[schemaName] = loadSchema;
       }
 
       // Remote schema
       else if (schemaDef.type === "remote") {
         const { endpoint } = schemaDef;
-        const remoteSchemaInput: RemoteSchemaInput = {
-          endpoint,
-          headers: schemaDef.headers || {},
-          hooks: await Promise.all((schemaDef.hooks || []).map(async (hookPath) => ({ importPath: await resolveRootPath(hookPath) }))),
-          loadSchema: getCachedLoader<GraphQLSchema>(`schema:remote:${schemaName}`, async () => await introspectRemoteSchema({ endpoint })),
-        };
-        if (nuxt.options.dev) {
-          addTemplate({ filename: `graphql/schemas/${schemaName}.ts`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).ts, write: true });
-          addServerTemplate({ filename: `graphql/schemas/${schemaName}.ts`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).ts });
-        }
-        else {
-          addTemplate({ filename: `graphql/schemas/${schemaName}.mjs`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).mjs, write: true });
-          addServerTemplate({ filename: `graphql/schemas/${schemaName}.mjs`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).mjs });
-          addTypeTemplate({ filename: `graphql/schemas/${schemaName}.d.ts`, getContents: async () => (await getRemoteSchemaTemplate(remoteSchemaInput)).dts });
-        }
+        const loadSchema = getCachedLoader<GraphQLSchema>(`schema:remote:${schemaName}`, async () => await introspectRemoteSchema({ endpoint }));
+        const hooks = await Promise.all((schemaDef.hooks || []).map(async (hookPath) => ({ importPath: await resolveRootPath(hookPath) })));
+        const remoteSchemaInput: RemoteSchemaInput = { endpoint, headers: schemaDef.headers || {}, hooks, loadSchema };
+        addUniversalTemplate({ filename: `graphql/schemas/${schemaName}`, getContents: () => getRemoteSchemaTemplate(remoteSchemaInput), emitTs });
         schemaInput.remote[schemaName] = { importPath: `./schemas/${schemaName}` };
-        schemaLoaders[schemaName] = remoteSchemaInput.loadSchema;
+        schemaLoaders[schemaName] = loadSchema;
       }
 
       // Unknown schema type
@@ -192,10 +115,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     }
 
     // Stitched schema
-    const schemaDst = addTemplate({ filename: `graphql/schema.ts`, getContents: () => getSchemaTemplate(schemaInput).ts, write: true }).dst;
-    addServerTemplate({ filename: `graphql/schema.ts`, getContents: () => getSchemaTemplate(schemaInput).ts });
-    nuxtAliases["#graphql/schema"] = schemaDst;
-    nitroAliases["#graphql/schema"] = schemaDst;
+    const schemaPath = addUniversalTemplate({ filename: "graphql/schema", getContents: () => getSchemaTemplate(schemaInput), emitTs });
+    nuxtAliases["#graphql/schema"] = schemaPath;
+    nitroAliases["#graphql/schema"] = schemaPath;
 
     // ────────────────────────────────────────────────────────────────────────────────
     // GraphQL schema / documents cached loaders
@@ -204,7 +126,6 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     const sdlPath = resolveRoot(options.saveSDL || "server/graphql/schema.graphql");
 
     const loadSchema = getCachedLoader<GraphQLSchema>("schema:stitched", async () => {
-      // Stitch subschemas
       const subschemas = await Promise.all(Object.values(schemaLoaders).map((loadSchema) => loadSchema()));
       if (subschemas.length === 0) {
         logger.warn(`No GraphQL schemas defined: using default empty schema.`);
@@ -219,6 +140,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
         writeFileSync(sdlPath, sdl, { encoding: "utf-8" });
         logger.info(`Stitched GraphQL SDL saved to: ${cyan}${getRelativePath(rootDir, sdlPath)}${reset}`);
       }
+
       return schema;
     });
 
@@ -234,47 +156,19 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // GraphQL operations
     // ────────────────────────────────────────────────────────────────────────────────
 
-    const operationsInput: OperationsInput = {
-      loadSchema,
-      loadDocuments,
-      documentGlob: options.client?.documents || "**/*.gql",
-    };
-
-    let operationsDst: string;
-    if (nuxt.options.dev || process.env.NUXT_MODULE_PREPARE) {
-      operationsDst = addTemplate({ filename: "graphql/operations.ts", getContents: async () => (await getOperationsTemplate(operationsInput)).ts, write: true }).dst;
-      addServerTemplate({ filename: "graphql/operations.ts", getContents: async () => (await getOperationsTemplate(operationsInput)).ts });
-    }
-    else {
-      operationsDst = addTemplate({ filename: "graphql/operations.mjs", getContents: async () => (await getOperationsTemplate(operationsInput)).mjs, write: true }).dst;
-      addServerTemplate({ filename: "graphql/operations.mjs", getContents: async () => (await getOperationsTemplate(operationsInput)).mjs });
-      addTypeTemplate({ filename: "graphql/operations.d.ts", getContents: async () => (await getOperationsTemplate(operationsInput)).dts });
-    }
-    nuxtAliases["#graphql/operations"] = operationsDst;
-    nitroAliases["#graphql/operations"] = operationsDst;
+    const operationsInput: OperationsInput = { loadSchema, loadDocuments, documentGlob: options.client?.documents || "**/*.gql" };
+    const operationsPath = addUniversalTemplate({ filename: "graphql/operations", getContents: () => getOperationsTemplate(operationsInput), emitTs });
+    nuxtAliases["#graphql/operations"] = operationsPath;
+    nitroAliases["#graphql/operations"] = operationsPath;
 
     // ────────────────────────────────────────────────────────────────────────────
     // Operations registry
     // ────────────────────────────────────────────────────────────────────────────
 
-    const registryInput: RegistryInput = {
-      loadDocuments,
-      documentGlob: options.client?.documents || "**/*.gql",
-    };
-
-    // Generate registry module
-    let registryDst: string;
-    if (nuxt.options.dev || process.env.NUXT_MODULE_PREPARE) {
-      registryDst = addTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)).ts, write: true }).dst;
-      addServerTemplate({ filename: "graphql/registry.ts", getContents: async () => (await getRegistryTemplate(registryInput)).ts });
-    }
-    else {
-      registryDst = addTemplate({ filename: "graphql/registry.mjs", getContents: async () => (await getRegistryTemplate(registryInput)).mjs, write: true }).dst;
-      addServerTemplate({ filename: "graphql/registry.mjs", getContents: async () => (await getRegistryTemplate(registryInput)).mjs });
-      addTypeTemplate({ filename: "graphql/registry.d.ts", getContents: async () => (await getRegistryTemplate(registryInput)).dts });
-    }
-    nuxtAliases["#graphql/registry"] = registryDst;
-    nitroAliases["#graphql/registry"] = registryDst;
+    const registryInput: RegistryInput = { loadDocuments, documentGlob: options.client?.documents || "**/*.gql" };
+    const registryPath = addUniversalTemplate({ filename: "graphql/registry", getContents: () => getRegistryTemplate(registryInput), emitTs });
+    nuxtAliases["#graphql/registry"] = registryPath;
+    nitroAliases["#graphql/registry"] = registryPath;
 
     // ────────────────────────────────────────────────────────────────────────────
     // GraphQL config
@@ -300,14 +194,6 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       nitroConfig.alias = defu(nitroConfig.alias, nitroAliases);
     });
 
-    // ────────────────────────────────────────────────────────────────────────────
-    // Types injection
-    // ────────────────────────────────────────────────────────────────────────────
-
-    addTypeTemplate({ filename: "types/nuxt-graphql.app.d.ts", getContents: () => getAppTypesTemplate() }, { nuxt: true });
-    addTypeTemplate({ filename: "types/nuxt-graphql.server.d.ts", getContents: () => getServerTypesTemplate() }, { nitro: true, node: true });
-    addTypeTemplate({ filename: "types/nuxt-graphql.shared.d.ts", getContents: () => getSharedTypesTemplate() }, { nuxt: true, nitro: true, node: true });
-
     // ─────────────────────────────────────────────────────────────
     // Runtime configuration
     // ─────────────────────────────────────────────────────────────
@@ -330,9 +216,9 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       });
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
     // GraphQL Yoga server endpoint
-    // ─────────────────────────────────────────────────────────────
+    // ────────────────────────────────────────────────────────────────────────────
 
     const handler = resolveModule("./runtime/server/api/graphql");
     addServerHandler({ route: "/api/graphql", handler });
@@ -344,7 +230,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // GraphQL client plugins
     // ─────────────────────────────────────────────────────────────
 
-    addPlugin(resolveModule("./runtime/app/plugins/graphql-request"));
+    addPlugin(resolveModule("./runtime/app/plugins/execute-graphql"));
     addPlugin(resolveModule("./runtime/app/plugins/graphql-sse.client"));
 
     // ─────────────────────────────────────────────────────────────
@@ -352,6 +238,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // ─────────────────────────────────────────────────────────────
 
     addImportsDir(resolveModule("./runtime/app/composables"));
+    addImportsDir(resolveModule("./runtime/shared/utils"));
     addServerImportsDir(resolveModule("./runtime/server/utils"));
   },
 });

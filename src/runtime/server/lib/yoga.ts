@@ -1,8 +1,7 @@
 import { createYoga } from "graphql-yoga";
-import type { GraphQLContext } from "#graphql/context";
 import { schema } from "#graphql/schema";
 
-let yoga: ReturnType<typeof createYoga<GraphQLContext>> | null = null;
+let yoga: ReturnType<typeof createYoga> | null = null;
 
 /**
  * Get or create the singleton GraphQL Yoga instance.
@@ -11,13 +10,11 @@ let yoga: ReturnType<typeof createYoga<GraphQLContext>> | null = null;
  */
 export function getYogaInstance() {
   if (!yoga) {
-    yoga = createYoga<GraphQLContext>({
-      schema,
+    yoga = createYoga({
       graphqlEndpoint: "/api/graphql",
+      graphiql: true,
       fetchAPI: globalThis,
-      graphiql: process.env.NODE_ENV !== "production",
-      // @ts-expect-error subscriptions type available at runtime
-      subscriptions: { protocol: "SSE" },
+      schema,
     });
     if (!yoga) {
       throw new Error("Failed to create Yoga instance");

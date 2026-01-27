@@ -1,10 +1,4 @@
-import type { ExecutionRequest, ExecutionResult } from "@graphql-tools/utils";
-
-export type GraphQLRemoteExecHooks = {
-  onRequest?: (request: ExecutionRequest) => void | Promise<void>;
-  onResult?: (result: ExecutionResult) => void | Promise<void>;
-  onError?: (error: unknown) => void | Promise<void>;
-};
+import type { GraphQLRemoteExecHooks } from "../lib/remote-executor";
 
 /**
  * Define remote executor hooks with proper typing.

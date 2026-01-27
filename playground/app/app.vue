@@ -1,13 +1,12 @@
 <script setup lang="ts">
-const { data, error } = await useGraphQLQuery("AllFilms", {});
-if (error) throw new Error(error.message);
+const { data } = await useAsyncGraphQLQuery("AllFilms", {});
 </script>
 
 <template>
   <div>
     Nuxt GraphQL module playground!
     <FilmList
-      v-if="data.allFilms?.films"
+      v-if="data?.allFilms?.films"
       :films="data.allFilms.films"
     />
   </div>

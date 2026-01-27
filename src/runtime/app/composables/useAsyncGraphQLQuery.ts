@@ -1,15 +1,13 @@
-import { useAsyncData, useNuxtData, useRuntimeConfig, type AsyncDataOptions } from "#app";
+import { useAsyncData, useNuxtApp, useNuxtData, useRuntimeConfig, type AsyncData, type AsyncDataOptions } from "#app";
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
 import { computed, toValue, type MaybeRefOrGetter } from "#imports";
-import { executeGraphQLHTTP, type ExecuteGraphQLHTTPOptions } from "../lib/execute-http";
+import { getOperationDocument } from "../../shared/lib/registry";
+import type { IsEmptyObject } from "../../shared/lib/types";
+import { getCacheKeyParts, resolveCacheConfig, type CacheConfig } from "../lib/cache";
 import { getInFlightRequests } from "../lib/in-flight";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
-import { getCacheKeyParts, resolveCacheConfig } from "../../shared/lib/cache";
-import type { IsEmptyObject } from "../../shared/lib/utils";
 
-type UseAsyncGraphQLQueryOptions<TName extends QueryName> = ExecuteGraphQLHTTPOptions
-  & { cache?: Partial<GraphQLCacheConfig> }
-  & AsyncDataOptions<ResultOf<TName>>;
+type UseAsyncGraphQLQueryOptions<TName extends QueryName> = AsyncDataOptions<ResultOf<TName>> & { cache?: Partial<CacheConfig> };
 
 /**
  * Async GraphQL query composable with caching support.
@@ -23,12 +21,14 @@ export function useAsyncGraphQLQuery<TName extends QueryName>(
   ...args: IsEmptyObject<VariablesOf<TName>> extends true
     ? [variables?: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName>]
     : [variables: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName>]
-): ReturnType<typeof useAsyncData <ResultOf<TName>>> {
+): AsyncData<ResultOf<TName> | null, Error | undefined> {
+  const { $executeGraphQL } = useNuxtApp();
   const [variables, options] = args;
+  const document = getOperationDocument(operationName);
 
   const isClient = import.meta.client;
   const { public: { graphql } } = useRuntimeConfig();
-  const { headers, cache, ...asyncDataOptions } = options ?? {};
+  const { cache, ...asyncDataOptions } = options ?? {};
 
   // Resolve cache config and reactive cache key
   const cacheConfig = resolveCacheConfig(graphql.cacheConfig, cache);
@@ -36,8 +36,9 @@ export function useAsyncGraphQLQuery<TName extends QueryName>(
 
   // Promise to execute the network request with deduplication and optional persistence
   const inFlight = getInFlightRequests();
+
   // Execute the network request with deduplication and optional persistence.
-  async function fetchAndPersist() {
+  async function fetchAndPersist(): Promise<ResultOf<TName>> {
     // Check for existing in-flight request with same cache key
     const key = cacheKey.value;
     if (inFlight.has(key)) {
@@ -45,8 +46,12 @@ export function useAsyncGraphQLQuery<TName extends QueryName>(
     }
 
     // GraphQL request execution promise with optional persistence on client
-    const promise = executeGraphQLHTTP<TName>(operationName, toValue(variables), { headers })
-      .then((data) => {
+    const promise = $executeGraphQL<ResultOf<TName>, VariablesOf<TName>>({ query: document, variables: toValue(variables), operationName })
+      .then((result) => {
+        if (result.error) {
+          throw result.error;
+        }
+        const data = result.data;
         if (isClient && cacheConfig.ttl !== undefined) {
           setPersistedEntry(key, data, cacheConfig.ttl);
         }
@@ -55,9 +60,7 @@ export function useAsyncGraphQLQuery<TName extends QueryName>(
 
     // Store in-flight request promise until settled
     inFlight.set(key, promise);
-    promise.finally(() => {
-      inFlight.delete(key);
-    });
+    promise.finally(() => inFlight.delete(key));
 
     return promise;
   }
@@ -125,5 +128,5 @@ export function useAsyncGraphQLQuery<TName extends QueryName>(
     }
   }
 
-  return useAsyncData(cacheKey, asyncDataHandler, asyncDataOptions) as ReturnType<typeof useAsyncData<ResultOf<TName>>>;
+  return useAsyncData(cacheKey, asyncDataHandler, asyncDataOptions);
 }
