@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.6.1
+
+[compare changes](https://undefined/undefined/compare/v0.6.0...v0.6.1)
+
+### 🩹 Fixes
+
+- Disable graphqiql in prod (d636375)
+- Typed request.context in remote executor hooks (1fe886b)
+
+### 🏡 Chore
+
+- Update README (9cc77bd)
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.0
 
 [compare changes](https://undefined/undefined/compare/v0.5.13...v0.6.0)
