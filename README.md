@@ -18,7 +18,7 @@ Opinionated Nuxt module that wires a typed GraphQL server + client into your app
 - 🧠 **Type-safe helpers** for **queries, mutations, and subscriptions**, shared across **client + server**
 - 🧊 **SSR-friendly** by default: request header forwarding + server-side schema execution helpers
 - 🚀 **Client-side cache** for `useAsyncGraphQLQuery` (cache policies + optional persistence in localStorage)
-- 🧯 **Unified error model** via `SafeResult` and `NormalizedError`
+- 🧯 **Unified error model** via `GraphQLExecutionResult` and `NormalizedError`
 
 
 ## Getting started
@@ -38,13 +38,12 @@ Declare your schemas, context, documents glob and optional client cache in [nuxt
 export default defineNuxtConfig({
   modules: ["@lewebsimple/nuxt-graphql"],
   graphql: {
-    yoga: {
+    server: {
       // Schemas to stitch together (local and/or remote)
-      schemas: {
-        local: {
-          type: "local",
-          path: "server/graphql/schema.ts",
-        },
+      schema: {
+        // Local schema example
+        local: { type: "local", path: "server/graphql/schema.ts" },
+      
         // Remote schema example
         swapi: {
           type: "remote",
@@ -91,7 +90,7 @@ export default defineNuxtConfig({
 ```
 
 
-### Define schema(s) (local and/or remote)
+### Define GraphQL schema (local and/or remote)
 
 **Local schemas** must live under `server/` and export a `GraphQLSchema` as `schema`.
 
@@ -134,12 +133,14 @@ export const schema = createSchema<GraphQLContext>({
 });
 ```
 
-**Remote schemas** are introspected at build time from the required endpoint URL and executed via an HTTP executor at runtime. Subscriptions are stripped from remote schemas.
+**Remote schemas** are introspected at build time from the endpoint URL and executed via an HTTP executor at runtime. Subscriptions are stripped from remote schemas.
+
+The final schema is stitched from the all of the defined local / remote schemas.
 
 
-### Define GraphQL context factories (optional)
+### Define GraphQL context (optional)
 
-Context factories are optional and run on the server in order. Their return types are merged into a single `GraphQLContext` type. You can use the auto-imported `defineGraphQLContext` helper for type-safety.
+Context definition is optional and factories resolve in order on the server. Their return types are merged into a single `GraphQLContext` type which is exported from `#graphql/context`. You can use the auto-imported `defineGraphQLContext` helper for type-safety.
 
 For example, create [server/graphql/context.ts](server/graphql/context.ts):
 
@@ -157,14 +158,9 @@ export default defineGraphQLContext(async (event) => {
 
 ### Write GraphQL documents (.gql)
 
-Write operations in `.gql` files; operation names become registry keys like `useGraphQLQuery("HelloWorld")`.
+By default, the module scans `**/*.gql` files for **named operations** and **fragments** which are converted into **types** and **typed document nodes** in `#graphql/operations`. The operations are exposed by name in `#graphql/registry` to allow type-safe execution with the provided **composables** and **server utils**.
 
 ⚠️ Operation names are required and must be unique.
-
-By default, the module scans `**/*.gql` and generates:
-
-- Typed documents and operations / fragments types in virtual modules under the `#graphql/operations` alias (internal)
-- Operation registry in virtual modules under the `#graphql/registry` alias (internal)
 
 Example document files:
 
@@ -231,25 +227,13 @@ The auto-imported composables allow executing queries, mutations, and subscripti
 
 ```ts
 // Cached query via useAsyncData
-const { data, pending, error, refresh } = await useAsyncGraphQLQuery(
-  "HelloWorld",
-  undefined,
-  {
-    headers: {
-      "X-Request-Header": "request-header-value",
-    },
-  },
-);
+const { data, pending, error, refresh } = await useAsyncGraphQLQuery("HelloWorld", undefined);
 
 // Direct HTTP query (SafeResult)
 const { data: queryData, error: queryError } = await useGraphQLQuery("HelloWorld");
 
 // Mutation (SafeResult)
-const { mutate, pending: mutationPending } = useGraphQLMutation("Ping", {
-  headers: {
-    "X-Request-Header": "request-header-value",
-  },
-});
+const { mutate, pending: mutationPending } = useGraphQLMutation("Ping");
 const { data: mutationData, error: mutationError } = await mutate({ message: "Hello!" });
 
 // Subscription (client-only, SSE)
@@ -257,30 +241,24 @@ const { data, error, start, stop } = useGraphQLSubscription("Time");
 ```
 
 
-### Use the auto-imported server-side utilities
+### Use the auto-imported server utils
 
 In server routes, you can execute queries and mutations directly against the stitched schema (no HTTP roundtrip):
 
 ```ts
 export default defineEventHandler(async (event) => {
   // Server-side GraphQL query example
-  const { data: queryData, error: queryError } = await useServerGraphQLQuery(
-    event,
-    "HelloWorld",
-  );
+  const { data: queryData, error: queryError } = await useGraphQLOperation(event, "HelloWorld" );
 
   // Server-side GraphQL mutation example
-  const { data: mutationData } = await useServerGraphQLMutation(
-    event,
-    "Ping",
-    { message: queryData?.hello ?? "fallback" },
+  const { data: mutationData } = await useGraphQLOperation(event, "Ping", { message: queryData?.hello ?? "Pong" },
   );
 
   return { queryData, mutationData, queryError };
 });
 ```
 
-Server helpers return a `SafeResult` in the same format as the client helpers.
+Server helpers return a `GraphQLExecutionResult` in the same format as some composables, i.e. `{ data: TResult, error: null } | { data: null, error: NormalizedError }`
 
 
 ### Query caching (client-side only)
@@ -293,10 +271,10 @@ Server helpers return a `SafeResult` in the same format as the client helpers.
 
 #### Cache policies
 
-- "no-cache": always fetches from the network (still dedupes in-flight).
-- "cache-first": returns cached value when present, otherwise fetches.
-- "network-first": tries the network first, falls back to cached value on error.
-- "swr": returns cached value immediately and refreshes in the background.
+- `"no-cache"`: always fetches from the network (still dedupes in-flight).
+- `"cache-first"`: returns cached value when present, otherwise fetches.
+- `"network-first"`: tries the network first, falls back to cached value on error.
+- `"swr"`: returns cached value immediately and refreshes in the background.
 
 #### Per-query overrides
 
@@ -334,20 +312,16 @@ You can define custom logic around the remote executor for each remote schema by
 For the example configuration above, create [server/graphql/swapi-hooks.ts](server/graphql/swapi-hooks.ts):
 
 ```ts
+import { defu } from "defu";
+
 export default defineRemoteExecutorHooks({
   onRequest(request) {
-    // Dynamically inject headers
-    request.extensions ??= {};
-    request.extensions.headers = {
-      ...request.extensions.headers,
-      "X-Remote-Exec-Request-Header": "custom-value",
-    };
-  },
-  onResult(result) {
-    console.log("Remote result", result);
-  },
-  onError(error) {
-    console.error("Remote error", error);
+    const { remoteAuthToken } = request.context || {};
+    request.extensions = defu(request.extensions, {
+      headers: {
+        "XAuthorization": `Bearer ${remoteAuthToken || ""}`,
+      },
+    });
   },
 });
 ```
