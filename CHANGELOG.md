@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.6.0
+
+[compare changes](https://undefined/undefined/compare/v0.5.13...v0.6.0)
+
+### 💅 Refactors
+
+- ⚠️  Fix execution in non-node environments (f7c80f7)
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Fix execution in non-node environments (f7c80f7)
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.5.13
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.5.12...v0.5.13)
