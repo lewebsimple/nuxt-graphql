@@ -12,7 +12,7 @@ export function getYogaInstance() {
   if (!yoga) {
     yoga = createYoga({
       graphqlEndpoint: "/api/graphql",
-      graphiql: true,
+      graphiql: import.meta.dev,
       fetchAPI: globalThis,
       schema,
     });
