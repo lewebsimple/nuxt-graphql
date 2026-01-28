@@ -2,8 +2,8 @@ import { useAsyncData, useNuxtApp, useNuxtData, useRuntimeConfig, type AsyncData
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
 import { computed, toValue, type MaybeRefOrGetter } from "#imports";
 import { getOperationDocument } from "../../shared/lib/registry";
-import type { IsEmptyObject } from "../../shared/lib/types";
-import { getCacheKeyParts, resolveCacheConfig, type CacheConfig } from "../lib/cache";
+import type { CacheConfig, IsEmptyObject } from "../../shared/lib/types";
+import { getCacheKeyParts, resolveCacheConfig } from "../lib/cache";
 import { getInFlightRequests } from "../lib/in-flight";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 

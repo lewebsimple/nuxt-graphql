@@ -1,6 +1,6 @@
 import type { QueryName } from "#graphql/registry";
 import { clearNuxtData, useRuntimeConfig } from "#imports";
-import { getCacheKeyParts, type CacheConfig } from "../lib/cache";
+import { getCacheKeyParts } from "../lib/cache";
 import { deletePersistedByPrefix, deletePersistedEntry } from "../lib/persisted";
 
 /**
@@ -39,12 +39,4 @@ export function useGraphQLCache() {
   }
 
   return { cacheConfig, invalidate } as const;
-}
-
-declare module "nuxt/schema" {
-  interface PublicRuntimeConfig {
-    graphql: {
-      cacheConfig: CacheConfig;
-    };
-  }
 }

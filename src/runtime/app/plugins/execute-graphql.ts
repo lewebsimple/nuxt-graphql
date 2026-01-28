@@ -50,11 +50,3 @@ declare module "#app" {
     $executeGraphQL: ExecuteGraphQL;
   }
 }
-
-declare module "nuxt/schema" {
-  interface PublicRuntimeConfig {
-    graphql: {
-      ssrForwardHeaders: string[];
-    };
-  }
-}

@@ -1,13 +1,7 @@
-// Default GraphQL cache configuration
 import { hash } from "ohash";
+import type { CacheConfig } from "../../shared/lib/types";
 
-export type CacheConfig = {
-  policy: "no-cache" | "cache-first" | "network-first" | "swr";
-  ttl?: number;
-  keyPrefix: string;
-  keyVersion: string | number;
-};
-
+// Default GraphQL cache configuration
 const defaultCacheConfig: CacheConfig = {
   policy: "no-cache",
   ttl: undefined,
