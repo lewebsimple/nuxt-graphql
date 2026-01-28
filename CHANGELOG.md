@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.6.4
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.3...v0.6.4)
+
+### 🚀 Enhancements
+
+- Disable immutableTypes in generated operations ([cd4fdac](https://github.com/lewebsimple/nuxt-graphql/commit/cd4fdac))
+- Enhance useAsyncGraphQLQuery to support transformation of query results ([90a849d](https://github.com/lewebsimple/nuxt-graphql/commit/90a849d))
+
+### 🩹 Fixes
+
+- Typo in repository ([c1b4434](https://github.com/lewebsimple/nuxt-graphql/commit/c1b4434))
+- Move CacheConfig type in shared/lib/types.ts ([ffe9238](https://github.com/lewebsimple/nuxt-graphql/commit/ffe9238))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.3
 
 [compare changes](https://undefined/undefined/compare/v0.6.2...v0.6.3)
