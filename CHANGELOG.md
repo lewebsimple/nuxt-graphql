@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.2
+
+[compare changes](https://undefined/undefined/compare/v0.6.1...v0.6.2)
+
+### 🩹 Fixes
+
+- Encode SDL using JSON.stringify (d489881)
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.1
 
 [compare changes](https://undefined/undefined/compare/v0.6.0...v0.6.1)
