@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.6
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.5...v0.6.6)
+
+### 🩹 Fixes
+
+- Auto-import shared/utils from server routes ([1357f67](https://github.com/lewebsimple/nuxt-graphql/commit/1357f67))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.5
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.4...v0.6.5)
