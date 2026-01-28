@@ -15,7 +15,8 @@ import { version } from "../package.json";
 import { getDocuments } from "./lib/documents";
 import { getOperationsTemplate, type OperationsInput } from "./lib/operations";
 import { getRegistryTemplate, type RegistryInput } from "./lib/registry";
-import { resolveCacheConfig, type CacheConfig } from "./runtime/app/lib/cache";
+import { resolveCacheConfig } from "./runtime/app/lib/cache";
+import type { CacheConfig } from "./runtime/shared/lib/types";
 
 export interface NuxtGraphQLModuleOptions {
   client?: {
@@ -240,5 +241,6 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     addImportsDir(resolveModule("./runtime/app/composables"));
     addImportsDir(resolveModule("./runtime/shared/utils"));
     addServerImportsDir(resolveModule("./runtime/server/utils"));
+    addServerImportsDir(resolveModule("./runtime/shared/utils"));
   },
 });
