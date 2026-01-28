@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.5
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.4...v0.6.5)
+
+### 🩹 Fixes
+
+- Update maybeValue type from "T ([ null" to "T ](https://github.com/lewebsimple/nuxt-graphql/commit/ null" to "T ))
+
+### ❤️ Contributors
+
+-  Undefined" In Operations Template <9c8176b>
+
 ## v0.6.4
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.3...v0.6.4)
