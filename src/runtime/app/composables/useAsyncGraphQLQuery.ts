@@ -7,7 +7,10 @@ import { getCacheKeyParts, resolveCacheConfig } from "../lib/cache";
 import { getInFlightRequests } from "../lib/in-flight";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
-type UseAsyncGraphQLQueryOptions<TName extends QueryName> = AsyncDataOptions<ResultOf<TName>> & { cache?: Partial<CacheConfig> };
+type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultOf<TName>> = Omit<AsyncDataOptions<ResultOf<TName>>, "transform"> & {
+  transform?: (input: ResultOf<TName>) => TTransformed;
+  cache?: Partial<CacheConfig>;
+};
 
 /**
  * Async GraphQL query composable with caching support.
@@ -16,19 +19,19 @@ type UseAsyncGraphQLQueryOptions<TName extends QueryName> = AsyncDataOptions<Res
  * @param args Operation variables (if any) and optional HTTP headers.
  * @returns Nuxt AsyncData wrapper for the query result.
  */
-export function useAsyncGraphQLQuery<TName extends QueryName>(
+export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = ResultOf<TName>>(
   operationName: TName,
   ...args: IsEmptyObject<VariablesOf<TName>> extends true
-    ? [variables?: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName>]
-    : [variables: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName>]
-): AsyncData<ResultOf<TName> | null, Error | undefined> {
+    ? [variables?: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>]
+    : [variables: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>]
+): AsyncData<TTransformed | null, Error | undefined> {
   const { $executeGraphQL } = useNuxtApp();
   const [variables, options] = args;
   const document = getOperationDocument(operationName);
 
   const isClient = import.meta.client;
   const { public: { graphql } } = useRuntimeConfig();
-  const { cache, ...asyncDataOptions } = options ?? {};
+  const { cache, transform, ...asyncDataOptions } = options ?? {};
 
   // Resolve cache config and reactive cache key
   const cacheConfig = resolveCacheConfig(graphql.cacheConfig, cache);
@@ -128,5 +131,5 @@ export function useAsyncGraphQLQuery<TName extends QueryName>(
     }
   }
 
-  return useAsyncData(cacheKey, asyncDataHandler, asyncDataOptions);
+  return useAsyncData(cacheKey, asyncDataHandler, { ...asyncDataOptions, transform }) as AsyncData<TTransformed | null, Error | undefined>;
 }
