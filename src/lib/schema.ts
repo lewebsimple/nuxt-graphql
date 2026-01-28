@@ -99,7 +99,7 @@ const executor = getRemoteExecutor({
   hooks: [${hooksArray.join(", ")}],
 });
 
-const sdl = \`${sdl.replace(/`/g, "\\`")}\`;
+const sdl = ${JSON.stringify(sdl)};
 
 // SubschemaConfig exported for stitching
 export const schema = {
