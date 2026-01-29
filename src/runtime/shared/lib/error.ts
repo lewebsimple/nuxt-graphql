@@ -70,6 +70,15 @@ function isGraphQLErrorArray(error: unknown): error is GraphQLError[] {
   return Array.isArray(error) && error.every(isGraphQLError);
 }
 
+function isGraphQLExecutionError(error: unknown): error is { errors: GraphQLError[] } {
+  return (
+    typeof error === "object"
+    && error !== null
+    && "errors" in error
+    && isGraphQLErrorArray((error as { errors: unknown }).errors)
+  );
+}
+
 /**
  * Extract a typed error code from a GraphQLError.
  *
@@ -110,13 +119,8 @@ export function normalizeError(error: unknown): NormalizedError {
   }
 
   // Subscription / execution-style { errors: GraphQLError[] }
-  if (
-    typeof error === "object"
-    && error !== null
-    && "errors" in error
-    && isGraphQLErrorArray((error as { errors: unknown }).errors)
-  ) {
-    const errors = (error as { errors: GraphQLError[] }).errors;
+  if (isGraphQLExecutionError(error)) {
+    const { errors } = error;
     return new NormalizedError({
       message: errors.map(({ message }) => message).join("\n"),
       errors,
@@ -124,9 +128,16 @@ export function normalizeError(error: unknown): NormalizedError {
     });
   }
 
-  // Fallback
+  // Error
+  if (error instanceof Error) {
+    return new NormalizedError({
+      message: error.message,
+    });
+  }
+
+  // Fallback for unknown error shapes
   return new NormalizedError({
-    message: error instanceof Error ? error.message : String(error),
+    message: JSON.stringify(error),
     code: "INTERNAL_ERROR",
   });
 }
