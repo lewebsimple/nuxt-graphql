@@ -1,13 +1,15 @@
 import { useAsyncData, useNuxtApp, useNuxtData, useRuntimeConfig, type AsyncData, type AsyncDataOptions } from "#app";
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
 import { computed, toValue, type MaybeRefOrGetter } from "#imports";
+import type { NormalizedError } from "../../shared/lib/error";
+import { normalizeError } from "../../shared/lib/error";
 import { getOperationDocument } from "../../shared/lib/registry";
 import type { CacheConfig, IsEmptyObject } from "../../shared/lib/types";
 import { getCacheKeyParts, resolveCacheConfig } from "../lib/cache";
 import { getInFlightRequests } from "../lib/in-flight";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
-type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultOf<TName>> = Omit<AsyncDataOptions<ResultOf<TName>>, "transform"> & {
+type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultOf<TName>> = Omit<AsyncDataOptions<ResultOf<TName>>, "transform" | "pick"> & {
   transform?: (input: ResultOf<TName>) => TTransformed;
   cache?: Partial<CacheConfig>;
 };
@@ -24,7 +26,7 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
   ...args: IsEmptyObject<VariablesOf<TName>> extends true
     ? [variables?: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>]
     : [variables: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>]
-): AsyncData<TTransformed | null, Error | undefined> {
+): AsyncData<TTransformed | null, NormalizedError | undefined> {
   const { $executeGraphQL } = useNuxtApp();
   const [variables, options] = args;
   const document = getOperationDocument(operationName);
@@ -106,7 +108,7 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
           if (cachedValue !== undefined) {
             return cachedValue;
           }
-          throw error;
+          throw normalizeError(error);
         }
       }
 
@@ -127,9 +129,9 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
       }
 
       default:
-        throw new Error(`Unknown cache policy: ${cacheConfig.policy}`);
+        throw normalizeError(new Error(`Unknown cache policy: ${cacheConfig.policy}`));
     }
   }
 
-  return useAsyncData(cacheKey, asyncDataHandler, { ...asyncDataOptions, transform }) as AsyncData<TTransformed | null, Error | undefined>;
+  return useAsyncData(cacheKey, asyncDataHandler, { ...asyncDataOptions, transform }) as AsyncData<TTransformed | null, NormalizedError | undefined>;
 }
