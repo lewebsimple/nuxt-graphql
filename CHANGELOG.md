@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.6.7
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.6...v0.6.7)
+
+### 🩹 Fixes
+
+- Normalize unknown error as JSON.stringify() instead of String() ([42f7d2a](https://github.com/lewebsimple/nuxt-graphql/commit/42f7d2a))
+- UseAsyncGraphQLQuery error typed as NormalizedError ([4d43dee](https://github.com/lewebsimple/nuxt-graphql/commit/4d43dee))
+- Let Yoga handle its own error response ([838409b](https://github.com/lewebsimple/nuxt-graphql/commit/838409b))
+- Type yoga instance with GraphQLContext for better type safety ([1a544ed](https://github.com/lewebsimple/nuxt-graphql/commit/1a544ed))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.6
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.5...v0.6.6)
