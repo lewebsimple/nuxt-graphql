@@ -26,7 +26,7 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
   ...args: IsEmptyObject<VariablesOf<TName>> extends true
     ? [variables?: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>]
     : [variables: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>]
-): AsyncData<TTransformed | null, NormalizedError | undefined> {
+): AsyncData<TTransformed | undefined, NormalizedError | undefined> {
   const { $executeGraphQL } = useNuxtApp();
   const [variables, options] = args;
   const document = getOperationDocument(operationName);
@@ -133,5 +133,5 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
     }
   }
 
-  return useAsyncData(cacheKey, asyncDataHandler, { ...asyncDataOptions, transform }) as AsyncData<TTransformed | null, NormalizedError | undefined>;
+  return useAsyncData(cacheKey, asyncDataHandler, { ...asyncDataOptions, transform }) as AsyncData<TTransformed | undefined, NormalizedError | undefined>;
 }
