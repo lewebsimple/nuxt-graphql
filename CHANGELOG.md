@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.8
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.7...v0.6.8)
+
+### 🩹 Fixes
+
+- UseAsyncGraphQL null => undefined ([fa92254](https://github.com/lewebsimple/nuxt-graphql/commit/fa92254))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.7
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.6...v0.6.7)
