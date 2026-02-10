@@ -32,7 +32,12 @@ export async function getOperationsTemplate({ loadSchema, loadDocuments, documen
     plugins: [
       {
         typescript: {
-          avoidOptionals: true,
+          avoidOptionals: {
+            field: true,
+            object: true,
+            inputValue: false,
+            defaultValue: false,
+          },
           defaultScalarType: "never",
           enumsAsTypes: true,
           maybeValue: "T | undefined",
@@ -43,7 +48,12 @@ export async function getOperationsTemplate({ loadSchema, loadDocuments, documen
       },
       {
         typescriptOperations: {
-          avoidOptionals: true,
+          avoidOptionals: {
+            field: true,
+            object: true,
+            inputValue: false,
+            defaultValue: false,
+          },
           defaultScalarType: "never",
           enumsAsTypes: true,
           exportFragmentSpreadSubTypes: true,
