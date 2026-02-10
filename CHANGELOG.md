@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.10
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.9...v0.6.10)
+
+### 🩹 Fixes
+
+- EndCursor should be string ([ undefined](https://github.com/lewebsimple/nuxt-graphql/commit/ undefined))
+
+### ❤️ Contributors
+
+- Ba5917b <Pascal Martineau>
+
 ## v0.6.9
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.8...v0.6.9)
