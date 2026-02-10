@@ -4,7 +4,7 @@ import { hash } from "ohash";
 
 type PageInfoFragment = {
   hasNextPage: boolean;
-  endCursor: string | null;
+  endCursor: string | undefined;
 };
 
 type Connection<TItem> = {
