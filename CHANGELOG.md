@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.6.9
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.8...v0.6.9)
+
+### 🚀 Enhancements
+
+- Disable avoidOptionals for input / default value ([92ff58b](https://github.com/lewebsimple/nuxt-graphql/commit/92ff58b))
+- UseGraphQLLoadMore ([4652ff1](https://github.com/lewebsimple/nuxt-graphql/commit/4652ff1))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.8
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.7...v0.6.8)
