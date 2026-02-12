@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.11
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.10...v0.6.11)
+
+### 🚀 Enhancements
+
+- Include response headers in GraphQLExecutionResult ([75f55db](https://github.com/lewebsimple/nuxt-graphql/commit/75f55db))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.10
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.9...v0.6.10)
