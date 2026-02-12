@@ -311,6 +311,51 @@ await cache.invalidate("HelloWorld");      // All entries for operation
 await cache.invalidate();                  // All entries
 ```
 
+#### Optimistic updates
+
+`useGraphQLMutation` supports optimistic updates via lifecycle hooks:
+
+```ts
+const { mutate } = useGraphQLMutation("AddFilm", {
+  onMutate: async (variables) => {
+    const cache = useGraphQLCache();
+    
+    // Snapshot current value for rollback
+    const snapshot = cache.read("AllFilms", {});
+    
+    // Optimistically update cache
+    await cache.update("AllFilms", {}, (current) => ({
+      films: [...(current?.films ?? []), { id: 'temp', title: variables.title }]
+    }));
+    
+    return { snapshot };
+  },
+  
+  onError: (error, variables, context) => {
+    const cache = useGraphQLCache();
+    // Rollback on error (sync for instant UI update)
+    if (context?.snapshot) {
+      cache.write("AllFilms", {}, context.snapshot);
+    }
+  },
+  
+  onSuccess: (data, variables, context) => {
+    // Replace optimistic temp ID with real ID from server
+    const cache = useGraphQLCache();
+    cache.update("AllFilms", {}, (current) => ({
+      films: current?.films.map(f => f.id === 'temp' ? data.addFilm : f) ?? []
+    }));
+  },
+  
+  onSettled: (result, variables, context) => {
+    // Always runs after mutation (success or error)
+    console.log('Mutation completed');
+  }
+});
+
+const result = await mutate({ title: "New Film" });
+```
+
 
 ### Remote executor hooks (optional, per remote)
 
