@@ -273,9 +273,21 @@ Storage:
 Helpers:
 
 ```ts
-useGraphQLCache().invalidate()
-useGraphQLCache().invalidate({ operation })
-useGraphQLCache().invalidate({ operation, variables })
+const cache = useGraphQLCache();
+
+// Read cached query (in-memory only, sync)
+cache.read(operation, variables?) → ResultOf<TName> | undefined
+
+// Write cached query (in-memory only, sync)
+cache.write(operation, variables, value | updater) → void
+
+// Update cached query (in-memory + persisted, async)
+cache.update(operation, variables, value | updater) → Promise<void>
+
+// Invalidate cache entries (async)
+cache.invalidate() → Promise<void>                     // all entries
+cache.invalidate(operation) → Promise<void>            // all for operation
+cache.invalidate(operation, variables) → Promise<void> // exact match
 ```
 
 Cache key:

@@ -287,21 +287,28 @@ const { data } = await useAsyncGraphQLQuery("HelloWorld", undefined, {
 });
 ```
 
-#### Manual invalidation
+#### Cache manipulation
 
-On the client, `useGraphQLCache()` can invalidate in-memory and persisted entries:
+On the client, `useGraphQLCache()` provides helpers to read, write, update, and invalidate cache entries:
 
 ```ts
-const { invalidate } = useGraphQLCache();
+const cache = useGraphQLCache();
 
-// Invalidate a single entry (operation + variables)
-await invalidate({ operation: "HelloWorld", variables: {} });
+// Read cached query (in-memory only)
+const films = cache.read("AllFilms", {});
 
-// Invalidate all entries for an operation
-await invalidate({ operation: "HelloWorld" });
+// Write cached query synchronously (in-memory only, useful for rollbacks)
+cache.write("AllFilms", {}, newValue);
+cache.write("AllFilms", {}, (current) => ({ ...current, films: [...current.films, newFilm] }));
 
-// Invalidate all entries
-await invalidate();
+// Update cached query asynchronously (in-memory + persisted)
+await cache.update("AllFilms", {}, newValue);
+await cache.update("AllFilms", {}, (current) => ({ ...current, films: [...current.films, newFilm] }));
+
+// Invalidate cache entries
+await cache.invalidate("HelloWorld", {});  // Exact match (operation + variables)
+await cache.invalidate("HelloWorld");      // All entries for operation
+await cache.invalidate();                  // All entries
 ```
 
 
