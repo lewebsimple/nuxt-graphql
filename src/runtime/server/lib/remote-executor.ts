@@ -5,7 +5,7 @@ import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
 import type { GraphQLVariables } from "../../shared/lib/types";
 
 type GraphQLExecutionRequest = ExecutionRequest<GraphQLVariables, GraphQLContext> & { extensions?: { headers?: HeadersInput } };
-type GraphQLExecutionResult<TData = unknown> = ExecutionResult<TData>;
+type GraphQLExecutionResult<TData = unknown> = ExecutionResult<TData> & { extensions?: { headers?: HeadersInput } };
 
 export type GraphQLRemoteExecHooks<TData = unknown> = {
   onRequest?: (request: GraphQLExecutionRequest) => void | Promise<void>;
@@ -40,6 +40,15 @@ export function getRemoteExecutor<TData = unknown>({ endpoint, headers, hooks }:
       }
 
       const result = (await response.json()) as GraphQLExecutionResult<TData>;
+
+      const responseHeaders: HeadersInput = {};
+      response.headers.forEach((value, key) => {
+        responseHeaders[key] = value;
+      });
+      result.extensions = {
+        ...(result.extensions && typeof result.extensions === "object" ? result.extensions : {}),
+        headers: responseHeaders,
+      };
 
       for (const hook of hooks) {
         await hook.onResult?.(result);
