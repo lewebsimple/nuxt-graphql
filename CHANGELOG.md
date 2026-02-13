@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.14
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.12...v0.6.14)
+
+### 🩹 Fixes
+
+- Default maybeValue config T ([ null](https://github.com/lewebsimple/nuxt-graphql/commit/ null))
+
+### ❤️ Contributors
+
+- 073fa09 <Pascal Martineau>
+
 ## v0.6.12
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.11...v0.6.12)
