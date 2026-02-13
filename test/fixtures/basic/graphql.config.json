@@ -1,4 +1,4 @@
 {
-  "schema": "./server/graphql/schema.graphql",
-  "documents": "test/**/*.gql"
+  "schema": "./.nuxt/graphql/schema.graphql",
+  "documents": "**/*.gql"
 }

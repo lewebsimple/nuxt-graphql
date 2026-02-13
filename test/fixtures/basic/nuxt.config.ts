@@ -1,7 +1,15 @@
-import MyModule from "../../../src/module";
+import NuxtGraphQL from "../../../src/module";
 
 export default defineNuxtConfig({
   modules: [
-    MyModule,
+    NuxtGraphQL,
   ],
+  graphql: {
+    server: {
+      schema: {
+        local: { type: "local", path: "./server/graphql/schema.ts" },
+      },
+    },
+    saveSDL: ".nuxt/graphql/schema.graphql",
+  },
 });
