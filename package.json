@@ -44,7 +44,7 @@
     "@graphql-tools/graphql-file-loader": "^8.1.9",
     "@graphql-tools/load": "^8.1.8",
     "@graphql-tools/schema": "^10.0.31",
-    "@graphql-tools/stitch": "^10.1.10",
+    "@graphql-tools/stitch": "^10.1.11",
     "@nuxt/kit": "^4.3.1",
     "defu": "^6.1.4",
     "graphql": "^16.12.0",
@@ -55,7 +55,7 @@
     "unstorage": "^1.17.4"
   },
   "devDependencies": {
-    "@nuxt/devtools": "^3.1.1",
+    "@nuxt/devtools": "^3.2.1",
     "@nuxt/eslint-config": "^1.15.1",
     "@nuxt/module-builder": "^1.0.2",
     "@nuxt/schema": "^4.3.1",

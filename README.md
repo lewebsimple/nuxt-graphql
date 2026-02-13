@@ -311,6 +311,8 @@ await cache.invalidate("HelloWorld");      // All entries for operation
 await cache.invalidate();                  // All entries
 ```
 
+> **⚠️ Important:** Cache manipulation methods (`read`, `write`, `update`, `invalidate`) are incompatible with the `transform` option on `useAsyncGraphQLQuery`. If you need to use cache invalidation or manipulation, do not use the `transform` option. Instead, transform the data after retrieving it from the composable.
+
 #### Optimistic updates
 
 `useGraphQLMutation` supports optimistic updates via lifecycle hooks:
