@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.6.12
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.11...v0.6.12)
+
+### 🚀 Enhancements
+
+- Cache manipulation helpers (read, write, update, invalidate) ([b0b1b72](https://github.com/lewebsimple/nuxt-graphql/commit/b0b1b72))
+- Optimistic updates in useGraphQLMutation ([4342757](https://github.com/lewebsimple/nuxt-graphql/commit/4342757))
+
+### 🩹 Fixes
+
+- Test needs dev: true ([9c12f06](https://github.com/lewebsimple/nuxt-graphql/commit/9c12f06))
+
+### 🏡 Chore
+
+- Update README and deps ([c51adb1](https://github.com/lewebsimple/nuxt-graphql/commit/c51adb1))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.11
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.10...v0.6.11)
