@@ -4,7 +4,7 @@ import { hash } from "ohash";
 
 type PageInfoFragment = {
   hasNextPage: boolean;
-  endCursor: string | undefined;
+  endCursor: string | null | undefined;
 };
 
 type Connection<TItem> = {
@@ -18,7 +18,7 @@ export async function useGraphQLLoadMore<
 >(
   queryName: TQueryName,
   inputVars: MaybeRef<Omit<VariablesOf<TQueryName>, "after">>,
-  getConnection: (data?: ResultOf<TQueryName>) => TConnection | undefined,
+  getConnection: (data?: ResultOf<TQueryName>) => TConnection | null | undefined,
 ) {
   type TItem = TConnection["nodes"][number];
 
