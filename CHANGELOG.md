@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.15
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.14...v0.6.15)
+
+### 🩹 Fixes
+
+- UseGraphQLLoadMore Maybe<T> null handling ([19b5bb8](https://github.com/lewebsimple/nuxt-graphql/commit/19b5bb8))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.14
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.12...v0.6.14)
