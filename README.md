@@ -363,19 +363,33 @@ const result = await mutate({ title: "New Film" });
 
 You can define custom logic around the remote executor for each remote schema by using the auto-imported `defineRemoteExecutorHooks` helper.
 
+All hooks receive the GraphQL context as a second parameter for convenient access.
+
 For the example configuration above, create [server/graphql/swapi-hooks.ts](server/graphql/swapi-hooks.ts):
 
 ```ts
 import { defu } from "defu";
 
 export default defineRemoteExecutorHooks({
-  onRequest(request) {
-    const { remoteAuthToken } = request.context || {};
+  onRequest(request, context) {
+    // Context is available as second parameter
+    const { remoteAuthToken } = context || {};
     request.extensions = defu(request.extensions, {
       headers: {
         "XAuthorization": `Bearer ${remoteAuthToken || ""}`,
       },
     });
+  },
+  
+  onResult(result, context) {
+    // You can also access context in onResult
+    console.log("User from context:", context?.user);
+    console.log("Result:", result.data);
+  },
+  
+  onError(error, context) {
+    // And in onError for logging/monitoring
+    console.error("Remote execution failed for user:", context?.user?.id);
   },
 });
 ```

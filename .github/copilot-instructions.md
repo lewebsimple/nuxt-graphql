@@ -190,15 +190,16 @@ createRemoteExecutor({
 
 ```ts
 interface GraphQLRemoteExecHooks {
-  onRequest?(request: ExecutionRequest): void | Promise<void>
-  onResult?(result: ExecutionResult): void | Promise<void>
-  onError?(error: unknown): void | Promise<void>
+  onRequest?(request: ExecutionRequest, context: GraphQLContext | undefined): void | Promise<void>
+  onResult?(result: ExecutionResult, context: GraphQLContext | undefined): void | Promise<void>
+  onError?(error: unknown, context: GraphQLContext | undefined): void | Promise<void>
 }
 ```
 
 Rules:
 
 * Hooks are **per operation**
+* Hooks receive the GraphQL context as a second parameter (may be undefined in edge cases)
 * No access to Nitro `event`
 * No Yoga response mutation
 * GraphQL execution errors are **data**, not thrown

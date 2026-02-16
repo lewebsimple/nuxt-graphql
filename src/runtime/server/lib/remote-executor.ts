@@ -8,9 +8,9 @@ type GraphQLExecutionRequest = ExecutionRequest<GraphQLVariables, GraphQLContext
 type GraphQLExecutionResult<TData = unknown> = ExecutionResult<TData> & { extensions?: { headers?: HeadersInput } };
 
 export type GraphQLRemoteExecHooks<TData = unknown> = {
-  onRequest?: (request: GraphQLExecutionRequest) => void | Promise<void>;
-  onResult?: (result: GraphQLExecutionResult<TData>) => void | Promise<void>;
-  onError?: (error: unknown) => void | Promise<void>;
+  onRequest?: (request: GraphQLExecutionRequest, context: GraphQLContext | undefined) => void | Promise<void>;
+  onResult?: (result: GraphQLExecutionResult<TData>, context: GraphQLContext | undefined) => void | Promise<void>;
+  onError?: (error: unknown, context: GraphQLContext | undefined) => void | Promise<void>;
 };
 
 export type RemoteExecutorInput = {
@@ -22,8 +22,10 @@ export type RemoteExecutorInput = {
 export function getRemoteExecutor<TData = unknown>({ endpoint, headers, hooks }: RemoteExecutorInput) {
   return async function execute(request: GraphQLExecutionRequest): Promise<GraphQLExecutionResult<TData>> {
     try {
+      const context = request.context;
+
       for (const hook of hooks) {
-        await hook.onRequest?.(request);
+        await hook.onRequest?.(request, context);
       }
 
       const response = await fetch(endpoint, {
@@ -51,14 +53,15 @@ export function getRemoteExecutor<TData = unknown>({ endpoint, headers, hooks }:
       };
 
       for (const hook of hooks) {
-        await hook.onResult?.(result);
+        await hook.onResult?.(result, context);
       }
 
       return result;
     }
     catch (error) {
+      const context = request.context;
       for (const hook of hooks) {
-        await hook.onError?.(error);
+        await hook.onError?.(error, context);
       }
       throw error;
     }
