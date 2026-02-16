@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.16
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.15...v0.6.16)
+
+### 🚀 Enhancements
+
+- Explicitly pass GraphQL context to remote executor hooks ([84a1428](https://github.com/lewebsimple/nuxt-graphql/commit/84a1428))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.15
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.14...v0.6.15)
