@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.17
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.16...v0.6.17)
+
+### 🩹 Fixes
+
+- Change enumsAsTypes to enumsAsConst in operations template ([350cc70](https://github.com/lewebsimple/nuxt-graphql/commit/350cc70))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.16
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.15...v0.6.16)
