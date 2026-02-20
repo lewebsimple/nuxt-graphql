@@ -38,6 +38,7 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
   // Resolve cache config and reactive cache key
   const cacheConfig = resolveCacheConfig(graphql.cacheConfig, cache);
   const cacheKey = computed(() => getCacheKeyParts(cacheConfig, operationName, toValue(variables)).key);
+  registerCacheKey(cacheKey.value);
 
   // Promise to execute the network request with deduplication and optional persistence
   const inFlight = getInFlightRequests();

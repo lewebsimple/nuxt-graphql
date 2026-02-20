@@ -131,6 +131,9 @@ export function useGraphQLCache() {
       if (keys.length > 0) {
         await refreshNuxtData(keys);
       }
+      else {
+        console.warn(`[nuxt-graphql][cache] No cache keys found for operation "${operation}" with prefix "${opPrefix}"`);
+      }
       return;
     }
 
