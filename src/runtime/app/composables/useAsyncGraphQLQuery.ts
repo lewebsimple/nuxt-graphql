@@ -5,7 +5,7 @@ import type { NormalizedError } from "../../shared/lib/error";
 import { normalizeError } from "../../shared/lib/error";
 import { getOperationDocument } from "../../shared/lib/registry";
 import type { CacheConfig, IsEmptyObject } from "../../shared/lib/types";
-import { getCacheKeyParts, resolveCacheConfig } from "../lib/cache";
+import { getCacheKeyParts, markCacheKeyRefreshed, registerCacheKey, resolveCacheConfig, shouldBypassCache } from "../lib/cache";
 import { getInFlightRequests } from "../lib/in-flight";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
@@ -52,14 +52,14 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
 
     // GraphQL request execution promise with optional persistence on client
     const promise = $executeGraphQL<ResultOf<TName>, VariablesOf<TName>>({ query: document, variables: toValue(variables), operationName })
-      .then((result) => {
-        if (result.error) {
-          throw result.error;
+      .then(({ data, error }) => {
+        if (error) {
+          throw error;
         }
-        const data = result.data;
         if (isClient && cacheConfig.ttl !== undefined) {
           setPersistedEntry(key, data, cacheConfig.ttl);
         }
+        markCacheKeyRefreshed(key);
         return data;
       });
 
@@ -72,8 +72,10 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
 
   // AsyncData handler that applies the configured cache policy.
   async function asyncDataHandler() {
-    // Bypass cache if disabled
-    if (cacheConfig.policy === "no-cache") {
+    registerCacheKey(cacheKey.value);
+
+    // Bypass cache if disabled or if cacheKey is marked for bypass (e.g. after mutation)
+    if (cacheConfig.policy === "no-cache" || shouldBypassCache(cacheKey.value)) {
       return await fetchAndPersist();
     }
 

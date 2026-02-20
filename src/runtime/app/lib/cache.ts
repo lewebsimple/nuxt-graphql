@@ -45,3 +45,86 @@ export function getCacheKeyParts(
   const key = opPrefix + hash(variables || {});
   return { key, opPrefix };
 }
+
+const knownCacheKeys = new Set<string>();
+
+/**
+ * Register a cache key seen by async GraphQL queries.
+ *
+ * @param key Cache key.
+ */
+export function registerCacheKey(key: string): void {
+  knownCacheKeys.add(key);
+}
+
+/**
+ * Get known cache keys by prefix.
+ *
+ * @param prefix Cache key prefix.
+ * @returns Matching cache keys.
+ */
+export function getCacheKeysByPrefix(prefix: string): string[] {
+  return [...knownCacheKeys].filter((key) => key.startsWith(prefix));
+}
+
+// Tracks invalidation state and successful network refresh times per cache key.
+const invalidatedExactAt = new Map<string, number>();
+const invalidatedPrefixAt = new Map<string, number>();
+const refreshedAt = new Map<string, number>();
+
+let invalidatedAllAt = 0;
+
+/**
+ * Mark a single cache key as invalidated.
+ *
+ * @param key Cache key.
+ */
+export function invalidateCacheKey(key: string): void {
+  invalidatedExactAt.set(key, Date.now());
+}
+
+/**
+ * Mark all cache keys matching a prefix as invalidated.
+ *
+ * @param prefix Cache key prefix.
+ */
+export function invalidateCachePrefix(prefix: string): void {
+  invalidatedPrefixAt.set(prefix, Date.now());
+}
+
+/**
+ * Mark all cache keys as invalidated.
+ */
+export function invalidateAllCacheKeys(): void {
+  invalidatedAllAt = Date.now();
+}
+
+/**
+ * Mark a cache key as refreshed from network.
+ *
+ * @param key Cache key.
+ */
+export function markCacheKeyRefreshed(key: string): void {
+  refreshedAt.set(key, Date.now());
+}
+
+/**
+ * Determine whether cache should be bypassed for this key.
+ *
+ * @param key Cache key.
+ * @returns True when invalidation is newer than the last successful network refresh.
+ */
+export function shouldBypassCache(key: string): boolean {
+  const lastRefreshAt = refreshedAt.get(key) ?? 0;
+  const exactInvalidatedAt = invalidatedExactAt.get(key) ?? 0;
+
+  let prefixInvalidatedAt = 0;
+  for (const [prefix, timestamp] of invalidatedPrefixAt) {
+    if (key.startsWith(prefix) && timestamp > prefixInvalidatedAt) {
+      prefixInvalidatedAt = timestamp;
+    }
+  }
+
+  const latestInvalidationAt = Math.max(invalidatedAllAt, exactInvalidatedAt, prefixInvalidatedAt);
+  return latestInvalidationAt > lastRefreshAt;
+}

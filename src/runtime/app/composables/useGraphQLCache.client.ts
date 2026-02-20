@@ -1,8 +1,10 @@
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
-import { clearNuxtData, useNuxtData, useRuntimeConfig } from "#imports";
-import { getCacheKeyParts } from "../lib/cache";
+import { refreshNuxtData, useNuxtData, useRuntimeConfig } from "#imports";
+import { getCacheKeyParts, getCacheKeysByPrefix, invalidateAllCacheKeys, invalidateCacheKey, invalidateCachePrefix, markCacheKeyRefreshed, registerCacheKey } from "../lib/cache";
 import { deletePersistedByPrefix, deletePersistedEntry, getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 import type { IsEmptyObject } from "../../shared/lib/types";
+
+type CacheWriteOptions = { markFresh?: boolean };
 
 /**
  * GraphQL cache helper composable.
@@ -42,6 +44,7 @@ export function useGraphQLCache() {
     operation: TName,
     variables: VariablesOf<TName>,
     value: ResultOf<TName> | ((current: ResultOf<TName> | undefined) => ResultOf<TName>),
+    options?: CacheWriteOptions,
   ): void {
     const { key } = getCacheKeyParts(cacheConfig, operation, variables);
     const nuxtData = useNuxtData<ResultOf<TName>>(key);
@@ -49,6 +52,11 @@ export function useGraphQLCache() {
     nuxtData.data.value = typeof value === "function"
       ? (value as (current: ResultOf<TName> | undefined) => ResultOf<TName>)(nuxtData.data.value)
       : value;
+
+    registerCacheKey(key);
+    if (options?.markFresh) {
+      markCacheKeyRefreshed(key);
+    }
   }
 
   /**
@@ -63,6 +71,7 @@ export function useGraphQLCache() {
     operation: TName,
     variables: VariablesOf<TName>,
     value: ResultOf<TName> | ((current: ResultOf<TName> | undefined) => ResultOf<TName>),
+    options?: CacheWriteOptions,
   ): Promise<void> {
     const { key } = getCacheKeyParts(cacheConfig, operation, variables);
     const nuxtData = useNuxtData<ResultOf<TName>>(key);
@@ -85,6 +94,11 @@ export function useGraphQLCache() {
     if (cacheConfig.ttl !== undefined) {
       await setPersistedEntry(key, updated, cacheConfig.ttl);
     }
+
+    registerCacheKey(key);
+    if (options?.markFresh) {
+      markCacheKeyRefreshed(key);
+    }
   }
 
   /**
@@ -102,23 +116,29 @@ export function useGraphQLCache() {
     if (operation === undefined) {
       const { keyPrefix, keyVersion } = cacheConfig;
       const prefix = `${keyPrefix}:${keyVersion}:`;
-      clearNuxtData((k) => k.startsWith(prefix));
+      invalidateAllCacheKeys();
       await deletePersistedByPrefix(prefix);
+      await refreshNuxtData();
       return;
     }
 
     if (variables === undefined) {
       // Invalidate all entries for an operation
       const { opPrefix } = getCacheKeyParts(cacheConfig, operation, {});
-      clearNuxtData((k) => k.startsWith(opPrefix));
+      invalidateCachePrefix(opPrefix);
       await deletePersistedByPrefix(opPrefix);
+      const keys = getCacheKeysByPrefix(opPrefix);
+      if (keys.length > 0) {
+        await refreshNuxtData(keys);
+      }
       return;
     }
 
     // Invalidate a single cache entry (exact)
     const { key } = getCacheKeyParts(cacheConfig, operation, variables);
-    clearNuxtData(key);
+    invalidateCacheKey(key);
     await deletePersistedEntry(key);
+    await refreshNuxtData(key);
   }
 
   return { cacheConfig, read, write, update, invalidate } as const;
