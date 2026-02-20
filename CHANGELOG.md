@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.6.18
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.17...v0.6.18)
+
+### 🚀 Enhancements
+
+- Enhance cache management with new cache key registration and invalidation methods ([d05c61c](https://github.com/lewebsimple/nuxt-graphql/commit/d05c61c))
+
+### 🩹 Fixes
+
+- Register cache key in useAsyncGraphQLQuery and add warning for missing cache keys in useGraphQLCache ([d12d218](https://github.com/lewebsimple/nuxt-graphql/commit/d12d218))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.17
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.16...v0.6.17)
