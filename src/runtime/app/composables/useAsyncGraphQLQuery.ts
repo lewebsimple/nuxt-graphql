@@ -9,7 +9,10 @@ import { getCacheKeyParts, markCacheKeyRefreshed, registerCacheKey, resolveCache
 import { getInFlightRequests } from "../lib/in-flight";
 import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
-type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultOf<TName>> = Omit<AsyncDataOptions<ResultOf<TName>>, "transform" | "pick"> & {
+type UseAsyncGraphQLQueryOptions<
+  TName extends QueryName,
+  TTransformed = ResultOf<TName>,
+> = Omit<AsyncDataOptions<ResultOf<TName>, TTransformed, never>, "transform" | "pick"> & {
   transform?: (input: ResultOf<TName>) => TTransformed;
   cache?: Partial<CacheConfig>;
   scope?: string;
@@ -24,7 +27,7 @@ type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultO
  */
 export function useAsyncGraphQLQuery<
   TName extends QueryName,
-  TTransformed extends ResultOf<TName> | Promise<ResultOf<TName>> = ResultOf<TName>,
+  TTransformed = ResultOf<TName>,
 >(
   operationName: TName,
   ...args: IsEmptyObject<VariablesOf<TName>> extends true
@@ -143,5 +146,5 @@ export function useAsyncGraphQLQuery<
     }
   }
 
-  return useAsyncData(cacheKey, asyncDataHandler, { ...asyncDataOptions, transform }) as AsyncData<TTransformed | undefined, NormalizedError | undefined>;
+  return useAsyncData<ResultOf<TName>, NormalizedError, TTransformed, never>(cacheKey, asyncDataHandler, { ...asyncDataOptions, transform });
 }
