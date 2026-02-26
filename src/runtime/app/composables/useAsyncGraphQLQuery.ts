@@ -22,7 +22,10 @@ type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultO
  * @param args Operation variables (if any) and optional HTTP headers.
  * @returns Nuxt AsyncData wrapper for the query result.
  */
-export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = ResultOf<TName>>(
+export function useAsyncGraphQLQuery<
+  TName extends QueryName,
+  TTransformed extends ResultOf<TName> | Promise<ResultOf<TName>> = ResultOf<TName>,
+>(
   operationName: TName,
   ...args: IsEmptyObject<VariablesOf<TName>> extends true
     ? [variables?: MaybeRefOrGetter<VariablesOf<TName>>, options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>]
