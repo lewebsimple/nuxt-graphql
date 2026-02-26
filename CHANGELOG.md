@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.20
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.19...v0.6.20)
+
+### 🩹 Fixes
+
+- Type issue with useAsyncGraphQLQuery ([48d7a40](https://github.com/lewebsimple/nuxt-graphql/commit/48d7a40))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.19
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.18...v0.6.19)
