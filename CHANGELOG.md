@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.6.19
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.18...v0.6.19)
+
+### 🚀 Enhancements
+
+- Forget cache keys on invalidation to prevent memory leak ([b4ccec5](https://github.com/lewebsimple/nuxt-graphql/commit/b4ccec5))
+
+### 🩹 Fixes
+
+- Type issue with useAsyncGraphQLQuery ([60009e2](https://github.com/lewebsimple/nuxt-graphql/commit/60009e2))
+
+### 💅 Refactors
+
+- Cache scope is now required (defaults to "global") ([d92e842](https://github.com/lewebsimple/nuxt-graphql/commit/d92e842))
+
+### 🏡 Chore
+
+- Update deps ([1aa2970](https://github.com/lewebsimple/nuxt-graphql/commit/1aa2970))
+- Eslint settings for VSCode ([8778523](https://github.com/lewebsimple/nuxt-graphql/commit/8778523))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.18
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.17...v0.6.18)
