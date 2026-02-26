@@ -1,8 +1,8 @@
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
 import { refreshNuxtData, useNuxtData, useRuntimeConfig } from "#imports";
+import type { IsEmptyObject } from "../../shared/lib/types";
 import { getCacheKeyParts, getCacheKeysByPrefix, invalidateAllCacheKeys, invalidateCacheKey, invalidateCachePrefix, markCacheKeyRefreshed, registerCacheKey } from "../lib/cache";
 import { deletePersistedByPrefix, deletePersistedEntry, getPersistedEntry, setPersistedEntry } from "../lib/persisted";
-import type { IsEmptyObject } from "../../shared/lib/types";
 
 type CacheWriteOptions = { markFresh?: boolean };
 
@@ -11,8 +11,13 @@ type CacheWriteOptions = { markFresh?: boolean };
  *
  * @returns Cache manipulation helpers.
  */
-export function useGraphQLCache() {
+export function useGraphQLCache(scope: string = "global") {
   const { public: { graphql: { cacheConfig } } } = useRuntimeConfig();
+
+  // Local cache key resolver to avoid repeating cacheConfig and scope parameters
+  function resolveKeyParts<TName extends QueryName>(operation: TName, variables: VariablesOf<TName> | undefined) {
+    return getCacheKeyParts(cacheConfig, scope, operation, variables ?? {});
+  }
 
   /**
    * Read a cached query result from in-memory cache.
@@ -28,9 +33,28 @@ export function useGraphQLCache() {
       : [variables: VariablesOf<TName>]
   ): ResultOf<TName> | undefined {
     const [variables] = args;
-    const { key } = getCacheKeyParts(cacheConfig, operation, variables ?? {});
+    const { key } = resolveKeyParts(operation, variables);
     const nuxtData = useNuxtData<ResultOf<TName>>(key);
     return nuxtData.data.value;
+  }
+
+  // Apply a cache write synchronously and register the key
+  function applyWrite<TName extends QueryName>(
+    key: string,
+    value: ResultOf<TName> | ((current: ResultOf<TName> | undefined) => ResultOf<TName>),
+    current: ResultOf<TName> | undefined,
+    options?: CacheWriteOptions,
+  ): ResultOf<TName> {
+    const nuxtData = useNuxtData<ResultOf<TName>>(key);
+    const next = typeof value === "function"
+      ? (value as (c: ResultOf<TName> | undefined) => ResultOf<TName>)(current)
+      : value;
+    nuxtData.data.value = next;
+    registerCacheKey(key);
+    if (options?.markFresh) {
+      markCacheKeyRefreshed(key);
+    }
+    return next;
   }
 
   /**
@@ -46,17 +70,9 @@ export function useGraphQLCache() {
     value: ResultOf<TName> | ((current: ResultOf<TName> | undefined) => ResultOf<TName>),
     options?: CacheWriteOptions,
   ): void {
-    const { key } = getCacheKeyParts(cacheConfig, operation, variables);
+    const { key } = resolveKeyParts(operation, variables);
     const nuxtData = useNuxtData<ResultOf<TName>>(key);
-
-    nuxtData.data.value = typeof value === "function"
-      ? (value as (current: ResultOf<TName> | undefined) => ResultOf<TName>)(nuxtData.data.value)
-      : value;
-
-    registerCacheKey(key);
-    if (options?.markFresh) {
-      markCacheKeyRefreshed(key);
-    }
+    applyWrite<TName>(key, value, nuxtData.data.value, options);
   }
 
   /**
@@ -73,31 +89,15 @@ export function useGraphQLCache() {
     value: ResultOf<TName> | ((current: ResultOf<TName> | undefined) => ResultOf<TName>),
     options?: CacheWriteOptions,
   ): Promise<void> {
-    const { key } = getCacheKeyParts(cacheConfig, operation, variables);
+    const { key } = resolveKeyParts(operation, variables);
     const nuxtData = useNuxtData<ResultOf<TName>>(key);
-
-    // Get current value from in-memory cache, fallback to persisted
     let current = nuxtData.data.value;
     if (current === undefined && cacheConfig.ttl !== undefined) {
       current = await getPersistedEntry<ResultOf<TName>>(key);
     }
-
-    // Apply value or updater function
-    const updated = typeof value === "function"
-      ? (value as (current: ResultOf<TName> | undefined) => ResultOf<TName>)(current)
-      : value;
-
-    // Update in-memory cache
-    nuxtData.data.value = updated;
-
-    // Update persisted cache if enabled
+    const next = applyWrite<TName>(key, value, current, options);
     if (cacheConfig.ttl !== undefined) {
-      await setPersistedEntry(key, updated, cacheConfig.ttl);
-    }
-
-    registerCacheKey(key);
-    if (options?.markFresh) {
-      markCacheKeyRefreshed(key);
+      await setPersistedEntry(key, next, cacheConfig.ttl);
     }
   }
 
@@ -112,37 +112,48 @@ export function useGraphQLCache() {
     operation?: TName,
     variables?: VariablesOf<TName>,
   ): Promise<void> {
-    // Invalidate everything
+    const { scopePrefix, opPrefix, key } = resolveKeyParts(operation as TName, variables);
+
+    // Invalidate entire scope
     if (operation === undefined) {
-      const { keyPrefix, keyVersion } = cacheConfig;
-      const prefix = `${keyPrefix}:${keyVersion}:`;
-      invalidateAllCacheKeys();
-      await deletePersistedByPrefix(prefix);
-      await refreshNuxtData();
+      invalidateCachePrefix(scopePrefix);
+      await deletePersistedByPrefix(scopePrefix);
+      const keys = getCacheKeysByPrefix(scopePrefix);
+      if (keys.length > 0) {
+        await refreshNuxtData(keys);
+      }
       return;
     }
 
+    // Invalidate operation within scope
     if (variables === undefined) {
-      // Invalidate all entries for an operation
-      const { opPrefix } = getCacheKeyParts(cacheConfig, operation, {});
       invalidateCachePrefix(opPrefix);
       await deletePersistedByPrefix(opPrefix);
       const keys = getCacheKeysByPrefix(opPrefix);
       if (keys.length > 0) {
         await refreshNuxtData(keys);
       }
-      else {
-        console.warn(`[nuxt-graphql][cache] No cache keys found for operation "${operation}" with prefix "${opPrefix}"`);
-      }
       return;
     }
 
-    // Invalidate a single cache entry (exact)
-    const { key } = getCacheKeyParts(cacheConfig, operation, variables);
+    // Invalidate exact key within scope
     invalidateCacheKey(key);
     await deletePersistedEntry(key);
     await refreshNuxtData(key);
   }
 
-  return { cacheConfig, read, write, update, invalidate } as const;
+  /**
+   * Invalidate all cache entries across all scopes.
+   *
+   * @returns Promise that resolves when all cache entries are invalidated.
+   */
+  async function invalidateAllScopes(): Promise<void> {
+    const { keyPrefix, keyVersion } = cacheConfig;
+    const rootPrefix = `${keyPrefix}:${keyVersion}:`;
+    invalidateAllCacheKeys();
+    await deletePersistedByPrefix(rootPrefix);
+    await refreshNuxtData();
+  }
+
+  return { cacheConfig, read, write, update, invalidate, invalidateAllScopes } as const;
 }

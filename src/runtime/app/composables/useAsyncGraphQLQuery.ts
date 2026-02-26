@@ -1,6 +1,6 @@
 import { useAsyncData, useNuxtApp, useNuxtData, useRuntimeConfig, type AsyncData, type AsyncDataOptions } from "#app";
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
-import { computed, toValue, type MaybeRefOrGetter } from "#imports";
+import { computed, toValue, watchEffect, type MaybeRefOrGetter } from "#imports";
 import type { NormalizedError } from "../../shared/lib/error";
 import { normalizeError } from "../../shared/lib/error";
 import { getOperationDocument } from "../../shared/lib/registry";
@@ -12,6 +12,7 @@ import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultOf<TName>> = Omit<AsyncDataOptions<ResultOf<TName>>, "transform" | "pick"> & {
   transform?: (input: ResultOf<TName>) => TTransformed;
   cache?: Partial<CacheConfig>;
+  scope?: string;
 };
 
 /**
@@ -33,12 +34,15 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
 
   const isClient = import.meta.client;
   const { public: { graphql } } = useRuntimeConfig();
-  const { cache, transform, ...asyncDataOptions } = options ?? {};
+  const { cache, transform, scope: scopeOpt, ...asyncDataOptions } = options ?? {};
 
   // Resolve cache config and reactive cache key
   const cacheConfig = resolveCacheConfig(graphql.cacheConfig, cache);
-  const cacheKey = computed(() => getCacheKeyParts(cacheConfig, operationName, toValue(variables)).key);
-  registerCacheKey(cacheKey.value);
+  const scope = scopeOpt ?? "global";
+  const cacheKey = computed(() => getCacheKeyParts(cacheConfig, scope, operationName, toValue(variables)).key);
+  watchEffect(() => {
+    registerCacheKey(cacheKey.value);
+  });
 
   // Promise to execute the network request with deduplication and optional persistence
   const inFlight = getInFlightRequests();

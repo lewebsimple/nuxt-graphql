@@ -19,31 +19,35 @@ export function resolveCacheConfig(...overrides: Array<Partial<CacheConfig> | un
   return Object.assign({}, defaultCacheConfig, ...overrides);
 }
 
-type CacheKeyParts = { key: string; opPrefix: string };
+type CacheKeyParts = {
+  rootPrefix: string;
+  scopePrefix: string;
+  opPrefix: string;
+  key: string;
+};
 
 /**
  * Build cache key parts from config, operation name, and variables.
  *
- * @param {GraphQLCacheConfig} options Cache configuration.
- * @param options.keyPrefix Cache key prefix.
- * @param options.keyVersion Cache key version.
+ * @param {GraphQLCacheConfig} config Cache configuration.
+ * @param config.keyPrefix Cache key prefix.
+ * @param config.keyVersion Cache key version.
+ * @param scope Cache scope segment.
  * @param operationName Operation name.
  * @param variables Operation variables.
- * @param scope Optional cache scope segment.
  * @returns Key parts including full key and operation prefix.
  */
 export function getCacheKeyParts(
   { keyPrefix, keyVersion }: CacheConfig,
+  scope: string,
   operationName: string,
   variables: unknown,
-  scope?: string,
 ): CacheKeyParts {
-  const parts = [keyPrefix, keyVersion];
-  if (scope) parts.push(scope);
-  parts.push(operationName);
-  const opPrefix = parts.join(":") + ":";
-  const key = opPrefix + hash(variables || {});
-  return { key, opPrefix };
+  const rootPrefix = `${keyPrefix}:${keyVersion}:`;
+  const scopePrefix = `${rootPrefix}${scope}:`;
+  const opPrefix = `${scopePrefix}${operationName}:`;
+  const key = `${opPrefix}${hash(variables || {})}`;
+  return { rootPrefix, scopePrefix, opPrefix, key };
 }
 
 const knownCacheKeys = new Set<string>();
