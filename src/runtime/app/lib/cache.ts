@@ -132,3 +132,41 @@ export function shouldBypassCache(key: string): boolean {
   const latestInvalidationAt = Math.max(invalidatedAllAt, exactInvalidatedAt, prefixInvalidatedAt);
   return latestInvalidationAt > lastRefreshAt;
 }
+
+/**
+ * Remove a single cache key from all internal registries.
+ */
+export function forgetCacheKey(key: string): void {
+  knownCacheKeys.delete(key);
+  invalidatedExactAt.delete(key);
+  refreshedAt.delete(key);
+}
+
+/**
+ * Remove all cache keys and related metadata matching a prefix.
+ */
+export function forgetCacheByPrefix(prefix: string): void {
+  // Remove matching keys
+  for (const key of knownCacheKeys) {
+    if (key.startsWith(prefix)) {
+      knownCacheKeys.delete(key);
+      invalidatedExactAt.delete(key);
+      refreshedAt.delete(key);
+    }
+  }
+
+  // Remove prefix invalidation marker itself
+  invalidatedPrefixAt.delete(prefix);
+}
+
+/**
+ * Clear all in-memory cache tracking metadata.
+ * Does NOT delete persisted storage.
+ */
+export function forgetCacheAll(): void {
+  knownCacheKeys.clear();
+  invalidatedExactAt.clear();
+  invalidatedPrefixAt.clear();
+  refreshedAt.clear();
+  invalidatedAllAt = 0;
+}

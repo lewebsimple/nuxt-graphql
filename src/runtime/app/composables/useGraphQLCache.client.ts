@@ -1,7 +1,18 @@
 import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
 import { refreshNuxtData, useNuxtData, useRuntimeConfig } from "#imports";
 import type { IsEmptyObject } from "../../shared/lib/types";
-import { getCacheKeyParts, getCacheKeysByPrefix, invalidateAllCacheKeys, invalidateCacheKey, invalidateCachePrefix, markCacheKeyRefreshed, registerCacheKey } from "../lib/cache";
+import {
+  forgetCacheAll,
+  forgetCacheByPrefix,
+  forgetCacheKey,
+  getCacheKeyParts,
+  getCacheKeysByPrefix,
+  invalidateAllCacheKeys,
+  invalidateCacheKey,
+  invalidateCachePrefix,
+  markCacheKeyRefreshed,
+  registerCacheKey,
+} from "../lib/cache";
 import { deletePersistedByPrefix, deletePersistedEntry, getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
 type CacheWriteOptions = { markFresh?: boolean };
@@ -122,6 +133,7 @@ export function useGraphQLCache(scope: string = "global") {
       if (keys.length > 0) {
         await refreshNuxtData(keys);
       }
+      forgetCacheByPrefix(scopePrefix);
       return;
     }
 
@@ -133,6 +145,7 @@ export function useGraphQLCache(scope: string = "global") {
       if (keys.length > 0) {
         await refreshNuxtData(keys);
       }
+      forgetCacheByPrefix(opPrefix);
       return;
     }
 
@@ -140,6 +153,7 @@ export function useGraphQLCache(scope: string = "global") {
     invalidateCacheKey(key);
     await deletePersistedEntry(key);
     await refreshNuxtData(key);
+    forgetCacheKey(key);
   }
 
   /**
@@ -153,6 +167,7 @@ export function useGraphQLCache(scope: string = "global") {
     invalidateAllCacheKeys();
     await deletePersistedByPrefix(rootPrefix);
     await refreshNuxtData();
+    forgetCacheAll();
   }
 
   return { cacheConfig, read, write, update, invalidate, invalidateAllScopes } as const;
