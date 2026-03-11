@@ -1,4 +1,8 @@
 {
-  "schema": "./server/graphql/schema.graphql",
-  "documents": "**/*.gql"
+  "schema": "./.nuxt/graphql/schema.graphql",
+  "documents": [
+    "./app/**/*.{gql,ts,vue}",
+    "./server/**/*.{gql,ts}",
+    "./shared/**/*.{gql,ts}"
+  ]
 }

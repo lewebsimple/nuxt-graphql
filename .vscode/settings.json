@@ -1,8 +1,16 @@
 {
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "always"
+  "[json]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
   },
-  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "[jsonc]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode"
+  },
+  "editor.defaultFormatter": "oxc.oxc-vscode",
   "editor.formatOnSave": true,
-  "eslint.useFlatConfig": true
+  "editor.quickSuggestions": {
+    "strings": "on"
+  }
 }

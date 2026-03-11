@@ -7,45 +7,46 @@
 
 Opinionated Nuxt module that wires a typed GraphQL server + client into your app.
 
-[✨ &nbsp;Release Notes](/CHANGELOG.md)
-
+✨ [Release Notes](/CHANGELOG.md)
 
 ## Features
 
 - 🧘 **GraphQL Yoga** server at `/api/graphql` (**GraphiQL** in dev) + **SSE subscriptions**
-- 🪡 **Stitched schema** from local and/or remote schemas (remote introspection at build time; subscriptions stripped)
-- 🪄 Code generation from `.gql` documents → **typed operation documents** + **registry**
-- 🧠 **Type-safe helpers** for **queries, mutations, and subscriptions**, shared across **client + server**
-- 🧊 **SSR-friendly** by default: request header forwarding + server-side schema execution helpers
+- 🪡 **Combined schema** from local and/or remote schemas (remote introspection at build time; subscriptions stripped)
+- 🪄 Code generation from `.gql` documents and source files → **validated schema operations and fragments**
+- 🧠 **Type-safe helpers** for **queries, mutations, and subscriptions** in both **client + server**
+- 🧊 **SSR-friendly** by default: request header forwarding + remote schema execution hooks
 - 🚀 **Client-side cache** for `useAsyncGraphQLQuery` (cache policies + optional persistence in localStorage)
-- 🧯 **Unified error model** via `GraphQLExecutionResult` and `NormalizedError`
-
+- 🧯 **Unified error model** via `ExecuteGraphQLResult` and `NormalizedError`
 
 ## Getting started
 
-Install the module to your Nuxt application with one command:
+Install the module and its dependencies in your project:
 
 ```bash
-pnpx nuxt module add @lewebsimple/nuxt-graphql
+pnpm add @lewebsimple/nuxt-graphql zod
 ```
-
 
 ### Configuration
 
-Declare your schemas, context, documents glob and optional client cache in [nuxt.config.ts](nuxt.config.ts):
+Add the module to your `nuxt.config.ts` and declare your schemas, context, documents glob and optional client cache:
 
 ```ts
 export default defineNuxtConfig({
   modules: ["@lewebsimple/nuxt-graphql"],
   graphql: {
+    // GraphQL server configuration
     server: {
+      // Optional: custom GraphQL context factories (defaults to empty context)
+      context: ["server/graphql/context.ts"],
+
       // Schemas to stitch together (local and/or remote)
-      schema: {
+      schema: [
         // Local schema example
-        local: { type: "local", path: "server/graphql/schema.ts" },
-      
+        { type: "local", path: "server/graphql/schema.ts" },
+
         // Remote schema example
-        swapi: {
+        {
           type: "remote",
           url: "https://swapi-graphql.netlify.app/graphql",
           // Optional: static headers for this remote
@@ -55,15 +56,13 @@ export default defineNuxtConfig({
           // Optional: per-remote execution hooks
           hooks: ["server/graphql/swapi-hooks.ts"],
         },
-      },
-
-      // Optional: custom GraphQL context factories (defaults to [])
-      context: ["server/graphql/context.ts"],
+      ],
     },
 
+    // GraphQL client configuration
     client: {
-      // Optional: documents glob (defaults to **/*.gql)
-      documents: "**/*.gql",
+      // Optional: documents globs (defaults to **/*.gql)
+      documents: ["**/*.gql"],
 
       // Optional: headers forwarded from SSR to graphql-request (defaults to ["authorization", "cookie"])
       ssrForwardHeaders: ["authorization", "cookie"],
@@ -80,7 +79,7 @@ export default defineNuxtConfig({
       },
     },
 
-    // Optional: save path for the stitched SDL (defaults to "server/graphql/schema.graphql")
+    // Optional: save path for the stitched SDL (defaults to ".nuxt/graphql/schema.graphql")
     saveSDL: "server/graphql/schema.graphql",
 
     // Optional: save path for the generated GraphQL config (defaults to "graphql.config.json")
@@ -88,7 +87,6 @@ export default defineNuxtConfig({
   },
 });
 ```
-
 
 ### Define GraphQL schema (local and/or remote)
 
@@ -135,8 +133,7 @@ export const schema = createSchema<GraphQLContext>({
 
 **Remote schemas** are introspected at build time from the endpoint URL and executed via an HTTP executor at runtime. Subscriptions are stripped from remote schemas.
 
-The final schema is stitched from the all of the defined local / remote schemas.
-
+The final schema combines the all of the defined local / remote schemas.
 
 ### Define GraphQL context (optional)
 
@@ -155,10 +152,9 @@ export default defineGraphQLContext(async (event) => {
 });
 ```
 
-
 ### Write GraphQL documents (.gql)
 
-By default, the module scans `**/*.gql` files for **named operations** and **fragments** which are converted into **types** and **typed document nodes** in `#graphql/operations`. The operations are exposed by name in `#graphql/registry` to allow type-safe execution with the provided **composables** and **server utils**.
+By default, the module scans `**/*.gql` files for **named operations** and **fragments** which are converted into **types** and **typed document nodes**. The operations are exposed by name in `#graphql/registry` to allow type-safe execution with the provided **composables** and **server utils**.
 
 ⚠️ Operation names are required and must be unique.
 
@@ -187,13 +183,12 @@ subscription Time {
 
 That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
 
-
 ### Fragments
 
 Fragments are fully supported and are the recommended way to share selection sets across operations.
 
 - Fragment names must be unique across all `.gql` files (duplicates throw during generation).
-- Fragment types are re-exported from `#graphql/operations`.
+- Fragment types are re-exported from `#graphql/types`.
 - Fragments are not executable by themselves and are not part of the registry.
 
 Example with a fragment:
@@ -217,9 +212,8 @@ query SwapiFilms {
 From TypeScript, you can also use fragment types explicitly when needed:
 
 ```ts
-import type { TheFilmFragment } from "#graphql/operations";
+import type { TheFilmFragment } from "#graphql/types";
 ```
-
 
 ### Use the auto-imported composables
 
@@ -227,19 +221,18 @@ The auto-imported composables allow executing queries, mutations, and subscripti
 
 ```ts
 // Cached query via useAsyncData
-const { data, pending, error, refresh } = await useAsyncGraphQLQuery("HelloWorld", undefined);
+const { data, pending, error, refresh } = await useAsyncGraphQLQuery("HelloWorld", {});
 
 // Direct HTTP query (SafeResult)
-const { data: queryData, error: queryError } = await useGraphQLQuery("HelloWorld");
+const { data: queryData, error: queryError } = await useGraphQLQuery("HelloWorld", {});
 
 // Mutation (SafeResult)
 const { mutate, pending: mutationPending } = useGraphQLMutation("Ping");
 const { data: mutationData, error: mutationError } = await mutate({ message: "Hello!" });
 
 // Subscription (client-only, SSE)
-const { data, error, start, stop } = useGraphQLSubscription("Time");
+const { data, error, start, stop } = useGraphQLSubscription("Time", {});
 ```
-
 
 ### Use the auto-imported server utils
 
@@ -248,18 +241,13 @@ In server routes, you can execute queries and mutations directly against the sti
 ```ts
 export default defineEventHandler(async (event) => {
   // Server-side GraphQL query example
-  const { data: queryData, error: queryError } = await useGraphQLOperation(event, "HelloWorld" );
+  const { data, error } = await executeSchemaOperation(event, "HelloWorld", {});
 
-  // Server-side GraphQL mutation example
-  const { data: mutationData } = await useGraphQLOperation(event, "Ping", { message: queryData?.hello ?? "Pong" },
-  );
-
-  return { queryData, mutationData, queryError };
+  return { data, error };
 });
 ```
 
-Server helpers return a `GraphQLExecutionResult` in the same format as some composables, i.e. `{ data: TResult, error: null } | { data: null, error: NormalizedError }`
-
+Server helpers return a `ExecuteGraphQLResult` in the same format as some composables, i.e. `{ data: TResult, error: null } | { data: null, error: NormalizedError }`
 
 ### Query caching (client-side only)
 
@@ -279,12 +267,16 @@ Server helpers return a `GraphQLExecutionResult` in the same format as some comp
 #### Per-query overrides
 
 ```ts
-const { data } = await useAsyncGraphQLQuery("HelloWorld", undefined, {
-  cache: {
-    policy: "network-first",
-    ttl: undefined, // disable persistence for this call
+const { data } = await useAsyncGraphQLQuery(
+  "HelloWorld",
+  {},
+  {
+    cache: {
+      policy: "network-first",
+      ttl: undefined, // disable persistence for this call
+    },
   },
-});
+);
 ```
 
 #### Cache manipulation
@@ -303,15 +295,15 @@ cache.write("AllFilms", {}, (current) => ({ ...current, films: [...current.films
 
 // Update cached query asynchronously (in-memory + persisted)
 await cache.update("AllFilms", {}, newValue);
-await cache.update("AllFilms", {}, (current) => ({ ...current, films: [...current.films, newFilm] }));
+await cache.update("AllFilms", {}, (current) => ({
+  ...current,
+  films: [...current.films, newFilm],
+}));
 
 // Invalidate cache entries
-await cache.invalidate("HelloWorld", {});  // Exact match (operation + variables)
-await cache.invalidate("HelloWorld");      // All entries for operation
-await cache.invalidate();                  // All entries
+await cache.invalidate("HelloWorld"); // All entries for operation
+await cache.invalidate(); // All entries
 ```
-
-> **⚠️ Important:** Cache manipulation methods (`read`, `write`, `update`, `invalidate`) are incompatible with the `transform` option on `useAsyncGraphQLQuery`. If you need to use cache invalidation or manipulation, do not use the `transform` option. Instead, transform the data after retrieving it from the composable.
 
 #### Optimistic updates
 
@@ -321,18 +313,18 @@ await cache.invalidate();                  // All entries
 const { mutate } = useGraphQLMutation("AddFilm", {
   onMutate: async (variables) => {
     const cache = useGraphQLCache();
-    
+
     // Snapshot current value for rollback
     const snapshot = cache.read("AllFilms", {});
-    
+
     // Optimistically update cache
     await cache.update("AllFilms", {}, (current) => ({
-      films: [...(current?.films ?? []), { id: 'temp', title: variables.title }]
+      films: [...(current?.films ?? []), { id: "temp", title: variables.title }],
     }));
-    
+
     return { snapshot };
   },
-  
+
   onError: (error, variables, context) => {
     const cache = useGraphQLCache();
     // Rollback on error (sync for instant UI update)
@@ -340,24 +332,23 @@ const { mutate } = useGraphQLMutation("AddFilm", {
       cache.write("AllFilms", {}, context.snapshot);
     }
   },
-  
+
   onSuccess: (data, variables, context) => {
     // Replace optimistic temp ID with real ID from server
     const cache = useGraphQLCache();
     cache.update("AllFilms", {}, (current) => ({
-      films: current?.films.map(f => f.id === 'temp' ? data.addFilm : f) ?? []
+      films: current?.films.map((f) => (f.id === "temp" ? data.addFilm : f)) ?? [],
     }));
   },
-  
+
   onSettled: (result, variables, context) => {
     // Always runs after mutation (success or error)
-    console.log('Mutation completed');
-  }
+    console.log("Mutation completed");
+  },
 });
 
 const result = await mutate({ title: "New Film" });
 ```
-
 
 ### Remote executor hooks (optional, per remote)
 
@@ -376,24 +367,23 @@ export default defineRemoteExecutorHooks({
     const { remoteAuthToken } = context || {};
     request.extensions = defu(request.extensions, {
       headers: {
-        "XAuthorization": `Bearer ${remoteAuthToken || ""}`,
+        Authorization: `Bearer ${remoteAuthToken || ""}`,
       },
     });
   },
-  
+
   onResult(result, context) {
     // You can also access context in onResult
     console.log("User from context:", context?.user);
     console.log("Result:", result.data);
   },
-  
+
   onError(error, context) {
     // And in onError for logging/monitoring
     console.error("Remote execution failed for user:", context?.user?.id);
   },
 });
 ```
-
 
 ## Contribution
 
@@ -426,16 +416,13 @@ export default defineRemoteExecutorHooks({
 
 </details>
 
-
 <!-- Badges -->
+
 [npm-version-src]: https://img.shields.io/npm/v/@lewebsimple/nuxt-graphql/latest.svg?style=flat&colorA=020420&colorB=00DC82
 [npm-version-href]: https://npmjs.com/package/@lewebsimple/nuxt-graphql
-
 [npm-downloads-src]: https://img.shields.io/npm/dm/@lewebsimple/nuxt-graphql.svg?style=flat&colorA=020420&colorB=00DC82
 [npm-downloads-href]: https://npm.chart.dev/@lewebsimple/nuxt-graphql
-
 [license-src]: https://img.shields.io/npm/l/@lewebsimple/nuxt-graphql.svg?style=flat&colorA=020420&colorB=00DC82
 [license-href]: https://npmjs.com/package/@lewebsimple/nuxt-graphql
-
 [nuxt-src]: https://img.shields.io/badge/Nuxt-020420?logo=nuxt
 [nuxt-href]: https://nuxt.com

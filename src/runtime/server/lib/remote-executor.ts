@@ -1,29 +1,53 @@
 import { print } from "graphql";
-import type { ExecutionRequest, ExecutionResult } from "@graphql-tools/utils";
-import type { GraphQLContext } from "#graphql/context";
-import { mergeHeaders, type HeadersInput } from "../../shared/lib/headers";
-import type { GraphQLVariables } from "../../shared/lib/types";
 
-type GraphQLExecutionRequest = ExecutionRequest<GraphQLVariables, GraphQLContext> & { extensions?: { headers?: HeadersInput } };
-type GraphQLExecutionResult<TData = unknown> = ExecutionResult<TData> & { extensions?: { headers?: HeadersInput } };
-
-export type GraphQLRemoteExecHooks<TData = unknown> = {
-  onRequest?: (request: GraphQLExecutionRequest, context: GraphQLContext | undefined) => void | Promise<void>;
-  onResult?: (result: GraphQLExecutionResult<TData>, context: GraphQLContext | undefined) => void | Promise<void>;
-  onError?: (error: unknown, context: GraphQLContext | undefined) => void | Promise<void>;
+/** GraphQL remote executor request. */
+type GraphQLRemoteExecutorRequest = {
+  /** GraphQL document node. */
+  document: unknown;
+  /** Operation variables. */
+  variables?: unknown;
+  /** Operation name. */
+  operationName?: string;
+  /** Additional execution extensions. */
+  extensions?: {
+    /** Extra HTTP headers for this request. */
+    headers?: Record<string, string>;
+  };
+  /** Execution context. */
+  context?: unknown;
 };
 
-export type RemoteExecutorInput = {
+/** Remote executor hook handlers. */
+type GraphQLRemoteExecutorHook = {
+  /** Called before sending remote request. */
+  onRequest?: (request: GraphQLRemoteExecutorRequest, context: unknown) => void | Promise<void>;
+  /** Called after receiving a result. */
+  onResult?: (result: unknown, context: unknown) => void | Promise<void>;
+  /** Called when execution throws. */
+  onError?: (error: unknown, context: unknown) => void | Promise<void>;
+};
+
+/** Remote executor factory input. */
+type RemoteExecutorInput = {
+  /** Remote GraphQL endpoint URL. */
   endpoint: string;
-  headers: HeadersInput;
-  hooks: GraphQLRemoteExecHooks[];
+  /** Static request headers. */
+  headers: Record<string, string>;
+  /** Hook handlers. */
+  hooks: GraphQLRemoteExecutorHook[];
 };
 
-export function getRemoteExecutor<TData = unknown>({ endpoint, headers, hooks }: RemoteExecutorInput) {
-  return async function execute(request: GraphQLExecutionRequest): Promise<GraphQLExecutionResult<TData>> {
-    try {
-      const context = request.context;
+/**
+ * Create a remote GraphQL executor bound to an endpoint.
+ *
+ * @param input Remote executor options.
+ * @returns Async executor function.
+ */
+export function getRemoteExecutor({ endpoint, headers, hooks }: RemoteExecutorInput) {
+  return async function execute(request: GraphQLRemoteExecutorRequest) {
+    const context = request.context;
 
+    try {
       for (const hook of hooks) {
         await hook.onRequest?.(request, context);
       }
@@ -32,38 +56,44 @@ export function getRemoteExecutor<TData = unknown>({ endpoint, headers, hooks }:
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...mergeHeaders(headers, request?.extensions?.headers || {}),
+          ...headers,
+          ...request.extensions?.headers,
         },
-        body: JSON.stringify({ query: print(request.document), variables: request.variables }),
+        body: JSON.stringify({
+          query: print(request.document as Parameters<typeof print>[0]),
+          variables: request.variables,
+          operationName: request.operationName,
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`GraphQL HTTP ${response.status}`);
       }
 
-      const result = (await response.json()) as GraphQLExecutionResult<TData>;
-
-      const responseHeaders: HeadersInput = {};
-      response.headers.forEach((value, key) => {
-        responseHeaders[key] = value;
-      });
-      result.extensions = {
-        ...(result.extensions && typeof result.extensions === "object" ? result.extensions : {}),
-        headers: responseHeaders,
-      };
+      const result = (await response.json()) as unknown;
 
       for (const hook of hooks) {
         await hook.onResult?.(result, context);
       }
 
       return result;
-    }
-    catch (error) {
-      const context = request.context;
+    } catch (error) {
       for (const hook of hooks) {
         await hook.onError?.(error, context);
       }
       throw error;
     }
   };
+}
+
+/**
+ * Define remote executor hooks with proper typing.
+ *
+ * @param hooks Hooks implementation.
+ * @returns The same hooks object.
+ */
+export function defineRemoteExecutorHooks(
+  hooks: GraphQLRemoteExecutorHook,
+): GraphQLRemoteExecutorHook {
+  return hooks;
 }

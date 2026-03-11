@@ -1,4 +1,4 @@
-import { relative, resolve } from "node:path";
+import { relative, resolve, parse } from "node:path";
 
 /**
  * Convert absolute paths to relative paths.
@@ -6,7 +6,7 @@ import { relative, resolve } from "node:path";
  * @param {string} to Target path
  * @returns {string} Relative path from "from" to "to"
  */
-export function getRelativePath(from: string, to: string): string {
+export function toRelativePath(from: string, to: string): string {
   let relativePath = relative(resolve(from), resolve(to));
   relativePath = relativePath.replace(/\\/g, "/");
   if (!relativePath.startsWith("./") && !relativePath.startsWith("../")) {
@@ -16,10 +16,11 @@ export function getRelativePath(from: string, to: string): string {
 }
 
 /**
- * Remove .ts or .mjs extension from path.
- * @param {string} path File path
- * @returns {string} File path without extension
+ * Strip the file extension from a file path.
+ * @param filePath The file path to process.
+ * @returns The file path without the extension.
  */
-export function removeExtension(path: string): string {
-  return path.replace(/\.(ts|mjs)$/, "");
+export function stripExtension(filePath: string): string {
+  const { dir, name } = parse(filePath);
+  return dir ? `${dir}/${name}` : name;
 }

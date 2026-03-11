@@ -1,12 +1,12 @@
-fragment Films on FilmsConnection {
-  films {
-    title
-    director
-  }
+fragment Film on Film {
+  title
+  director
 }
 
 query AllFilms {
   allFilms {
-    ...Films
+    films {
+      ...Film
+    }
   }
 }

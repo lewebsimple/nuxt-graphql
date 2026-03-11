@@ -1,139 +1,259 @@
-import { buildClientSchema, buildSchema, getIntrospectionQuery, lexicographicSortSchema, printSchema, GraphQLSchema } from "graphql";
-import type { HeadersInput } from "../runtime/shared/lib/headers";
-import { splitModule } from "./split-module";
+import { createResolver } from "@nuxt/kit";
+import type { Nuxt } from "@nuxt/schema";
+import {
+  GraphQLSchema,
+  buildClientSchema,
+  getIntrospectionQuery,
+  lexicographicSortSchema,
+  printSchema,
+  type IntrospectionQuery,
+} from "graphql";
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Schema definitions (local / remote)
+// Schema definition (local / remote)
 // ────────────────────────────────────────────────────────────────────────────────
 
-export type LocalSchemaDef = { type: "local"; path: string };
-export type RemoteSchemaDef = { type: "remote"; endpoint: string; headers?: HeadersInput; hooks?: string[] };
-export type SchemaDef = LocalSchemaDef | RemoteSchemaDef;
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Schema template
-// ────────────────────────────────────────────────────────────────────────────────
-
-export type SchemaInput = {
-  local: Record<string, { importPath: string }>;
-  remote: Record<string, { importPath: string }>;
+/** Local schema definition. */
+export type LocalSchemaDef = {
+  /** Schema source type. */
+  type: "local";
+  /** Path to a module exporting `schema`. */
+  path: string;
 };
 
-export function getSchemaTemplate({ local, remote }: SchemaInput): { ts: string; mjs: string; dts: string } {
-  const localImports = Object.entries(local).map(([name, { importPath }]) => `import { schema as ${name}LocalSchema } from ${JSON.stringify(importPath)};`);
-  const localSchemas = Object.keys(local).map((name) => `${name}LocalSchema`);
-  const mergedSchema = `mergeSchemas({ schemas: [${localSchemas.join(", ")}] })`;
+/** Remote schema definition. */
+export type RemoteSchemaDef = {
+  /** Schema source type. */
+  type: "remote";
+  /** Remote GraphQL endpoint URL. */
+  endpoint: string;
+  /** Static headers for introspection and execution. */
+  headers?: Record<string, string>;
+  /** Hook module paths used by the remote executor. */
+  hooks?: string[];
+};
 
-  const remoteImports = Object.entries(remote).map(([name, { importPath }]) => `import { schema as ${name}RemoteSchema } from ${JSON.stringify(importPath)};`);
-  const remoteSchemas = Object.keys(remote).map((name) => `${name}RemoteSchema`);
+/** Supported schema definition union. */
+export type SchemaDef = LocalSchemaDef | RemoteSchemaDef;
 
-  const ts = `
-import { mergeSchemas } from "@graphql-tools/schema";
-import { stitchSchemas } from "@graphql-tools/stitch";
-${localImports.join("\n")}
-${remoteImports.join("\n")}
+/**
+ * Resolve schema definition file paths and defaults.
+ *
+ * @param schemaDefs Raw schema definitions.
+ * @param nuxt Nuxt instance.
+ * @returns Resolved schema definitions.
+ */
+export async function resolveSchemaDefs(
+  schemaDefs: SchemaDef[],
+  nuxt: Nuxt,
+): Promise<Required<SchemaDef>[]> {
+  const { resolvePath } = createResolver(nuxt.options.rootDir);
 
-export const schema = stitchSchemas({
-  subschemas: [${[mergedSchema, ...remoteSchemas].join(", ")}],
-});
-  `.trim();
+  return Promise.all(
+    schemaDefs.map(async (schemaDef) => {
+      switch (schemaDef.type) {
+        case "local": {
+          const path = await resolvePath(schemaDef.path, { alias: nuxt.options.alias });
+          return {
+            type: "local",
+            path: path.replaceAll("\\", "/"),
+          };
+        }
 
-  return { ts, ...splitModule(ts) };
+        case "remote": {
+          const hooks = await Promise.all(
+            (schemaDef.hooks ?? []).map(async (hookPath) => {
+              const path = await resolvePath(hookPath, { alias: nuxt.options.alias });
+              return path.replaceAll("\\", "/");
+            }),
+          );
+          return {
+            type: "remote",
+            endpoint: schemaDef.endpoint,
+            headers: schemaDef.headers ?? {},
+            hooks,
+          };
+        }
+      }
+    }),
+  );
 }
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Load local schema via Jiti
+// Remote schema server template
 // ────────────────────────────────────────────────────────────────────────────────
 
-type LoadLocalSchemaInput = {
-  importPath: string;
+/** Remote schema template input. */
+export type RemoteSchemaInput = {
+  /** Remote GraphQL endpoint URL. */
+  endpoint: string;
+  /** Static request headers. */
+  headers: Record<string, string>;
+  /** Hook module paths. */
+  hooks: string[];
+  /** Introspected schema SDL. */
+  sdl: string;
 };
 
 /**
- * Load a local GraphQL schema module via Jiti.
+ * Build a virtual module template for a remote schema.
  *
- * @param {LoadLocalSchemaInput} input Local schema loader input.
- * @returns GraphQLSchema instance.
+ * @param input Remote schema template input.
+ * @returns Template source code.
  */
-export async function loadLocalSchema({ importPath }: LoadLocalSchemaInput): Promise<GraphQLSchema> {
+export function getRemoteSchemaServerTemplate({
+  endpoint,
+  headers,
+  hooks,
+  sdl,
+}: RemoteSchemaInput): string {
+  const hookImports = hooks.map(
+    (hookPath, index) => `import hook${index} from ${JSON.stringify(hookPath)};`,
+  );
+  const hookRefs = hooks.map((_, index) => `hook${index}`);
+
+  return `
+import { getRemoteExecutor } from "#graphql/runtime/remote-executor";
+import { buildSchema } from "graphql";
+${hookImports.join("\n")}
+
+const executor = getRemoteExecutor({
+  endpoint: ${JSON.stringify(endpoint)},
+  headers: ${JSON.stringify(headers)},
+  hooks: [${hookRefs.join(", ")}],
+});
+
+export const schema = {
+  schema: buildSchema(${JSON.stringify(sdl)}),
+  executor,
+};
+`.trim();
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// GraphQL schema server / type template
+// ────────────────────────────────────────────────────────────────────────────────
+
+/** GraphQL schema server template input. */
+export type SchemaInput = {
+  /** Local schema module paths. */
+  localPaths: string[];
+  /** Remote schema virtual module paths. */
+  remotePaths: string[];
+};
+
+/**
+ * Build the GraphQL schema virtual server template.
+ *
+ * @param input Local and remote schema module paths.
+ * @returns Template source code.
+ */
+export function getSchemaServerTemplate({ localPaths, remotePaths }: SchemaInput): string {
+  // Local / remote schema imports
+  const imports = [
+    ...localPaths.map(
+      (schemaPath, index) =>
+        `import { schema as localSchema${index} } from ${JSON.stringify(schemaPath)};`,
+    ),
+    ...remotePaths.map(
+      (schemaPath, index) =>
+        `import { schema as remoteSchema${index} } from ${JSON.stringify(schemaPath)};`,
+    ),
+  ];
+
+  // Local / remote / final schema references
+  const localSchemaRefs = localPaths.map((_, index) => `localSchema${index}`);
+  const remoteSchemaRefs = remotePaths.map((_, index) => `remoteSchema${index}`);
+  const schemaRefs: string[] = [];
+
+  // Merge local schemas if necessary
+  if (localSchemaRefs.length === 1) {
+    schemaRefs.push(localSchemaRefs[0]!);
+  } else if (localSchemaRefs.length > 1) {
+    imports.unshift(`import { mergeSchemas } from "@graphql-tools/schema";`);
+    schemaRefs.push(`mergeSchemas({ schemas: [${localSchemaRefs.join(", ")}] })`);
+  }
+
+  // Add remote schema references
+  schemaRefs.push(...remoteSchemaRefs);
+
+  // Determine final schema reference
+  let schemaRef: string;
+  if (schemaRefs.length === 0) {
+    // No schemas defined: use default empty schema
+    imports.unshift(`import {  buildSchema } from "graphql";`);
+    schemaRef = `buildSchema("type Query { _empty: String }")`;
+  } else if (schemaRefs.length === 1) {
+    // Single schema: use as-is
+    schemaRef = schemaRefs[0]!;
+  } else {
+    // Multiple schemas: stitch into a single executable schema
+    imports.unshift(`import { stitchSchemas } from "@graphql-tools/stitch";`);
+    schemaRef = `stitchSchemas({ subschemas: [${schemaRefs.join(", ")}] })`;
+  }
+
+  return [...imports, "", `export const schema = ${schemaRef};`].join("\n");
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Schema utilities
+// ────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Load a local GraphQL schema module.
+ *
+ * @param path Module path.
+ * @param nuxt Nuxt instance.
+ * @returns Loaded GraphQL schema.
+ */
+export async function loadLocalSchema(path: string, nuxt: Nuxt): Promise<GraphQLSchema> {
   const { createJiti } = await import("jiti");
-  const jiti = createJiti(import.meta.url, { interopDefault: true });
-  const module = (await jiti.import(importPath)) as { schema?: GraphQLSchema };
-  if (!module.schema || !(module.schema instanceof Object) || typeof module.schema.getQueryType !== "function") {
-    throw new Error(`${importPath} must export a valid 'schema' of type GraphQLSchema.`);
+  const jiti = createJiti(import.meta.url, { interopDefault: true, alias: nuxt.options.alias });
+  const module = (await jiti.import(path)) as { schema?: GraphQLSchema };
+  if (
+    !module.schema ||
+    !(module.schema instanceof Object) ||
+    typeof module.schema.getQueryType !== "function"
+  ) {
+    throw new Error(`${path} must export a valid 'schema' of type GraphQLSchema.`);
   }
   return module.schema;
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Remote schema template
-// ────────────────────────────────────────────────────────────────────────────────
-
-export type RemoteSchemaInput = {
-  endpoint: string;
-  headers: HeadersInput;
-  hooks: { importPath: string }[];
-  loadSchema: () => Promise<GraphQLSchema>;
-};
-
 /**
- * Render remote GraphQL schema template.
- * @param {RemoteSchemaInput} input Remote schema template input.
- * @returns .ts / .mjs source code.
+ * Introspect and build a remote GraphQL schema.
+ *
+ * @param endpoint Remote endpoint URL.
+ * @param headers Request headers.
+ * @returns Built GraphQL schema.
  */
-export async function getRemoteSchemaTemplate({ endpoint, headers, hooks, loadSchema }: RemoteSchemaInput): Promise<{ ts: string; mjs: string; dts: string }> {
-  const hooksImports = hooks.map((hook, index) => `import hook${index} from ${JSON.stringify(hook.importPath)};`);
-  const hooksArray = hooks.map((_, index) => `hook${index}`);
-  const schema = await loadSchema();
-  const sdl = getSchemaSDL(schema);
-
-  const ts = `
-import type { GraphQLSchema } from "graphql";
-import { buildSchema } from "graphql";
-import { getRemoteExecutor } from "#graphql/runtime/remote-executor";
-${hooksImports.join("\n")}
-
-const executor = getRemoteExecutor({
-  endpoint: "${endpoint}",
-  headers: ${JSON.stringify(headers)},
-  hooks: [${hooksArray.join(", ")}],
-});
-
-const sdl = ${JSON.stringify(sdl)};
-
-// SubschemaConfig exported for stitching
-export const schema = {
-  schema: buildSchema(sdl),
-  executor,
-} as unknown as GraphQLSchema;
-  `.trim();
-
-  return { ts, ...splitModule(ts) };
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Remote schema introspection
-// ────────────────────────────────────────────────────────────────────────────────
-
-export type IntrospectRemoteSchemaInput = {
-  endpoint: string;
-};
-
-/**
- * Introspect a remote GraphQL schema via introspection query.
- * @param {IntrospectRemoteSchemaInput} input Introspection input.
- * @returns GraphQLSchema instance.
- */
-export async function introspectRemoteSchema({ endpoint }: IntrospectRemoteSchemaInput): Promise<GraphQLSchema> {
+export async function loadRemoteSchema(
+  endpoint: string,
+  headers: Record<string, string>,
+): Promise<GraphQLSchema> {
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify({ query: getIntrospectionQuery() }),
   });
-  const json = await response.json();
-  if (json.errors) {
-    throw new Error(`Failed to fetch GraphQL schema from ${endpoint}: ${JSON.stringify(json.errors)} `);
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to introspect remote GraphQL schema at "${endpoint}" (HTTP ${response.status}).`,
+    );
   }
+
+  const json = (await response.json()) as { data?: IntrospectionQuery; errors?: unknown };
+  if (json.errors) {
+    throw new Error(
+      `Failed to introspect remote GraphQL schema at "${endpoint}": ${JSON.stringify(json.errors)}`,
+    );
+  }
+
+  if (!json.data || typeof json.data !== "object") {
+    throw new Error(`Remote GraphQL introspection at "${endpoint}" returned no data.`);
+  }
+
   const schema = buildClientSchema(json.data);
   return stripSubscriptions(schema);
 }
@@ -156,10 +276,6 @@ function stripSubscriptions(schema: GraphQLSchema): GraphQLSchema {
   });
 }
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Get schema SDL from GraphQLSchema
-// ────────────────────────────────────────────────────────────────────────────────
-
 /**
  * Print the SDL of a GraphQL schema.
  * @param schema GraphQLSchema instance.
@@ -167,12 +283,4 @@ function stripSubscriptions(schema: GraphQLSchema): GraphQLSchema {
  */
 export function getSchemaSDL(schema: GraphQLSchema): string {
   return printSchema(lexicographicSortSchema(schema));
-}
-
-/**
- * Get a default empty GraphQL schema.
- * @returns GraphQLSchema instance.
- */
-export function getDefaultSchema(): GraphQLSchema {
-  return buildSchema(`type Query { _empty: String }`);
 }

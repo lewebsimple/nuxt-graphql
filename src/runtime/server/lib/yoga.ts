@@ -1,7 +1,8 @@
-import { createYoga } from "graphql-yoga";
 import type { GraphQLContext } from "#graphql/context";
 import { schema } from "#graphql/schema";
+import { createYoga } from "graphql-yoga";
 
+// Singleton instance of the GraphQL Yoga server.
 let yoga: ReturnType<typeof createYoga<GraphQLContext>> | null = null;
 
 /**
@@ -22,4 +23,4 @@ export function getYogaInstance() {
     }
   }
   return yoga;
-};
+}

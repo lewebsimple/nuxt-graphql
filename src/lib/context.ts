@@ -1,37 +1,62 @@
-// ────────────────────────────────────────────────────────────────────────────────
-// Context template
-// ────────────────────────────────────────────────────────────────────────────────
+import { createResolver } from "@nuxt/kit";
+import type { Nuxt } from "@nuxt/schema";
 
-import { splitModule } from "./split-module";
+import { stripExtension } from "./path";
 
+/** GraphQL context input paths. */
 export type ContextInput = {
-  importPaths: string[];
+  /** Context factory module paths. */
+  paths: string[];
 };
 
 /**
- * Render the GraphQL context factory template
- * @param {ContextInput} input Context template input.
- * @returns .ts, .mjs and .d.ts source code
+ * Resolve context factory paths from Nuxt aliases.
+ *
+ * @param input Context paths input.
+ * @param nuxt Nuxt instance.
+ * @returns Resolved context input.
  */
-export function getContextTemplate({ importPaths }: ContextInput): { ts: string; mjs: string; dts: string } {
-  const contextImports = importPaths.map((importPath, index) => `import context${index} from ${JSON.stringify(importPath)};`);
-  const contextTypes = ["{}", ...importPaths.map((_, index) => `Awaited<ReturnType<typeof context${index}>>`)];
-  const contextArray = ["(event: H3Event) => ({})", ...importPaths.map((_, index) => `context${index}`)];
+export async function resolveContextInput(
+  { paths }: ContextInput,
+  nuxt: Nuxt,
+): Promise<ContextInput> {
+  const { resolvePath } = createResolver(nuxt.options.rootDir);
+  return {
+    paths: await Promise.all(
+      paths.map(async (contextPath) => {
+        const path = await resolvePath(contextPath, { alias: nuxt.options.alias });
+        return path.replaceAll("\\", "/");
+      }),
+    ),
+  };
+}
 
-  const ts = `
-import type { H3Event } from "h3";
-${contextImports.join("\n")}
+/**
+ * Build the virtual GraphQL context template.
+ *
+ * @param input Context paths input.
+ * @returns Template source code.
+ */
+export function getContextTemplate({ paths }: ContextInput): string {
+  const imports = [
+    ...paths.map(
+      (path, index) => `import factory${index} from ${JSON.stringify(stripExtension(path))};`,
+    ),
+    `import type { H3Event } from "h3";`,
+  ];
+  const factories = ["(_event: H3Event) => ({})", ...paths.map((_, index) => `factory${index}`)];
+  const types = ["{}", ...paths.map((_, index) => `Awaited<ReturnType<typeof factory${index}>>`)];
 
-export type GraphQLContext = ${contextTypes.join(" & ")};
-
-const contextFactories = [${contextArray.join(", ")}];
-
-export async function createContext(event: H3Event): Promise<GraphQLContext> {
-  return Object.assign(
-    {},
-    ...await Promise.all(contextFactories.map((factory) => factory(event)))
-  )
-}`.trim();
-
-  return { ts, ...splitModule(ts) };
+  return [
+    ...imports,
+    "",
+    `export type GraphQLContext = ${types.join(" & ")};`,
+    "",
+    `const factories = [${factories.join(", ")}];`,
+    "",
+    `export async function createContext(event: H3Event): Promise<GraphQLContext> {`,
+    `  const contexts = await Promise.all(factories.map((factory) => factory(event)));`,
+    `  return Object.assign({}, ...contexts);`,
+    `}`,
+  ].join("\n");
 }

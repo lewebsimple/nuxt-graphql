@@ -1,172 +1,247 @@
 import { hash } from "ohash";
-import type { CacheConfig } from "../../shared/lib/types";
 
-// Default GraphQL cache configuration
-const defaultCacheConfig: CacheConfig = {
-  policy: "no-cache",
-  ttl: undefined,
-  keyPrefix: "gql",
-  keyVersion: "1",
-};
+import type { CacheConfig } from "./cache-config";
+
+// ────────────────────────────────────────────────────────────────────────────
+// Cache key helpers
+// ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Resolve cache config from default value with user overrides.
+ * Build the root cache key prefix shared by all entries.
  *
- * @param overrides Partial cache config overrides.
- * @returns Resolved cache configuration.
+ * @param config Cache configuration.
+ * @returns Root cache prefix.
  */
-export function resolveCacheConfig(...overrides: Array<Partial<CacheConfig> | undefined>): CacheConfig {
-  return Object.assign({}, defaultCacheConfig, ...overrides);
+export function getCacheRootPrefix({ keyPrefix, keyVersion }: CacheConfig): string {
+  return `${keyPrefix}:${keyVersion}:`;
 }
 
-type CacheKeyParts = {
-  rootPrefix: string;
-  scopePrefix: string;
-  opPrefix: string;
-  key: string;
-};
+/**
+ * Build the cache key prefix for a specific scope.
+ *
+ * @param config Cache configuration.
+ * @param scope Cache scope.
+ * @returns Scope cache prefix.
+ */
+export function getCacheScopePrefix(config: CacheConfig, scope: string): string {
+  return `${getCacheRootPrefix(config)}${scope}:`;
+}
 
 /**
- * Build cache key parts from config, operation name, and variables.
+ * Build the cache key prefix for a specific operation in a scope.
  *
- * @param {GraphQLCacheConfig} config Cache configuration.
- * @param config.keyPrefix Cache key prefix.
- * @param config.keyVersion Cache key version.
- * @param scope Cache scope segment.
- * @param operationName Operation name.
- * @param variables Operation variables.
- * @returns Key parts including full key and operation prefix.
+ * @param config Cache configuration.
+ * @param scope Cache scope.
+ * @param operationName GraphQL operation name.
+ * @returns Operation cache prefix.
  */
-export function getCacheKeyParts(
-  { keyPrefix, keyVersion }: CacheConfig,
+export function getCacheOperationPrefix(
+  config: CacheConfig,
+  scope: string,
+  operationName: string,
+): string {
+  return `${getCacheScopePrefix(config, scope)}${operationName}:`;
+}
+
+/**
+ * Build the full cache key for a scoped operation and variables.
+ *
+ * @param config Cache configuration.
+ * @param scope Cache scope.
+ * @param operationName GraphQL operation name.
+ * @param variables Operation variables.
+ * @returns Full cache key.
+ */
+export function getCacheKey(
+  config: CacheConfig,
   scope: string,
   operationName: string,
   variables: unknown,
-): CacheKeyParts {
-  const rootPrefix = `${keyPrefix}:${keyVersion}:`;
-  const scopePrefix = `${rootPrefix}${scope}:`;
-  const opPrefix = `${scopePrefix}${operationName}:`;
-  const key = `${opPrefix}${hash(variables || {})}`;
-  return { rootPrefix, scopePrefix, opPrefix, key };
+): string {
+  return `${getCacheOperationPrefix(config, scope, operationName)}${hash(variables ?? {})}`;
 }
 
-const knownCacheKeys = new Set<string>();
+// ────────────────────────────────────────────────────────────────────────────
+// Invalidation tracking
+// ────────────────────────────────────────────────────────────────────────────
 
-/**
- * Register a cache key seen by async GraphQL queries.
- *
- * @param key Cache key.
- */
-export function registerCacheKey(key: string): void {
-  knownCacheKeys.add(key);
-}
-
-/**
- * Get known cache keys by prefix.
- *
- * @param prefix Cache key prefix.
- * @returns Matching cache keys.
- */
-export function getCacheKeysByPrefix(prefix: string): string[] {
-  return [...knownCacheKeys].filter((key) => key.startsWith(prefix));
-}
-
-// Tracks invalidation state and successful network refresh times per cache key.
-const invalidatedExactAt = new Map<string, number>();
+// In-memory tracking of cache invalidation timestamps for prefixes and global scope.
 const invalidatedPrefixAt = new Map<string, number>();
-const refreshedAt = new Map<string, number>();
-
 let invalidatedAllAt = 0;
 
 /**
- * Mark a single cache key as invalidated.
+ * Invalidate cache entries matching a specific key prefix.
  *
- * @param key Cache key.
- */
-export function invalidateCacheKey(key: string): void {
-  invalidatedExactAt.set(key, Date.now());
-}
-
-/**
- * Mark all cache keys matching a prefix as invalidated.
- *
- * @param prefix Cache key prefix.
+ * @param prefix Cache key prefix to invalidate.
  */
 export function invalidateCachePrefix(prefix: string): void {
   invalidatedPrefixAt.set(prefix, Date.now());
 }
 
-/**
- * Mark all cache keys as invalidated.
- */
-export function invalidateAllCacheKeys(): void {
+/** Invalidate all cache entries regardless of prefix. */
+export function invalidateAllCache(): void {
   invalidatedAllAt = Date.now();
 }
 
 /**
- * Mark a cache key as refreshed from network.
+ * Determine whether a cache entry should be bypassed due to invalidation.
  *
- * @param key Cache key.
+ * @param key Full cache key.
+ * @param createdAt Entry creation timestamp in milliseconds.
+ * @returns `true` when the entry was invalidated by global or prefix invalidation.
  */
-export function markCacheKeyRefreshed(key: string): void {
-  refreshedAt.set(key, Date.now());
-}
+export function shouldBypassCache(key: string, createdAt?: number): boolean {
+  if (!createdAt) return false;
+  if (createdAt < invalidatedAllAt) return true;
 
-/**
- * Determine whether cache should be bypassed for this key.
- *
- * @param key Cache key.
- * @returns True when invalidation is newer than the last successful network refresh.
- */
-export function shouldBypassCache(key: string): boolean {
-  const lastRefreshAt = refreshedAt.get(key) ?? 0;
-  const exactInvalidatedAt = invalidatedExactAt.get(key) ?? 0;
+  // Check all prefixes of the key for invalidation timestamps.
+  let newest = 0;
+  let idx = key.indexOf(":");
+  while (idx !== -1) {
+    const prefix = key.slice(0, idx + 1);
+    const ts = invalidatedPrefixAt.get(prefix);
 
-  let prefixInvalidatedAt = 0;
-  for (const [prefix, timestamp] of invalidatedPrefixAt) {
-    if (key.startsWith(prefix) && timestamp > prefixInvalidatedAt) {
-      prefixInvalidatedAt = timestamp;
-    }
+    if (ts && ts > newest) newest = ts;
+    idx = key.indexOf(":", idx + 1);
   }
 
-  const latestInvalidationAt = Math.max(invalidatedAllAt, exactInvalidatedAt, prefixInvalidatedAt);
-  return latestInvalidationAt > lastRefreshAt;
+  return createdAt < newest;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Query cache using Nuxt data and in-memory metadata map
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Metadata stored for a cache entry. */
+export type CacheMeta<T> = {
+  /** In-flight promise for the current cache request. */
+  promise?: Promise<T>;
+  /** Timestamp when this metadata entry was created. */
+  createdAt: number;
+  /** Expiration timestamp in milliseconds, or `null` when it does not expire. */
+  expiresAt: number | null;
+};
+
+const metaCache = new Map<string, CacheMeta<unknown>>();
+
+/**
+ * Returns metadata for a cache key.
+ *
+ * @param key Cache key used to look up metadata.
+ * @returns Metadata for the key when present, otherwise `undefined`.
+ */
+export function getCacheMeta<T>(key: string) {
+  return metaCache.get(key) as CacheMeta<T> | undefined;
 }
 
 /**
- * Remove a single cache key from all internal registries.
+ * Resolves a cache entry and updates both metadata and Nuxt data state.
+ *
+ * @param key Cache key to resolve.
+ * @param value Resolved data to store in Nuxt state.
+ * @param ttl Optional time-to-live in milliseconds. When omitted or `null`, the entry does not expire.
+ * @returns The resolved value.
  */
-export function forgetCacheKey(key: string): void {
-  knownCacheKeys.delete(key);
-  invalidatedExactAt.delete(key);
-  refreshedAt.delete(key);
+export function resolveCacheEntry<T>(key: string, value: T, ttl?: number | null): T {
+  const now = Date.now();
+
+  const meta = metaCache.get(key) as CacheMeta<T> | undefined;
+  const next: CacheMeta<T> = meta ?? { createdAt: now, expiresAt: null };
+
+  next.createdAt = now;
+  next.expiresAt = ttl ? now + ttl : null;
+  next.promise = undefined;
+
+  metaCache.set(key, next);
+
+  return value;
 }
 
 /**
- * Remove all cache keys and related metadata matching a prefix.
+ * Returns whether the provided cache metadata is expired.
+ *
+ * @param meta Metadata object to evaluate.
+ * @returns `true` when metadata exists and is past its expiration time; otherwise `false`.
  */
-export function forgetCacheByPrefix(prefix: string): void {
-  // Remove matching keys
-  for (const key of knownCacheKeys) {
-    if (key.startsWith(prefix)) {
-      knownCacheKeys.delete(key);
-      invalidatedExactAt.delete(key);
-      refreshedAt.delete(key);
-    }
+export function isExpired(meta?: CacheMeta<unknown>) {
+  if (!meta) return false;
+  if (meta.expiresAt === null) return false;
+  return Date.now() > meta.expiresAt;
+}
+
+/**
+ * Returns a promise for a cache key, creating it if it doesn't exist.
+ *
+ * @param key Cache key to resolve.
+ * @param create Function to create a new promise if none exists.
+ * @param ttl Optional time-to-live in milliseconds. When omitted or `null`, the entry does not expire.
+ * @returns A promise for the cache key.
+ */
+export function getOrCreatePromise<T>(
+  key: string,
+  create: () => Promise<T>,
+  ttl?: number | null,
+): Promise<T> {
+  let meta = metaCache.get(key) as CacheMeta<T> | undefined;
+
+  if (meta?.promise) return meta.promise;
+
+  const promise = (async () => {
+    const value = await create();
+    resolveCacheEntry(key, value, ttl);
+    return value;
+  })();
+
+  if (!meta) {
+    meta = { createdAt: Date.now(), expiresAt: null };
+    metaCache.set(key, meta);
   }
 
-  // Remove prefix invalidation marker itself
-  invalidatedPrefixAt.delete(prefix);
+  meta.promise = promise;
+  return promise;
 }
 
 /**
- * Clear all in-memory cache tracking metadata.
- * Does NOT delete persisted storage.
+ * Determines whether a cache entry should be used based on its presence, invalidation status, and expiration.
+ *
+ * @param key Cache key to evaluate.
+ * @param cached Cached value to check.
+ * @param meta Metadata associated with the cache entry.
+ * @returns `true` if the cache entry should be used; otherwise `false`.
  */
-export function forgetCacheAll(): void {
-  knownCacheKeys.clear();
-  invalidatedExactAt.clear();
-  invalidatedPrefixAt.clear();
-  refreshedAt.clear();
-  invalidatedAllAt = 0;
+export function shouldUseCached<T>(
+  key: string,
+  cached: T | undefined,
+  meta?: CacheMeta<unknown>,
+): cached is T {
+  if (cached === undefined) return false;
+  if (shouldBypassCache(key, meta?.createdAt)) return false;
+  if (isExpired(meta)) return false;
+  return true;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Stale-while-revalidate policy
+// ────────────────────────────────────────────────────────────────────────────
+
+type SWRParams<T> = {
+  cached: T | undefined;
+  fetch: () => Promise<T>;
+  inFlight?: Promise<T>;
+};
+
+/**
+ * Return cached data immediately and refresh in background when possible.
+ *
+ * @param params SWR inputs including cached value, fetcher, and optional in-flight promise.
+ * @returns Cached value when available, otherwise a promise resolving fresh data.
+ */
+export function staleWhileRevalidate<T>({ cached, fetch, inFlight }: SWRParams<T>): Promise<T> | T {
+  if (cached !== undefined) {
+    if (!inFlight) {
+      fetch().catch(() => {});
+    }
+    return cached;
+  }
+  return inFlight ?? fetch();
 }

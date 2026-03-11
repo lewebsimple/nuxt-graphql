@@ -1,29 +1,33 @@
 import { hash } from "ohash";
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Cached loader
-// ────────────────────────────────────────────────────────────────────────────────
-
-type BuildCache<TData> = { key: string; data: TData };
-const buildCache = new Map<string, BuildCache<unknown>>();
+/** In-memory cache for async loader results, keyed by stable hashes of input arguments. */
+type BuildCacheEntry<TData> = {
+  /** Stable key computed from input arguments. */
+  key: string;
+  /** Cached loader result. */
+  data: TData;
+};
+const buildCache = new Map<string, BuildCacheEntry<unknown>>();
 
 /**
- * Gets a cached version of the loader function.
+ * Wrap an async loader with an argument-based in-memory cache.
  *
- * @param {string} baseKey Base key to identify the loader
- * @param {(...args: TArgs) => Promise<TData>} loader The loader function to be cached
- * @returns {(...args: TArgs) => Promise<TData>} A function that returns cached data if available, otherwise calls the loader
+ * @param baseKey Cache namespace.
+ * @param loader Async function to cache.
+ * @returns Cached loader function.
  */
 export function getCachedLoader<TData, TArgs extends unknown[] = []>(
   baseKey: string,
   loader: (...args: TArgs) => Promise<TData>,
-) {
+): (...args: TArgs) => Promise<TData> {
   return async (...args: TArgs): Promise<TData> => {
     const key = `${baseKey}:${hash(args)}`;
+
     const cached = buildCache.get(key);
     if (cached?.key === key) {
       return cached.data as TData;
     }
+
     const data = await loader(...args);
     buildCache.set(key, { key, data });
     return data;
@@ -31,18 +35,23 @@ export function getCachedLoader<TData, TArgs extends unknown[] = []>(
 }
 
 /**
- * Clears the build cache entirely or for specific base keys.
- * @param {string | string[]} [baseKey] Optional base key or array of base keys to clear from the cache
+ * Clear build cache entries.
+ *
+ * @param baseKey Optional key or keys to clear; clears all entries when omitted.
+ * @returns Nothing.
  */
-export function clearBuildCache(baseKey?: string | string[]) {
+export function clearBuildCache(baseKey?: string | string[]): void {
   if (!baseKey) {
     buildCache.clear();
+    return;
   }
+
   const baseKeys = Array.isArray(baseKey) ? baseKey : [baseKey];
   for (const key of buildCache.keys()) {
-    for (const baseKey of baseKeys) {
-      if (key.startsWith(`${baseKey}:`)) {
+    for (const targetBaseKey of baseKeys) {
+      if (key.startsWith(`${targetBaseKey}:`)) {
         buildCache.delete(key);
+        break;
       }
     }
   }

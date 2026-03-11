@@ -1,6 +1,6 @@
 {
-  "private": true,
   "name": "nuxt-graphql-playground",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
@@ -9,6 +9,6 @@
   },
   "dependencies": {
     "@lewebsimple/nuxt-graphql": "workspace:*",
-    "nuxt": "^4.3.0"
+    "nuxt": "^4.3.1"
   }
 }

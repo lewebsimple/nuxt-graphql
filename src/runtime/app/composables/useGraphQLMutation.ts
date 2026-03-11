@@ -1,9 +1,13 @@
 import { useNuxtApp } from "#app";
-import { ref } from "vue";
-import type { MutationName, ResultOf, VariablesOf } from "#graphql/registry";
-import type { ExecuteGraphQLResult, IsEmptyObject } from "../../shared/lib/types";
-import { getOperationDocument } from "../../shared/lib/registry";
-import { normalizeError, type NormalizedError } from "../../shared/lib/error";
+import { computed, ref } from "vue";
+
+import type { NormalizedError } from "../../shared/utils/error";
+import type { ExecuteGraphQLResult } from "../../shared/utils/execute";
+import {
+  type MutationName,
+  type ResultOf,
+  type VariablesInputOf,
+} from "../../shared/utils/registry";
 
 /**
  * Mutation lifecycle hooks for optimistic updates and cache manipulation.
@@ -11,121 +15,106 @@ import { normalizeError, type NormalizedError } from "../../shared/lib/error";
  * @template TName Mutation operation name.
  * @template TContext Type of context returned by onMutate and passed to other hooks.
  */
-export type MutationOptions<TName extends MutationName, TContext = unknown> = {
+export type MutationHooks<TName extends MutationName, TContext = unknown> = {
   /**
-   * Callback invoked before the mutation executes.
-   * Use for optimistic updates. Return value is passed as context to other hooks.
+   * Called before the mutation function is executed, allowing you to perform optimistic updates or prepare context for later hooks.
    *
-   * @param variables Mutation variables.
-   * @returns Context object for onSuccess/onError/onSettled hooks.
+   * @param variables The variables passed to the mutation function.
+   * @returns A context object that will be passed to onSuccess and onError hooks, or a promise that resolves to such an object.
    */
-  onMutate?: (variables: VariablesOf<TName>) => TContext | Promise<TContext>;
+  onMutate?: (variables: VariablesInputOf<TName>) => TContext | Promise<TContext>;
 
   /**
-   * Callback invoked when the mutation succeeds.
+   * Called after a successful mutation, allowing you to update the cache or perform side effects based on the result.
    *
-   * @param data Mutation result data.
-   * @param variables Mutation variables.
-   * @param context Context returned from onMutate (undefined if onMutate not provided or threw).
+   * @param data The result of the mutation.
+   * @param variables The variables passed to the mutation function.
+   * @param context The context object returned by onMutate, if any.
    */
   onSuccess?: (
     data: ResultOf<TName>,
-    variables: VariablesOf<TName>,
+    variables: VariablesInputOf<TName>,
     context: TContext | undefined,
   ) => void;
 
   /**
-   * Callback invoked when the mutation fails.
-   * Use for rolling back optimistic updates.
+   * Called after a failed mutation, allowing you to roll back optimistic updates or handle errors.
    *
-   * @param error Normalized error.
-   * @param variables Mutation variables.
-   * @param context Context returned from onMutate (undefined if onMutate not provided or threw).
+   * @param error The error thrown by the mutation function.
+   * @param variables The variables passed to the mutation function.
+   * @param context The context object returned by onMutate, if any.
    */
   onError?: (
     error: NormalizedError,
-    variables: VariablesOf<TName>,
+    variables: VariablesInputOf<TName>,
     context: TContext | undefined,
   ) => void;
 
   /**
-   * Callback invoked when the mutation completes (success or error).
+   * Called after the mutation has either succeeded or failed, allowing you to perform cleanup or final updates regardless of the outcome.
    *
-   * @param result Mutation result (data or error).
-   * @param variables Mutation variables.
-   * @param context Context returned from onMutate (undefined if onMutate not provided or threw).
+   * @param result The result of the mutation, which may be a success or an error.
+   * @param variables The variables passed to the mutation function.
+   * @param context The context object returned by onMutate, if any.
    */
   onSettled?: (
-    result: ExecuteGraphQLResult<ResultOf<TName>>,
-    variables: VariablesOf<TName>,
+    result: ExecuteGraphQLResult<TName>,
+    variables: VariablesInputOf<TName>,
     context: TContext | undefined,
   ) => void;
 };
 
 /**
- * GraphQL mutation composable with lifecycle hooks for optimistic updates.
+ * Create a mutation helper with a reactive pending state.
  *
  * @template TName Mutation operation name.
  * @template TContext Type of context returned by onMutate and passed to other hooks.
  * @param operationName Mutation operation name.
- * @param options Optional mutation lifecycle hooks.
- * @returns Mutation state and mutate function.
+ * @param hooks Optional lifecycle hooks for the mutation.
+ * @returns Mutation executor and pending state.
  */
 export function useGraphQLMutation<TName extends MutationName, TContext = unknown>(
   operationName: TName,
-  options?: MutationOptions<TName, TContext>,
+  hooks?: MutationHooks<TName, TContext>,
 ) {
-  const { $executeGraphQL } = useNuxtApp();
-  const document = getOperationDocument(operationName);
-  const pending = ref(false);
+  const { $executeOperation } = useNuxtApp();
+  const inFlightCount = ref(0);
+  const pending = computed(() => inFlightCount.value > 0);
 
-  async function mutate(
-    ...args: IsEmptyObject<VariablesOf<TName>> extends true
-      ? [variables?: VariablesOf<TName>]
-      : [variables: VariablesOf<TName>]
-  ): Promise<ExecuteGraphQLResult<ResultOf<TName>>> {
-    const [variables] = args;
+  /**
+   * Execute the mutation with the given variables, managing the pending state and invoking lifecycle hooks as appropriate.
+   *
+   * @param variables Variables for the mutation.
+   * @returns The result of the mutation.
+   */
+  async function mutate(variables: VariablesInputOf<TName>) {
+    // Initialize context variable to hold the result of onMutate, if it exists.
+    let context: TContext | undefined = undefined;
 
-    let context: TContext | undefined;
+    inFlightCount.value += 1;
 
-    // Execute onMutate hook before mutation
-    if (options?.onMutate) {
-      try {
-        context = await options.onMutate(variables as VariablesOf<TName>);
-      }
-      catch (error) {
-        const normalizedError = normalizeError(error);
-        options?.onError?.(normalizedError, variables as VariablesOf<TName>, context);
-        return { data: null, error: normalizedError };
-      }
-    }
-
-    pending.value = true;
     try {
-      const result = await $executeGraphQL<ResultOf<TName>>({ query: document, variables, operationName });
+      // Invoke onMutate hook to allow for optimistic updates and context preparation
+      if (hooks?.onMutate) {
+        context = await hooks.onMutate(variables);
+      }
 
-      // Execute success/error hooks based on result
+      // Execute the GraphQL mutation operation
+      const result = await $executeOperation({ operationName, variables });
+
+      // Invoke onSuccess or onError hooks based on the result of the mutation
       if (result.error) {
-        options?.onError?.(result.error, variables as VariablesOf<TName>, context);
-      }
-      else if (result.data) {
-        options?.onSuccess?.(result.data, variables as VariablesOf<TName>, context);
+        hooks?.onError?.(result.error, variables, context);
+      } else {
+        hooks?.onSuccess?.(result.data, variables, context);
       }
 
-      // Execute settled hook
-      options?.onSettled?.(result, variables as VariablesOf<TName>, context);
+      // Invoke onSettled hook regardless of success or error
+      hooks?.onSettled?.(result, variables, context);
 
       return result;
-    }
-    catch (error) {
-      const normalizedError = normalizeError(error);
-      const errorResult = { data: null, error: normalizedError };
-      options?.onError?.(normalizedError, variables as VariablesOf<TName>, context);
-      options?.onSettled?.(errorResult, variables as VariablesOf<TName>, context);
-      return errorResult;
-    }
-    finally {
-      pending.value = false;
+    } finally {
+      inFlightCount.value = Math.max(0, inFlightCount.value - 1);
     }
   }
 

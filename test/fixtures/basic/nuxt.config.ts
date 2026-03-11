@@ -1,15 +1,14 @@
 import NuxtGraphQL from "../../../src/module";
 
 export default defineNuxtConfig({
-  modules: [
-    NuxtGraphQL,
-  ],
+  modules: [NuxtGraphQL],
   graphql: {
     server: {
-      schema: {
-        local: { type: "local", path: "./server/graphql/schema.ts" },
-      },
+      context: ["server/graphql/context-a.ts", "server/graphql/context-b.ts"],
+      schema: [
+        { type: "local", path: "server/graphql/schema-a.ts" },
+        { type: "local", path: "server/graphql/schema-b.ts" },
+      ],
     },
-    saveSDL: ".nuxt/graphql/schema.graphql",
   },
 });

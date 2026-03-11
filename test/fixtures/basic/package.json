@@ -1,8 +1,5 @@
 {
-  "private": true,
   "name": "basic",
-  "type": "module",
-  "devDependencies": {
-    "nuxt": "workspace:*"
-  }
+  "private": true,
+  "type": "module"
 }

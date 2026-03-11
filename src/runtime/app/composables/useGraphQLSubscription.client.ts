@@ -1,9 +1,14 @@
+import { useNuxtApp } from "#app";
 import { print } from "graphql";
-import { onScopeDispose, shallowRef, useNuxtApp, type Ref } from "#imports";
-import type { ResultOf, SubscriptionName, VariablesOf } from "#graphql/registry";
-import { normalizeError, type NormalizedError } from "../../shared/lib/error";
-import { getOperationDocument } from "../../shared/lib/registry";
-import type { IsEmptyObject } from "../../shared/lib/types";
+import { onScopeDispose, shallowRef, type Ref } from "vue";
+
+import { normalizeError, type NormalizedError } from "../../shared/utils/error";
+import {
+  getOperationDocument,
+  type ResultOf,
+  type SubscriptionName,
+  type VariablesInputOf,
+} from "../../shared/utils/registry";
 
 type UseGraphQLSubscriptionReturn<TName extends SubscriptionName> = {
   data: Readonly<Ref<ResultOf<TName> | null>>;
@@ -21,12 +26,9 @@ type UseGraphQLSubscriptionReturn<TName extends SubscriptionName> = {
  */
 export function useGraphQLSubscription<TName extends SubscriptionName>(
   operationName: TName,
-  ...args: IsEmptyObject<VariablesOf<TName>> extends true
-    ? [variables?: VariablesOf<TName>]
-    : [variables: VariablesOf<TName>]
+  variables: VariablesInputOf<TName>,
 ): UseGraphQLSubscriptionReturn<TName> {
   const { $getGraphQLSSEClient } = useNuxtApp();
-  const [variables] = args;
 
   const document = getOperationDocument(operationName);
   const query = print(document);
@@ -40,13 +42,13 @@ export function useGraphQLSubscription<TName extends SubscriptionName>(
   function start() {
     stop();
     error.value = null;
-    unsubscribe = $getGraphQLSSEClient().subscribe<ResultOf<TName>>({ query, variables },
+    unsubscribe = $getGraphQLSSEClient().subscribe<ResultOf<TName>>(
+      { query, variables },
       {
         next: (result) => {
           if (result.errors?.length) {
             error.value = normalizeError(result.errors);
-          }
-          else if (result.data) {
+          } else if (result.data) {
             data.value = result.data as ResultOf<TName>;
           }
         },

@@ -1,98 +1,143 @@
-import { Kind } from "graphql";
-import type { Source } from "@graphql-tools/utils";
-import { splitModule } from "./split-module";
+import { mkdir, writeFile } from "fs/promises";
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Registry template
-// ────────────────────────────────────────────────────────────────────────────────
+import { codegen } from "@graphql-codegen/core";
+import type { Types } from "@graphql-codegen/plugin-helpers";
+import zodPreset from "@lewebsimple/graphql-codegen-zod";
+import { createResolver } from "@nuxt/kit";
+import { parse, printSchema, type GraphQLSchema } from "graphql";
+import type { Nuxt } from "nuxt/schema";
 
-export type RegistryInput = {
-  documentGlob: string;
-  loadDocuments: (documentGlob: string) => Promise<Source[]>;
+import { stripExtension } from "./path";
+import { compileTsModule } from "./ts-compiler";
+
+type RegistryCoreArtifacts = {
+  "registry.ts": string;
+  "types.d.ts": string;
+};
+
+type RegistryArtifacts = RegistryCoreArtifacts & Record<string, string>;
+
+/** Registry template generation input. */
+export type GenerateRegistryArtifactsInput = {
+  /** GraphQL schema. */
+  schema: GraphQLSchema;
+  /** Loaded GraphQL documents. */
+  documents: Types.DocumentFile[];
 };
 
 /**
- * Render the operation registry module / types from GraphQL documents.
+ * Generate GraphQL registry artifacts from schema and documents.
  *
- * @param {RegistryInput} input Registry template input.
- * @returns Generated .ts / .mjs / .d.ts source for the registry module.
+ * @param input Registry generation input.
+ * @param nuxt Nuxt instance.
+ * @returns Generated registry artifacts as a record of filename to content.
  */
-export async function getRegistryTemplate({ loadDocuments, documentGlob }: RegistryInput): Promise<{ ts: string; mjs: string; dts: string }> {
-  const documents = await loadDocuments(documentGlob);
-  const operations = collectOperations(documents);
+export async function generateRegistryArtifacts({
+  schema,
+  documents,
+}: GenerateRegistryArtifactsInput): Promise<RegistryArtifacts> {
+  const generates = await zodPreset.buildGeneratesSection({
+    baseOutputDir: "registry.ts",
+    schema: parse(printSchema(schema)),
+    documents: documents,
+    config: {},
+    pluginMap: {},
+    plugins: [],
+    presetConfig: {},
+  });
 
-  function capitalize(value: string): string {
-    if (!value) return value;
-    return value.charAt(0).toUpperCase() + value.slice(1);
+  if (!documents.length) {
+    return {
+      "registry.ts": getRegistryFallback(),
+      "types.d.ts": getTypesFallback(),
+    };
   }
+  const files: Record<string, string> = {};
 
-  const ts = `
-import type { DocumentNode } from "graphql";
-import {
-  ${operations.map(({ name, kind }) => `${name}Document, type ${name}${capitalize(kind)}Variables, type ${name}${capitalize(kind)}Result,`).join("\n  ")}
-} from "./operations";
+  await Promise.all(
+    generates.map((generate) =>
+      codegen(generate).then((content) => {
+        files[generate.filename] = content;
+      }),
+    ),
+  );
 
-// Operation entry
-export interface OperationEntry<TVariables, TResult, TKind extends "query" | "mutation" | "subscription"> {
-  kind: TKind;
-  variables: TVariables;
-  result: TResult;
-  document: DocumentNode;
+  const artifacts: RegistryArtifacts = {
+    ...files,
+    "registry.ts": files["registry.ts"] || getRegistryFallback(),
+    "types.d.ts": files["types.d.ts"] || getTypesFallback(),
+  };
+
+  return artifacts;
 }
 
-// Operation registry type
-export type OperationRegistry = {
-  ${operations.map(({ name, kind }) => `${name}: OperationEntry<${name}${capitalize(kind)}Variables, ${name}${capitalize(kind)}Result, "${kind}">;`).join("\n  ")}
-};
+// Fallback for registry.ts when no documents are found.
+function getRegistryFallback(): string {
+  return `
+import type { TypedDocumentNode } from "@graphql-typed-document-node/core";
+import type * as z from "zod";
 
-// Operation name types
-export type OperationName = keyof OperationRegistry;
-export type QueryName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "query" ? K : never }[keyof OperationRegistry];
-export type MutationName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "mutation" ? K : never }[keyof OperationRegistry];
-export type SubscriptionName = { [K in keyof OperationRegistry]: OperationRegistry[K]["kind"] extends "subscription" ? K : never }[keyof OperationRegistry];
+type EnumEntry = { schema: z.ZodEnum<Record<string, string>> };
 
-// Projection helpers (variables / result)
-export type VariablesOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["variables"];
-export type ResultOf<TName extends keyof OperationRegistry> = OperationRegistry[TName]["result"];
+type FragmentEntry = { schema: z.ZodObject<z.ZodRawShape> };
 
-export const registry: { [K in keyof OperationRegistry]: { kind: OperationRegistry[K]["kind"]; document: DocumentNode; }; } = {
-  ${operations.map(({ name, kind }) => `${name}: { kind: "${kind}", document: ${name}Document },`).join("\n  ")}
-};`.trim();
-
-  return { ts, ...splitModule(ts) };
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Registry helpers
-// ────────────────────────────────────────────────────────────────────────────────
-
-type OperationMeta = {
-  name: string;
+type OperationEntry = {
   kind: "query" | "mutation" | "subscription";
+  document: TypedDocumentNode<any, any>;
+  resultSchema: z.ZodObject<z.ZodRawShape>;
+  variablesSchema: z.ZodObject<z.ZodRawShape>;
 };
+
+export const enums: Record<string, EnumEntry> = {};
+export const fragments: Record<string, FragmentEntry> = {};
+export const operations: Record<string, OperationEntry> = {};
+`.trim();
+}
+
+// Fallback for types.d.ts when no documents are found.
+function getTypesFallback(): string {
+  return `export type {};`;
+}
 
 /**
- * Extract unique operation metadata from GraphQL documents.
+ * Write registry artifacts to the Nuxt build directory, compiling TypeScript modules as needed.
  *
- * @param documents Parsed GraphQL documents.
- * @returns Operation metadata entries.
+ * @param artifacts Generated artifact contents by filename.
+ * @param nuxt Nuxt instance.
+ * @returns Resolves when all artifacts are written.
  */
-function collectOperations(documents: Source[]): OperationMeta[] {
-  const operations = new Map<string, OperationMeta>();
-  for (const source of documents) {
-    const doc = source.document;
-    if (!doc) continue;
-    for (const def of doc.definitions) {
-      if (def.kind !== Kind.OPERATION_DEFINITION) continue;
-      const name = def.name?.value;
-      if (!name) {
-        throw new Error("Anonymous GraphQL operations are not allowed");
-      }
-      if (operations.has(name)) {
-        throw new Error(`Duplicate GraphQL operation name "${name}"`);
-      }
-      operations.set(name, { name, kind: def.operation });
+export async function writeRegistryArtifacts(
+  artifacts: RegistryArtifacts,
+  nuxt: Nuxt,
+): Promise<void> {
+  const { resolve: resolveBuild } = createResolver(nuxt.options.buildDir);
+
+  await mkdir(resolveBuild(`graphql/enums`), { recursive: true });
+  await mkdir(resolveBuild(`graphql/fragments`), { recursive: true });
+  await mkdir(resolveBuild(`graphql/operations`), { recursive: true });
+
+  for (const [filename, content] of Object.entries(artifacts)) {
+    switch (filename) {
+      case "registry.ts":
+        // Written by addTemplate in module setup()
+        break;
+
+      case "types.d.ts":
+        await writeFile(resolveBuild(`graphql/types.d.ts`), content);
+        break;
+
+      default:
+        // Split the TypeScript module into .mjs and .d.ts files in production, but keep it as a single .ts file in development / module preparation.
+        // @see https://github.com/nuxt/nuxt/discussions/34154#discussioncomment-15751036
+        const filePath = resolveBuild(`graphql/${stripExtension(filename)}`);
+        if (nuxt.options.dev || nuxt.options._prepare) {
+          await writeFile(`${filePath}.ts`, content);
+        } else {
+          const { mjs, dts } = compileTsModule(content);
+          await writeFile(`${filePath}.mjs`, mjs);
+          await writeFile(`${filePath}.d.ts`, dts);
+        }
+        break;
     }
   }
-  return Array.from(operations.values());
 }

@@ -1,6 +1,9 @@
-import type { QueryName, ResultOf, VariablesOf } from "#graphql/registry";
-import { computed, ref, shallowRef, toValue, useAsyncGraphQLQuery, watch, type ComputedRef, type MaybeRef, type Ref } from "#imports";
 import { hash } from "ohash";
+import { computed, ref, shallowRef, toValue, watchEffect, type MaybeRefOrGetter } from "vue";
+
+import type { QueryName, ResultOf, VariablesOf } from "../../shared/utils/registry";
+
+import { useAsyncGraphQLQuery } from "./useAsyncGraphQLQuery";
 
 type PageInfoFragment = {
   hasNextPage: boolean;
@@ -12,93 +15,98 @@ type Connection<TItem> = {
   pageInfo: PageInfoFragment;
 };
 
+/**
+ * Executes a GraphQL query with cursor-based pagination to load more items as needed.
+ * @param operationName The name of the GraphQL query operation.
+ * @param variables The variables for the GraphQL query, excluding the "after" cursor.
+ * @param getConnection A function to extract the connection data from the query result.
+ * @returns An object containing the items, loading state, error state, and pagination functions.
+ */
 export async function useGraphQLLoadMore<
-  TQueryName extends QueryName,
+  TName extends QueryName,
   TConnection extends Connection<unknown>,
 >(
-  queryName: TQueryName,
-  inputVars: MaybeRef<Omit<VariablesOf<TQueryName>, "after">>,
-  getConnection: (data?: ResultOf<TQueryName>) => TConnection | null | undefined,
+  operationName: TName,
+  variables: MaybeRefOrGetter<Omit<VariablesOf<TName>, "after">>,
+  getConnection: (data?: ResultOf<TName>) => TConnection | null | undefined,
 ) {
   type TItem = TConnection["nodes"][number];
 
-  // Current pagination cursor with set of added cursors to prevent duplicate fetches
+  // Current pagination cursor and the last requested cursor to prevent duplicate requests
   const after = ref<string | null>(null);
-  const addedCursors = new Set<string>();
+  const lastRequestedCursor = ref<string | null>(null);
 
-  // Query input (excluding pagination) and its hash for changes detection
-  const queryInput = computed(() => toValue(inputVars));
-  const queryInputHash = computed(() => hash(queryInput.value));
-  const queryVars = computed(() => ({
-    ...queryInput.value,
+  // Compute the base variables and their hash to detect changes in query inputs
+  const baseVariables = computed(() => toValue(variables));
+  const baseVariablesHash = computed(() => hash(baseVariables.value));
+  const queryVariables = computed<VariablesOf<TName>>(() => ({
+    ...baseVariables.value,
     after: after.value,
   }));
 
-  // Execute GraphQL query
-  const query = await useAsyncGraphQLQuery(
-    queryName,
-    queryVars as ComputedRef<VariablesOf<TQueryName>>,
-    {},
-  );
-
-  const items: Ref<TItem[]> = shallowRef(getConnection(query.data.value)?.nodes || []);
+  // State for items and loading status
+  const items = shallowRef<TItem[]>([]);
   const isLoadingMore = ref(false);
 
-  // Pagination info
-  const hasNextPage = computed(
-    () => getConnection(query.data.value)?.pageInfo?.hasNextPage ?? false,
-  );
-  const endCursor = computed(() => getConnection(query.data.value)?.pageInfo?.endCursor ?? null);
+  // Execute GraphQL query
+  const query = await useAsyncGraphQLQuery<TName>(operationName, queryVariables);
 
-  // Reset function
-  function reset(clearProducts = false) {
-    after.value = null;
-    addedCursors.clear();
-    if (clearProducts) {
-      items.value = [];
+  // Extract connection data and pagination info from the query result
+  const connection = computed(() => getConnection(query.data.value));
+  const hasNextPage = computed(() => connection.value?.pageInfo?.hasNextPage ?? false);
+  const endCursor = computed(() => connection.value?.pageInfo?.endCursor ?? null);
+
+  // Watch for changes to handle new query inputs and update items accordingly
+  let lastInputHash = baseVariablesHash.value;
+  watchEffect(() => {
+    const newItems = connection.value?.nodes ?? [];
+
+    // If the query input has changed, reset pagination and items
+    if (baseVariablesHash.value !== lastInputHash) {
+      lastInputHash = baseVariablesHash.value;
+      reset();
     }
-  }
 
-  // Watch query results to seed/append products
-  watch(
-    () => getConnection(query.data.value),
-    (connection) => {
-      const newItems = connection?.nodes || [];
-      if (after.value === null) {
-        items.value = newItems;
-      }
-      else {
-        items.value = [...items.value, ...newItems];
-      }
-      isLoadingMore.value = false;
-    },
-  );
+    // Append new items to the existing list if loading more, otherwise replace the list
+    if (after.value === null) {
+      items.value = newItems;
+    } else if (isLoadingMore.value) {
+      items.value = [...items.value, ...newItems];
+    }
 
-  // Reset when input changes
-  watch(queryInputHash, () => reset());
+    isLoadingMore.value = false;
+  });
 
-  // Load more function to fetch next page of products
+  // Load more items based on the current cursor
   function loadMore() {
+    const cursor = endCursor.value;
     if (
-      isLoadingMore.value
-      || !hasNextPage.value
-      || !endCursor.value
-      || addedCursors.has(endCursor.value)
+      isLoadingMore.value ||
+      !hasNextPage.value ||
+      !cursor ||
+      cursor === lastRequestedCursor.value
     ) {
       return;
     }
-    addedCursors.add(endCursor.value);
+    lastRequestedCursor.value = cursor;
     isLoadingMore.value = true;
-    after.value = endCursor.value;
+    after.value = cursor;
+  }
+
+  // Reset the pagination and items
+  function reset() {
+    after.value = null;
+    lastRequestedCursor.value = null;
+    items.value = [];
   }
 
   return {
     items,
     pending: query.pending,
     error: query.error,
-    reset,
     hasNextPage,
     isLoadingMore,
     loadMore,
+    reset,
   };
 }
