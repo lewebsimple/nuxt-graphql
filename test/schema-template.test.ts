@@ -5,8 +5,8 @@ import { getRemoteSchemaServerTemplate, getSchemaServerTemplate } from "../src/l
 describe("schema template generation", () => {
   it("returns a dummy schema when no schema is configured", () => {
     const template = getSchemaServerTemplate({
-      localSchemaPaths: [],
-      remoteSchemaPaths: [],
+      localPaths: [],
+      remotePaths: [],
     });
 
     expect(template).toContain(`buildSchema("type Query { _empty: String }")`);
@@ -14,8 +14,8 @@ describe("schema template generation", () => {
 
   it("exports a single local schema directly", () => {
     const template = getSchemaServerTemplate({
-      localSchemaPaths: ["/abs/server/graphql/schema.ts"],
-      remoteSchemaPaths: [],
+      localPaths: ["/abs/server/graphql/schema.ts"],
+      remotePaths: [],
     });
 
     expect(template).toContain(`export const schema = localSchema0;`);
@@ -24,23 +24,25 @@ describe("schema template generation", () => {
 
   it("stitches local and remote schemas", () => {
     const template = getSchemaServerTemplate({
-      localSchemaPaths: ["/abs/server/graphql/schema-a.ts", "/abs/server/graphql/schema-b.ts"],
-      remoteSchemaPaths: ["./schemas/remote-2"],
+      localPaths: ["/abs/server/graphql/schema-a.ts", "/abs/server/graphql/schema-b.ts"],
+      remotePaths: ["./schemas/remote-2"],
     });
 
     expect(template).toContain(`import { stitchSchemas } from "@graphql-tools/stitch";`);
-    expect(template).toContain(`subschemas: [localSchema0, remoteSchema0]`);
+    expect(template).toContain(`import { mergeSchemas } from "@graphql-tools/schema";`);
+    expect(template).toContain(`mergeSchemas({ schemas: [localSchema0, localSchema1] })`);
+    expect(template).toContain(`subschemas: [mergeSchemas({ schemas: [localSchema0, localSchema1] }), remoteSchema0]`);
     expect(template).toContain(`remoteSchema0`);
   });
 
-  it("stitches a single remote schema", () => {
+  it("exports a single remote schema directly", () => {
     const template = getSchemaServerTemplate({
-      localSchemaPaths: [],
-      remoteSchemaPaths: ["./schemas/remote-0"],
+      localPaths: [],
+      remotePaths: ["./schemas/remote-0"],
     });
 
-    expect(template).toContain(`import { stitchSchemas } from "@graphql-tools/stitch";`);
-    expect(template).toContain(`subschemas: [remoteSchema0]`);
+    expect(template).not.toContain(`stitchSchemas`);
+    expect(template).toContain(`export const schema = remoteSchema0;`);
   });
 
   it("builds a remote subschema config without stitching", () => {
