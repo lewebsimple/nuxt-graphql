@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.7.0
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.20...v0.7.0)
+
+### 🩹 Fixes
+
+- Write registry templates using addCompiledTemplate ([8cfeea9](https://github.com/lewebsimple/nuxt-graphql/commit/8cfeea9))
+- Tests ([0e2c3de](https://github.com/lewebsimple/nuxt-graphql/commit/0e2c3de))
+
+### 💅 Refactors
+
+- ⚠️  Complete rewrite using @lewebsimple/graphql-codegen-zod ([ee0414d](https://github.com/lewebsimple/nuxt-graphql/commit/ee0414d))
+
+### 🏡 Chore
+
+- Updete deps ([01a9bf6](https://github.com/lewebsimple/nuxt-graphql/commit/01a9bf6))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Complete rewrite using @lewebsimple/graphql-codegen-zod ([ee0414d](https://github.com/lewebsimple/nuxt-graphql/commit/ee0414d))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.6.20
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.19...v0.6.20)
