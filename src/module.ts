@@ -10,6 +10,7 @@ import {
   addServerImportsDir,
   createResolver,
   defineNuxtModule,
+  updateTemplates,
   useLogger,
 } from "@nuxt/kit";
 import { defu } from "defu";
@@ -23,7 +24,7 @@ import { clearBuildCache, getCachedLoader } from "./lib/cached-loader";
 import { getContextTemplate, resolveContextInput } from "./lib/context";
 import { loadDocuments, resolveDocumentGlobs } from "./lib/documents";
 import { toRelativePath } from "./lib/path";
-import { generateRegistryArtifacts, writeRegistryArtifacts } from "./lib/registry";
+import { addRegistryArtifactTemplates, generateRegistryArtifacts } from "./lib/registry";
 import {
   getRemoteSchemaServerTemplate,
   getSchemaSDL,
@@ -82,9 +83,8 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     logger.info(`@lewebsimple/nuxt-graphql v${version} loaded`);
 
     // Resolvers
-    const { buildDir, rootDir } = nuxt.options;
+    const { rootDir } = nuxt.options;
     const { resolve: resolveModule } = createResolver(import.meta.url);
-    const { resolve: resolveBuild } = createResolver(buildDir);
     const { resolve: resolveRoot } = createResolver(rootDir);
 
     // Nuxt / Nitro aliases
@@ -258,17 +258,11 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // GraphQL registry loader
     // ────────────────────────────────────────────────────────────────────────────
 
-    const { dst: registryDst } = await addCompiledTemplate(
-      {
-        filename: "graphql/registry",
-        getContents: async () => {
-          const artifacts = await generateRegistryCached(documentGlobs);
-          await writeRegistryArtifacts(artifacts, nuxt);
-          return artifacts["registry.ts"];
-        },
-      },
-      nuxt,
-    );
+    const syncRegistryTemplates = async () =>
+      await addRegistryArtifactTemplates(await generateRegistryCached(documentGlobs), nuxt);
+
+    const { registryDst, typesDts } = await syncRegistryTemplates();
+    const typesPath = typesDts.replace(/\.d\.ts$/, "");
     nuxtAliases["#graphql/registry"] = registryDst;
     nitroAliases["#graphql/registry"] = registryDst;
 
@@ -276,17 +270,8 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // GraphQL types
     // ────────────────────────────────────────────────────────────────────────────
 
-    const typesPath = resolveBuild("graphql/types");
     nuxtAliases["#graphql/types"] = typesPath;
     nitroAliases["#graphql/types"] = typesPath;
-    nuxt.hook("prepare:types", async ({ references }) => {
-      references ||= [];
-      references.push({ path: `${typesPath}.d.ts` });
-    });
-    nuxt.hook("nitro:prepare:types", ({ references }) => {
-      references ||= [];
-      references.push({ path: `${typesPath}.d.ts` });
-    });
 
     // ────────────────────────────────────────────────────────────────────────────
     // File watchers
@@ -304,12 +289,16 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
         if (schemaWatchPaths.some((schemaPath) => path.includes(schemaPath))) {
           logger.info(`Local schema change detected: ${path}`);
           clearBuildCache(["graphql:schema", "graphql:registry"]);
+          await syncRegistryTemplates();
+          await updateTemplates({ filter: (template) => template.filename.startsWith("graphql/") });
         }
 
         // GraphQL document change
         if (isDocument(path)) {
           logger.info(`Document change detected: ${path}`);
           clearBuildCache(["graphql:documents", "graphql:registry"]);
+          await syncRegistryTemplates();
+          await updateTemplates({ filter: (template) => template.filename.startsWith("graphql/") });
         }
       });
     }
