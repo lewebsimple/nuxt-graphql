@@ -183,8 +183,8 @@ export function getSchemaServerTemplate({ localPaths, remotePaths }: SchemaInput
     // No schemas defined: use default empty schema
     imports.unshift(`import {  buildSchema } from "graphql";`);
     schemaRef = `buildSchema("type Query { _empty: String }")`;
-  } else if (schemaRefs.length === 1) {
-    // Single schema: use as-is
+  } else if (remoteSchemaRefs.length === 0) {
+    // Single local schema: use as-is
     schemaRef = schemaRefs[0]!;
   } else {
     // Multiple schemas: stitch into a single executable schema
