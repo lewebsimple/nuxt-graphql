@@ -1,9 +1,15 @@
+import { extname } from "node:path";
+
 import type { Types } from "@graphql-codegen/plugin-helpers";
 import { CodeFileLoader } from "@graphql-tools/code-file-loader";
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadDocuments as gqlLoadDocuments } from "@graphql-tools/load";
 import { createResolver } from "@nuxt/kit";
 import type { Nuxt } from "@nuxt/schema";
+
+const DOCUMENT_IGNORE_GLOBS = ["**/.nuxt/**", "**/.output/**", "**/dist/**", "**/node_modules/**"];
+const GRAPHQL_FILE_EXTENSIONS = new Set([".gql", ".graphql"]);
+const CODE_FILE_EXTENSIONS = new Set([".ts", ".mts", ".cts", ".js", ".mjs", ".cjs", ".vue"]);
 
 /**
  * Resolve GraphQL document glob paths.
@@ -33,7 +39,8 @@ export async function loadDocuments(globs: string[]): Promise<Types.DocumentFile
   try {
     const docs = await gqlLoadDocuments(globs, {
       loaders: [new GraphQLFileLoader(), new CodeFileLoader()],
-      ignore: ["**/.nuxt/**", "**/.output/**", "**/dist/**", "**/node_modules/**"],
+      ignore: DOCUMENT_IGNORE_GLOBS,
+      noRequire: true,
     });
 
     const seen = new Set<string>();
@@ -53,5 +60,40 @@ export async function loadDocuments(globs: string[]): Promise<Types.DocumentFile
       return [];
     }
     throw error;
+  }
+}
+
+/**
+ * Determine whether a changed file can affect the GraphQL document registry.
+ *
+ * GraphQL code files are checked via plucking only, which avoids importing user modules during
+ * watch mode and prevents spurious side-effects from ordinary `.vue` / `.ts` edits.
+ *
+ * @param path Absolute file path reported by the builder watcher.
+ * @param event Builder watcher event name.
+ * @returns Whether the registry should be regenerated.
+ */
+export async function isGraphQLDocumentChange(path: string, event: string): Promise<boolean> {
+  const extension = extname(path).toLowerCase();
+
+  if (GRAPHQL_FILE_EXTENSIONS.has(extension)) {
+    return true;
+  }
+
+  if (!CODE_FILE_EXTENSIONS.has(extension)) {
+    return false;
+  }
+
+  if (event === "unlink" || event === "unlinkDir") {
+    return true;
+  }
+
+  try {
+    const docs = await new CodeFileLoader().load(path, {
+      noRequire: true,
+    });
+    return docs.some((doc) => Boolean(doc.document));
+  } catch {
+    return true;
   }
 }

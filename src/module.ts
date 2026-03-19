@@ -23,7 +23,7 @@ import { version } from "../package.json";
 
 import { clearBuildCache, getCachedLoader } from "./lib/cached-loader";
 import { getContextTemplate, resolveContextInput } from "./lib/context";
-import { loadDocuments, resolveDocumentGlobs } from "./lib/documents";
+import { isGraphQLDocumentChange, loadDocuments, resolveDocumentGlobs } from "./lib/documents";
 import { toRelativePath } from "./lib/path";
 import { addRegistryArtifactTemplates, generateRegistryArtifacts } from "./lib/registry";
 import {
@@ -286,7 +286,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
 
       const isDocument = picomatch(documentGlobs);
 
-      nuxt.hook("builder:watch", async (_event, path) => {
+      nuxt.hook("builder:watch", async (event, path) => {
         // Local schema change
         if (schemaWatchPaths.some((schemaPath) => path.includes(schemaPath))) {
           logger.info(`Local schema change detected: ${path}`);
@@ -296,7 +296,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
         }
 
         // GraphQL document change
-        if (isDocument(path)) {
+        if (isDocument(path) && (await isGraphQLDocumentChange(path, event))) {
           logger.info(`Document change detected: ${path}`);
           clearBuildCache(["graphql:documents", "graphql:registry"]);
           await syncRegistryTemplates();
