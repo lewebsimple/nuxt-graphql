@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.5
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.4...v0.7.5)
+
+### 🩹 Fixes
+
+- Update graphql-codegen-zod v0.2.1 to strip directives from documents ([48b9d60](https://github.com/lewebsimple/nuxt-graphql/commit/48b9d60))
+
+### 🏡 Chore
+
+- **release:** V0.7.4 ([9da9dbb](https://github.com/lewebsimple/nuxt-graphql/commit/9da9dbb))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.4
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.3...v0.7.4)
