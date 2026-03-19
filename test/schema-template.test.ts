@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getRemoteSchemaServerTemplate, getSchemaServerTemplate } from "../src/lib/schema";
+import { getRemoteSchemaTemplate, getSchemaTemplate } from "../src/lib/schema";
 
 describe("schema template generation", () => {
   it("returns a dummy schema when no schema is configured", () => {
-    const template = getSchemaServerTemplate({
+    const template = getSchemaTemplate({
       localPaths: [],
       remotePaths: [],
     });
@@ -13,7 +13,7 @@ describe("schema template generation", () => {
   });
 
   it("exports a single local schema directly", () => {
-    const template = getSchemaServerTemplate({
+    const template = getSchemaTemplate({
       localPaths: ["/abs/server/graphql/schema.ts"],
       remotePaths: [],
     });
@@ -23,7 +23,7 @@ describe("schema template generation", () => {
   });
 
   it("stitches local and remote schemas", () => {
-    const template = getSchemaServerTemplate({
+    const template = getSchemaTemplate({
       localPaths: ["/abs/server/graphql/schema-a.ts", "/abs/server/graphql/schema-b.ts"],
       remotePaths: ["./schemas/remote-2"],
     });
@@ -31,12 +31,14 @@ describe("schema template generation", () => {
     expect(template).toContain(`import { stitchSchemas } from "@graphql-tools/stitch";`);
     expect(template).toContain(`import { mergeSchemas } from "@graphql-tools/schema";`);
     expect(template).toContain(`mergeSchemas({ schemas: [localSchema0, localSchema1] })`);
-    expect(template).toContain(`subschemas: [mergeSchemas({ schemas: [localSchema0, localSchema1] }), remoteSchema0]`);
+    expect(template).toContain(
+      `subschemas: [mergeSchemas({ schemas: [localSchema0, localSchema1] }), remoteSchema0]`,
+    );
     expect(template).toContain(`remoteSchema0`);
   });
 
   it("exports a single remote schema directly", () => {
-    const template = getSchemaServerTemplate({
+    const template = getSchemaTemplate({
       localPaths: [],
       remotePaths: ["./schemas/remote-0"],
     });
@@ -46,7 +48,7 @@ describe("schema template generation", () => {
   });
 
   it("builds a remote subschema config without stitching", () => {
-    const template = getRemoteSchemaServerTemplate({
+    const template = getRemoteSchemaTemplate({
       endpoint: "https://example.com/graphql",
       headers: { Authorization: "Bearer token" },
       hooks: ["/abs/server/graphql/hook.ts"],

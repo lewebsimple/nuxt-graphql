@@ -26,9 +26,9 @@ import { loadDocuments, resolveDocumentGlobs } from "./lib/documents";
 import { toRelativePath } from "./lib/path";
 import { addRegistryArtifactTemplates, generateRegistryArtifacts } from "./lib/registry";
 import {
-  getRemoteSchemaServerTemplate,
+  getRemoteSchemaTemplate,
   getSchemaSDL,
-  getSchemaServerTemplate,
+  getSchemaTemplate,
   loadLocalSchema,
   loadRemoteSchema,
   resolveSchemaDefs,
@@ -172,7 +172,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
             {
               filename: `graphql/schemas/remote-${index}`,
               getContents: async () =>
-                getRemoteSchemaServerTemplate({
+                getRemoteSchemaTemplate({
                   ...schemaDef,
                   sdl: getSchemaSDL(await schemaLoader()),
                 }),
@@ -189,7 +189,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     const { dst: schemaDst } = await addCompiledTemplate(
       {
         filename: "graphql/schema",
-        getContents: () => getSchemaServerTemplate(schemaInput),
+        getContents: () => getSchemaTemplate(schemaInput),
       },
       nuxt,
     );

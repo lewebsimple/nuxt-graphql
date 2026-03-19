@@ -101,7 +101,7 @@ export type RemoteSchemaInput = {
  * @param input Remote schema template input.
  * @returns Template source code.
  */
-export function getRemoteSchemaServerTemplate({
+export function getRemoteSchemaTemplate({
   endpoint,
   headers,
   hooks,
@@ -148,7 +148,7 @@ export type SchemaInput = {
  * @param input Local and remote schema module paths.
  * @returns Template source code.
  */
-export function getSchemaServerTemplate({ localPaths, remotePaths }: SchemaInput): string {
+export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): string {
   // Local / remote schema imports
   const imports = [
     ...localPaths.map(
