@@ -43,7 +43,11 @@ export async function generateRegistryArtifacts({
     baseOutputDir: "registry.ts",
     schema: parse(printSchema(schema)),
     documents: documents,
-    config: {},
+    config: {
+      scalars: {
+        ZodValue: "unknown",
+      },
+    },
     pluginMap: {},
     plugins: [],
     presetConfig: {},

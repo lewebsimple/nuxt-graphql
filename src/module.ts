@@ -314,6 +314,15 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
       const config = {
         schema: toRelativePath(rootDir, sdlPath),
         documents: documentGlobs.map((glob) => toRelativePath(rootDir, glob)),
+        extensions: {
+          codegen: {
+            config: {
+              scalars: {
+                ZodValue: "unknown",
+              },
+            },
+          },
+        },
       };
       await writeFile(configPath, JSON.stringify(config, null, 2));
     }
