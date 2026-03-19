@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.2
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.1...v0.7.2)
+
+### 🩹 Fixes
+
+- Extend schema used for SDL with Zod directives ([ef5647f](https://github.com/lewebsimple/nuxt-graphql/commit/ef5647f))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.1
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.0...v0.7.1)
