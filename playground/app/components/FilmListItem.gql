@@ -1,0 +1,4 @@
+fragment FilmListItem on Film {
+  title @nonNull
+  director @nonNull
+}

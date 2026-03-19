@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import FilmItem from "./FilmItem.vue";
+import FilmItem from "./FilmListItem.vue";
 
 const { data: films, error } = await useAsyncGraphQLQuery(
-  "AllFilms",
+  "FilmList",
   {},
   {
-    transform: ({ allFilms }) => allFilms?.films || [],
+    transform: ({ allFilms }) => allFilms.films,
   },
 );
 </script>

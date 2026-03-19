@@ -151,6 +151,7 @@ export type SchemaInput = {
 export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): string {
   // Local / remote schema imports
   const imports = [
+    `import { extendSchemaWithZodDirectives } from "@lewebsimple/graphql-codegen-zod/extend-schema";`,
     ...localPaths.map(
       (schemaPath, index) =>
         `import { schema as localSchema${index} } from ${JSON.stringify(schemaPath)};`,
@@ -192,7 +193,13 @@ export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): str
     schemaRef = `stitchSchemas({ subschemas: [${schemaRefs.join(", ")}] })`;
   }
 
-  return [...imports, "", `export const schema = ${schemaRef};`].join("\n");
+  return [
+    ...imports,
+    "",
+    `export const schema = extendSchemaWithZodDirectives(`,
+    `  ${schemaRef},`,
+    `);`,
+  ].join("\n");
 }
 
 // ────────────────────────────────────────────────────────────────────────────────

@@ -48,11 +48,10 @@
     "@graphql-tools/schema": "^10.0.31",
     "@graphql-tools/stitch": "^10.1.16",
     "@graphql-typed-document-node/core": "^3.2.0",
-    "@lewebsimple/graphql-codegen-zod": "^0.1.9",
+    "@lewebsimple/graphql-codegen-zod": "^0.2.0",
     "@nuxt/kit": "^4.4.2",
     "defu": "^6.1.4",
     "es-toolkit": "^1.45.1",
-    "graphql": "^16.13.1",
     "graphql-sse": "^2.6.0",
     "graphql-yoga": "^5.18.1",
     "jiti": "^2.6.1",
@@ -69,6 +68,7 @@
     "@types/node": "latest",
     "@types/picomatch": "^4.0.2",
     "changelogen": "^0.6.2",
+    "graphql": "^16.13.1",
     "nuxt": "^4.4.2",
     "oxfmt": "^0.41.0",
     "oxlint": "^1.56.0",
@@ -78,6 +78,7 @@
     "zod": "^4.3.6"
   },
   "peerDependencies": {
+    "graphql": "^16",
     "zod": "^4"
   },
   "pnpm": {
