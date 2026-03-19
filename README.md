@@ -188,7 +188,6 @@ That's it! You can now use Nuxt GraphQL in your Nuxt app ✨
 Fragments are fully supported and are the recommended way to share selection sets across operations.
 
 - Fragment names must be unique across all `.gql` files (duplicates throw during generation).
-- Fragment types are re-exported from `#graphql/types`.
 - Fragments are not executable by themselves and are not part of the registry.
 
 Example with a fragment:
@@ -209,11 +208,13 @@ query SwapiFilms {
 }
 ```
 
-From TypeScript, you can also use fragment types explicitly when needed:
+From TypeScript, you can also use fragment types explicitly when needed (see below):
 
 ```ts
-import type { TheFilmFragment } from "#graphql/types";
+import type { TheFilmFragment, SwapiFilmsVariables } from "#graphql/types";
 ```
+
+⚠️ These types are inferred from the Zod schemas and cannot be used as top-level in component props, i.e. `defineProps<TheFilmFragment>()` breaks but `defineProps<{ film: TheFilmFragment }>()` works just fine.
 
 ### Use the auto-imported composables
 
@@ -248,6 +249,14 @@ export default defineEventHandler(async (event) => {
 ```
 
 Server helpers return a `ExecuteGraphQLResult` in the same format as some composables, i.e. `{ data: TResult, error: null } | { data: null, error: NormalizedError }`
+
+### Type-safety
+
+All enum, fragment and operation variables & result types are re-exported from `#graphql/types` for your convenience:
+
+```ts
+import type { TheFilmFragment } from "#graphql/types";
+```
 
 ### Query caching (client-side only)
 
