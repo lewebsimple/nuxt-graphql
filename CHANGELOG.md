@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.7.1
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.0...v0.7.1)
+
+### 🚀 Enhancements
+
+- Update to graphql-codegen-zod 0.2.0 with better directives ([9d62794](https://github.com/lewebsimple/nuxt-graphql/commit/9d62794))
+
+### 🩹 Fixes
+
+- Stitch single remote schema ([7bd0b41](https://github.com/lewebsimple/nuxt-graphql/commit/7bd0b41))
+- Adjust tests ([562e8c7](https://github.com/lewebsimple/nuxt-graphql/commit/562e8c7))
+
+### 🏡 Chore
+
+- Update deps ([a5c4a17](https://github.com/lewebsimple/nuxt-graphql/commit/a5c4a17))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.0
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.6.20...v0.7.0)
