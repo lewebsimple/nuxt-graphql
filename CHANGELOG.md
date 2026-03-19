@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.3
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.2...v0.7.3)
+
+### 🩹 Fixes
+
+- Configure unknown ZodValue scalar ([0e44ade](https://github.com/lewebsimple/nuxt-graphql/commit/0e44ade))
+
+### 🏡 Chore
+
+- **release:** V0.7.2 ([a1c5af1](https://github.com/lewebsimple/nuxt-graphql/commit/a1c5af1))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.2
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.1...v0.7.2)
