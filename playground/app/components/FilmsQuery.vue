@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import FilmItem from "./FilmItem.vue";
+
 const { data: films, error } = await useAsyncGraphQLQuery(
   "AllFilms",
   {},
@@ -11,7 +13,7 @@ const { data: films, error } = await useAsyncGraphQLQuery(
 <template>
   <ul v-if="films">
     <li v-for="(film, key) in films" :key="key">
-      {{ film?.title || "Unknown" }}
+      <FilmItem :film="film" />
     </li>
   </ul>
   <p v-else-if="error">Error: {{ error.message }}</p>
