@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import { stitchSchemas } from "@graphql-tools/stitch";
+import { extendSchemaWithZodDirectives } from "@lewebsimple/graphql-codegen-zod/extend-schema";
 import {
   addImportsDir,
   addPlugin,
@@ -217,6 +218,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
           throw new Error("Failed to load GraphQL schema");
         }
       }
+      schema = extendSchemaWithZodDirectives(schema);
 
       // Save schema.graphql to disk
       if (nuxt.options.dev) {
