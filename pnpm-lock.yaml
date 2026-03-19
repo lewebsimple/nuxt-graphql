@@ -42,8 +42,8 @@ importers:
         specifier: ^3.2.0
         version: 3.2.0(graphql@16.13.1)
       '@lewebsimple/graphql-codegen-zod':
-        specifier: ^0.2.0
-        version: 0.2.0(graphql@16.13.1)(zod@4.3.6)
+        specifier: ^0.2.1
+        version: 0.2.1(graphql@16.13.1)(zod@4.3.6)
       '@nuxt/kit':
         specifier: ^4.4.2
         version: 4.4.2(magicast@0.5.2)
@@ -933,8 +933,8 @@ packages:
   '@kwsites/promise-deferred@1.1.1':
     resolution: {integrity: sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==}
 
-  '@lewebsimple/graphql-codegen-zod@0.2.0':
-    resolution: {integrity: sha512-GuNAaixAmex5rHHkex2BqemPVY5XUA9UvQMomTEYkbMlPzYjtLX1JvXgsaknD8a1+QflPdk4+CsJ4WhDwhvJLQ==}
+  '@lewebsimple/graphql-codegen-zod@0.2.1':
+    resolution: {integrity: sha512-6a9hE/5+6lBdx3CSiAuJ5/KkPI/DmT/BvZihix41mJnzvROlpYRnpKvoDbWb8E7Zp1nH6C8xuwG/N9UMPT342Q==}
     peerDependencies:
       graphql: ^16.13.1
       zod: ^4.3.6
@@ -6271,7 +6271,7 @@ snapshots:
 
   '@kwsites/promise-deferred@1.1.1': {}
 
-  '@lewebsimple/graphql-codegen-zod@0.2.0(graphql@16.13.1)(zod@4.3.6)':
+  '@lewebsimple/graphql-codegen-zod@0.2.1(graphql@16.13.1)(zod@4.3.6)':
     dependencies:
       '@graphql-codegen/add': 6.0.0(graphql@16.13.1)
       '@graphql-codegen/plugin-helpers': 6.2.0(graphql@16.13.1)

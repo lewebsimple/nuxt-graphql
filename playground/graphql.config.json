@@ -1,8 +1,13 @@
 {
   "schema": "./.nuxt/graphql/schema.graphql",
-  "documents": [
-    "./app/**/*.{gql,ts,vue}",
-    "./server/**/*.{gql,ts}",
-    "./shared/**/*.{gql,ts}"
-  ]
+  "documents": ["./app/**/*.{gql,ts,vue}", "./server/**/*.{gql,ts}", "./shared/**/*.{gql,ts}"],
+  "extensions": {
+    "codegen": {
+      "config": {
+        "scalars": {
+          "ZodValue": "unknown"
+        }
+      }
+    }
+  }
 }

@@ -48,7 +48,7 @@
     "@graphql-tools/schema": "^10.0.31",
     "@graphql-tools/stitch": "^10.1.16",
     "@graphql-typed-document-node/core": "^3.2.0",
-    "@lewebsimple/graphql-codegen-zod": "^0.2.0",
+    "@lewebsimple/graphql-codegen-zod": "^0.2.1",
     "@nuxt/kit": "^4.4.2",
     "defu": "^6.1.4",
     "es-toolkit": "^1.45.1",
