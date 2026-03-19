@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.7.4
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.3...v0.7.4)
+
+### 🚀 Enhancements
+
+- Prevent duplicate fragments false positives by tightening documents loading ([2ccb45a](https://github.com/lewebsimple/nuxt-graphql/commit/2ccb45a))
+
+### 🩹 Fixes
+
+- Prevent generation-only directives from reaching runtime schema ([92abb80](https://github.com/lewebsimple/nuxt-graphql/commit/92abb80))
+
+### 🏡 Chore
+
+- **release:** V0.7.3 ([3fd7863](https://github.com/lewebsimple/nuxt-graphql/commit/3fd7863))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.3
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.2...v0.7.3)
