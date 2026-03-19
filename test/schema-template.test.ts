@@ -18,11 +18,8 @@ describe("schema template generation", () => {
       remotePaths: [],
     });
 
-    expect(template).toContain(
-      `import { extendSchemaWithZodDirectives } from "@lewebsimple/graphql-codegen-zod/extend-schema";`,
-    );
-    expect(template).toContain(`export const schema = extendSchemaWithZodDirectives(`);
-    expect(template).toContain(`  localSchema0,`);
+    expect(template).not.toContain(`extendSchemaWithZodDirectives`);
+    expect(template).toContain(`export const schema = localSchema0;`);
     expect(template).not.toContain(`stitchSchemas`);
   });
 
@@ -48,8 +45,8 @@ describe("schema template generation", () => {
     });
 
     expect(template).toContain(`import { stitchSchemas } from "@graphql-tools/stitch";`);
-    expect(template).toContain(`export const schema = extendSchemaWithZodDirectives(`);
-    expect(template).toContain(`  stitchSchemas({ subschemas: [remoteSchema0] }),`);
+    expect(template).not.toContain(`extendSchemaWithZodDirectives`);
+    expect(template).toContain(`export const schema = stitchSchemas({ subschemas: [remoteSchema0] });`);
   });
 
   it("builds a remote subschema config without stitching", () => {
