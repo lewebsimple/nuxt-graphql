@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.7
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.6...v0.7.7)
+
+### 🩹 Fixes
+
+- Generate on prepare because typecheck needs it ([d62038f](https://github.com/lewebsimple/nuxt-graphql/commit/d62038f))
+
+### 🏡 Chore
+
+- **release:** V0.7.6 ([5be5ed1](https://github.com/lewebsimple/nuxt-graphql/commit/5be5ed1))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.6
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.5...v0.7.6)
