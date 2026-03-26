@@ -1,7 +1,10 @@
+import type { GraphQLContext } from "#graphql/context";
 import { print } from "graphql";
 
 /** GraphQL remote executor request. */
-type GraphQLRemoteExecutorRequest = {
+export type GraphQLRemoteExecutorRequest<
+  TContext extends Record<string, unknown> = GraphQLContext,
+> = {
   /** GraphQL document node. */
   document: unknown;
   /** Operation variables. */
@@ -14,27 +17,30 @@ type GraphQLRemoteExecutorRequest = {
     headers?: Record<string, string>;
   };
   /** Execution context. */
-  context?: unknown;
+  context?: TContext;
 };
 
 /** Remote executor hook handlers. */
-type GraphQLRemoteExecutorHook = {
+export type GraphQLRemoteExecutorHook<TContext extends Record<string, unknown> = GraphQLContext> = {
   /** Called before sending remote request. */
-  onRequest?: (request: GraphQLRemoteExecutorRequest, context: unknown) => void | Promise<void>;
+  onRequest?: (
+    request: GraphQLRemoteExecutorRequest<TContext>,
+    context: TContext | undefined,
+  ) => void | Promise<void>;
   /** Called after receiving a result. */
-  onResult?: (result: unknown, context: unknown) => void | Promise<void>;
+  onResult?: (result: unknown, context: TContext | undefined) => void | Promise<void>;
   /** Called when execution throws. */
-  onError?: (error: unknown, context: unknown) => void | Promise<void>;
+  onError?: (error: unknown, context: TContext | undefined) => void | Promise<void>;
 };
 
 /** Remote executor factory input. */
-type RemoteExecutorInput = {
+type RemoteExecutorInput<TContext extends Record<string, unknown> = GraphQLContext> = {
   /** Remote GraphQL endpoint URL. */
   endpoint: string;
   /** Static request headers. */
   headers: Record<string, string>;
   /** Hook handlers. */
-  hooks: GraphQLRemoteExecutorHook[];
+  hooks: GraphQLRemoteExecutorHook<TContext>[];
 };
 
 /**
@@ -43,8 +49,12 @@ type RemoteExecutorInput = {
  * @param input Remote executor options.
  * @returns Async executor function.
  */
-export function getRemoteExecutor({ endpoint, headers, hooks }: RemoteExecutorInput) {
-  return async function execute(request: GraphQLRemoteExecutorRequest) {
+export function getRemoteExecutor<TContext extends Record<string, unknown> = GraphQLContext>({
+  endpoint,
+  headers,
+  hooks,
+}: RemoteExecutorInput<TContext>) {
+  return async function execute(request: GraphQLRemoteExecutorRequest<TContext>) {
     const context = request.context;
 
     try {
@@ -92,8 +102,8 @@ export function getRemoteExecutor({ endpoint, headers, hooks }: RemoteExecutorIn
  * @param hooks Hooks implementation.
  * @returns The same hooks object.
  */
-export function defineRemoteExecutorHooks(
-  hooks: GraphQLRemoteExecutorHook,
-): GraphQLRemoteExecutorHook {
+export function defineRemoteExecutorHooks<
+  TContext extends Record<string, unknown> = GraphQLContext,
+>(hooks: GraphQLRemoteExecutorHook<TContext>): GraphQLRemoteExecutorHook<TContext> {
   return hooks;
 }
