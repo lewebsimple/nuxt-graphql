@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.6
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.5...v0.7.6)
+
+### 🩹 Fixes
+
+- Proper context type for defineRemoteExecutorHooks ([a841b81](https://github.com/lewebsimple/nuxt-graphql/commit/a841b81))
+
+### 🏡 Chore
+
+- **release:** V0.7.5 ([fc55141](https://github.com/lewebsimple/nuxt-graphql/commit/fc55141))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.5
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.4...v0.7.5)
