@@ -8,8 +8,26 @@ import { createResolver } from "@nuxt/kit";
 import type { Nuxt } from "@nuxt/schema";
 
 const DOCUMENT_IGNORE_GLOBS = ["**/.nuxt/**", "**/.output/**", "**/dist/**", "**/node_modules/**"];
+const DEFAULT_DOCUMENT_GLOBS = [
+  "app/**/*.{gql,ts,vue}",
+  "server/**/*.{gql,ts}",
+  "shared/**/*.{gql,ts}",
+];
 const GRAPHQL_FILE_EXTENSIONS = new Set([".gql", ".graphql"]);
 const CODE_FILE_EXTENSIONS = new Set([".ts", ".mts", ".cts", ".js", ".mjs", ".cjs", ".vue"]);
+
+/**
+ * Resolve the document globs configured by the user.
+ *
+ * Defaults are always used when no explicit configuration is provided, including during Nuxt
+ * prepare and typecheck runs.
+ *
+ * @param globs User-configured document globs.
+ * @returns Effective GraphQL document globs.
+ */
+export function getDocumentGlobs(globs?: string[]): string[] {
+  return [...(globs ?? DEFAULT_DOCUMENT_GLOBS)];
+}
 
 /**
  * Resolve GraphQL document glob paths.

@@ -23,7 +23,12 @@ import { version } from "../package.json";
 
 import { clearBuildCache, getCachedLoader } from "./lib/cached-loader";
 import { getContextTemplate, resolveContextInput } from "./lib/context";
-import { isGraphQLDocumentChange, loadDocuments, resolveDocumentGlobs } from "./lib/documents";
+import {
+  getDocumentGlobs,
+  isGraphQLDocumentChange,
+  loadDocuments,
+  resolveDocumentGlobs,
+} from "./lib/documents";
 import { toRelativePath } from "./lib/path";
 import { addRegistryArtifactTemplates, generateRegistryArtifacts } from "./lib/registry";
 import {
@@ -234,9 +239,7 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
     // ────────────────────────────────────────────────────────────────────────────
 
     const documentGlobs = await resolveDocumentGlobs(
-      (options.client?.documents ?? nuxt.options._prepare)
-        ? []
-        : ["app/**/*.{gql,ts,vue}", "server/**/*.{gql,ts}", "shared/**/*.{gql,ts}"],
+      getDocumentGlobs(options.client?.documents),
       nuxt,
     );
     const loadDocumentsCached = getCachedLoader("graphql:documents", async (globs: string[]) =>

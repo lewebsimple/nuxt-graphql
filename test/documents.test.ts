@@ -4,7 +4,25 @@ import { tmpdir } from "node:os";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { isGraphQLDocumentChange } from "../src/lib/documents";
+import { getDocumentGlobs, isGraphQLDocumentChange } from "../src/lib/documents";
+
+describe("document globs", () => {
+  it("uses the default globs when none are configured", () => {
+    expect(getDocumentGlobs()).toEqual([
+      "app/**/*.{gql,ts,vue}",
+      "server/**/*.{gql,ts}",
+      "shared/**/*.{gql,ts}",
+    ]);
+  });
+
+  it("preserves explicit document globs", () => {
+    expect(getDocumentGlobs(["app/graphql/**/*.gql"])).toEqual(["app/graphql/**/*.gql"]);
+  });
+
+  it("preserves an explicit empty document list", () => {
+    expect(getDocumentGlobs([])).toEqual([]);
+  });
+});
 
 describe("document watch filtering", () => {
   const tempDirs: string[] = [];
