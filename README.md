@@ -24,7 +24,7 @@ Opinionated Nuxt module that wires a typed GraphQL server + client into your app
 Install the module and its dependencies in your project:
 
 ```bash
-pnpm add @lewebsimple/nuxt-graphql zod
+pnpm add @lewebsimple/nuxt-graphql @lewebsimple/graphql-codegen-zod graphql zod
 ```
 
 ### Configuration
