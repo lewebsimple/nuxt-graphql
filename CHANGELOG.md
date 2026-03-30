@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.8
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.7...v0.7.8)
+
+### 🚀 Enhancements
+
+- @lewebsimple/graphql-codegen-zod in peerDeps ([dcbf393](https://github.com/lewebsimple/nuxt-graphql/commit/dcbf393))
+
+### 🏡 Chore
+
+- **release:** V0.7.7 ([443d7cf](https://github.com/lewebsimple/nuxt-graphql/commit/443d7cf))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.7
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.6...v0.7.7)
