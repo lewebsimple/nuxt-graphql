@@ -144,7 +144,7 @@
 
 ### 💅 Refactors
 
-- ⚠️  Complete rewrite using @lewebsimple/graphql-codegen-zod ([ee0414d](https://github.com/lewebsimple/nuxt-graphql/commit/ee0414d))
+- ⚠️ Complete rewrite using @lewebsimple/graphql-codegen-zod ([ee0414d](https://github.com/lewebsimple/nuxt-graphql/commit/ee0414d))
 
 ### 🏡 Chore
 
@@ -152,7 +152,7 @@
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  Complete rewrite using @lewebsimple/graphql-codegen-zod ([ee0414d](https://github.com/lewebsimple/nuxt-graphql/commit/ee0414d))
+- ⚠️ Complete rewrite using @lewebsimple/graphql-codegen-zod ([ee0414d](https://github.com/lewebsimple/nuxt-graphql/commit/ee0414d))
 
 ### ❤️ Contributors
 
@@ -366,7 +366,7 @@
 
 ### ❤️ Contributors
 
--  Undefined" In Operations Template <9c8176b>
+- Undefined" In Operations Template <9c8176b>
 
 ## v0.6.4
 
@@ -425,11 +425,11 @@
 
 ### 💅 Refactors
 
-- ⚠️  Fix execution in non-node environments (f7c80f7)
+- ⚠️ Fix execution in non-node environments (f7c80f7)
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  Fix execution in non-node environments (f7c80f7)
+- ⚠️ Fix execution in non-node environments (f7c80f7)
 
 ### ❤️ Contributors
 
@@ -629,11 +629,11 @@
 
 ### 💅 Refactors
 
-- ⚠️  Complete rewrite of the module ([5212c6d](https://github.com/lewebsimple/nuxt-graphql/commit/5212c6d))
+- ⚠️ Complete rewrite of the module ([5212c6d](https://github.com/lewebsimple/nuxt-graphql/commit/5212c6d))
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  Complete rewrite of the module ([5212c6d](https://github.com/lewebsimple/nuxt-graphql/commit/5212c6d))
+- ⚠️ Complete rewrite of the module ([5212c6d](https://github.com/lewebsimple/nuxt-graphql/commit/5212c6d))
 
 ### ❤️ Contributors
 
@@ -645,7 +645,7 @@
 
 ### 🚀 Enhancements
 
-- ⚠️  Remove Zod generation schema (postponed) ([c52e0ad](https://github.com/lewebsimple/nuxt-graphql/commit/c52e0ad))
+- ⚠️ Remove Zod generation schema (postponed) ([c52e0ad](https://github.com/lewebsimple/nuxt-graphql/commit/c52e0ad))
 
 ### 🩹 Fixes
 
@@ -653,7 +653,7 @@
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  Remove Zod generation schema (postponed) ([c52e0ad](https://github.com/lewebsimple/nuxt-graphql/commit/c52e0ad))
+- ⚠️ Remove Zod generation schema (postponed) ([c52e0ad](https://github.com/lewebsimple/nuxt-graphql/commit/c52e0ad))
 
 ### ❤️ Contributors
 
@@ -713,7 +713,7 @@
 
 ### 🩹 Fixes
 
-- Export helpers from separate entry  file ([1c9be5c](https://github.com/lewebsimple/nuxt-graphql/commit/1c9be5c))
+- Export helpers from separate entry file ([1c9be5c](https://github.com/lewebsimple/nuxt-graphql/commit/1c9be5c))
 
 ### ❤️ Contributors
 
@@ -729,11 +729,11 @@
 
 ### 💅 Refactors
 
-- ⚠️  Complete module rewrite with better structure, comments and documentation ([ffd88d1](https://github.com/lewebsimple/nuxt-graphql/commit/ffd88d1))
+- ⚠️ Complete module rewrite with better structure, comments and documentation ([ffd88d1](https://github.com/lewebsimple/nuxt-graphql/commit/ffd88d1))
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  Complete module rewrite with better structure, comments and documentation ([ffd88d1](https://github.com/lewebsimple/nuxt-graphql/commit/ffd88d1))
+- ⚠️ Complete module rewrite with better structure, comments and documentation ([ffd88d1](https://github.com/lewebsimple/nuxt-graphql/commit/ffd88d1))
 
 ### ❤️ Contributors
 
@@ -798,7 +798,7 @@
 
 ### 🚀 Enhancements
 
-- ⚠️  GraphQL endpoint is now fixed to /api/graphql ([2166bd7](https://github.com/lewebsimple/nuxt-graphql/commit/2166bd7))
+- ⚠️ GraphQL endpoint is now fixed to /api/graphql ([2166bd7](https://github.com/lewebsimple/nuxt-graphql/commit/2166bd7))
 
 ### 🩹 Fixes
 
@@ -812,7 +812,7 @@
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  GraphQL endpoint is now fixed to /api/graphql ([2166bd7](https://github.com/lewebsimple/nuxt-graphql/commit/2166bd7))
+- ⚠️ GraphQL endpoint is now fixed to /api/graphql ([2166bd7](https://github.com/lewebsimple/nuxt-graphql/commit/2166bd7))
 
 ### ❤️ Contributors
 
@@ -858,7 +858,7 @@
 ### 🏡 Chore
 
 - Better source formatting and comments ([8ef21f0](https://github.com/lewebsimple/nuxt-graphql/commit/8ef21f0))
-- Update @graphql-codegen/* packages ([2bb90db](https://github.com/lewebsimple/nuxt-graphql/commit/2bb90db))
+- Update @graphql-codegen/\* packages ([2bb90db](https://github.com/lewebsimple/nuxt-graphql/commit/2bb90db))
 - Rename server utils to prevent confusion ([cc3c289](https://github.com/lewebsimple/nuxt-graphql/commit/cc3c289))
 
 ### ❤️ Contributors
@@ -1059,7 +1059,6 @@
 
 ## v0.1.1
 
-
 ### 🚀 Enhancements
 
 - GraphQL Yoga server handler with user-provided schema ([a0dc34a](https://github.com/lewebsimple/nuxt-graphql/commit/a0dc34a))
@@ -1075,4 +1074,3 @@
 ### ❤️ Contributors
 
 - Pascal Martineau <pascal@lewebsimple.ca>
-
