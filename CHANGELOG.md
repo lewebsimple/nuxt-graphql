@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.7.9
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.8...v0.7.9)
+
+### 🚀 Enhancements
+
+- Implement passthrough mode for remote subschemas and update schema execution logic ([c20ac56](https://github.com/lewebsimple/nuxt-graphql/commit/c20ac56))
+
+### 🏡 Chore
+
+- **release:** V0.7.8 ([0115a25](https://github.com/lewebsimple/nuxt-graphql/commit/0115a25))
+- Update deps ([3b903c3](https://github.com/lewebsimple/nuxt-graphql/commit/3b903c3))
+- Update deps ([053cefc](https://github.com/lewebsimple/nuxt-graphql/commit/053cefc))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.8
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.7...v0.7.8)
