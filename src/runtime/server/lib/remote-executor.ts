@@ -20,6 +20,14 @@ export type GraphQLRemoteExecutorRequest<
   context?: TContext;
 };
 
+/** Metadata from the upstream HTTP response. */
+export type GraphQLRemoteExecutorResponseMeta = {
+  /** Response headers from the upstream endpoint. */
+  headers: Headers;
+  /** HTTP status code from the upstream endpoint. */
+  status: number;
+};
+
 /** Remote executor hook handlers. */
 export type GraphQLRemoteExecutorHook<TContext extends Record<string, unknown> = GraphQLContext> = {
   /** Called before sending remote request. */
@@ -27,10 +35,22 @@ export type GraphQLRemoteExecutorHook<TContext extends Record<string, unknown> =
     request: GraphQLRemoteExecutorRequest<TContext>,
     context: TContext | undefined,
   ) => void | Promise<void>;
-  /** Called after receiving a result. */
-  onResult?: (result: unknown, context: TContext | undefined) => void | Promise<void>;
-  /** Called when execution throws. */
-  onError?: (error: unknown, context: TContext | undefined) => void | Promise<void>;
+  /** Called after receiving a result, with the upstream response metadata. */
+  onResult?: (
+    result: unknown,
+    context: TContext | undefined,
+    meta: GraphQLRemoteExecutorResponseMeta,
+  ) => void | Promise<void>;
+  /**
+   * Called when execution throws. `meta` is provided when the failure happened
+   * after the HTTP response was received (non-2xx, JSON parse error, hook
+   * error); it is `undefined` for fetch/network failures.
+   */
+  onError?: (
+    error: unknown,
+    context: TContext | undefined,
+    meta?: GraphQLRemoteExecutorResponseMeta,
+  ) => void | Promise<void>;
 };
 
 /** Remote executor factory input. */
@@ -56,6 +76,7 @@ export function getRemoteExecutor<TContext extends Record<string, unknown> = Gra
 }: RemoteExecutorInput<TContext>) {
   return async function execute(request: GraphQLRemoteExecutorRequest<TContext>) {
     const context = request.context;
+    let meta: GraphQLRemoteExecutorResponseMeta | undefined;
 
     try {
       for (const hook of hooks) {
@@ -76,6 +97,8 @@ export function getRemoteExecutor<TContext extends Record<string, unknown> = Gra
         }),
       });
 
+      meta = { headers: response.headers, status: response.status };
+
       if (!response.ok) {
         throw new Error(`GraphQL HTTP ${response.status}`);
       }
@@ -83,13 +106,13 @@ export function getRemoteExecutor<TContext extends Record<string, unknown> = Gra
       const result = (await response.json()) as unknown;
 
       for (const hook of hooks) {
-        await hook.onResult?.(result, context);
+        await hook.onResult?.(result, context, meta);
       }
 
       return result;
     } catch (error) {
       for (const hook of hooks) {
-        await hook.onError?.(error, context);
+        await hook.onError?.(error, context, meta);
       }
       throw error;
     }

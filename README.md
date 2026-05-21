@@ -381,15 +381,20 @@ export default defineRemoteExecutorHooks({
     });
   },
 
-  onResult(result, context) {
+  onResult(result, context, meta) {
     // You can also access context in onResult
     console.log("User from context:", context?.user);
     console.log("Result:", result.data);
+    // Upstream HTTP response metadata (headers + status)
+    const session = meta.headers.get("woocommerce-session");
+    if (session) context?.setSession?.(session);
   },
 
-  onError(error, context) {
+  onError(error, context, meta) {
     // And in onError for logging/monitoring
-    console.error("Remote execution failed for user:", context?.user?.id);
+    // `meta` is undefined when the failure happened before the HTTP response
+    // (e.g. fetch/network error); defined for non-2xx or JSON parse errors.
+    console.error("Remote execution failed for user:", context?.user?.id, meta?.status);
   },
 });
 ```
