@@ -10,22 +10,24 @@ describe("schema template generation", () => {
     });
 
     expect(template).toContain(`buildSchema("type Query { _empty: String }")`);
+    // Schema construction is deferred via getSchema()
+    expect(template).toContain(`export const getSchema = () => (_schema ??= buildSchema("type Query { _empty: String }"));`);
     expect(template).toContain(`export const executor = undefined;`);
   });
 
-  it("exports a single local schema directly", () => {
+  it("exports a single local schema lazily", () => {
     const template = getSchemaTemplate({
       localPaths: ["/abs/server/graphql/schema.ts"],
       remotePaths: [],
     });
 
     expect(template).not.toContain(`extendSchemaWithZodDirectives`);
-    expect(template).toContain(`export const schema = localSchema0;`);
+    expect(template).toContain(`export const getSchema = () => (_schema ??= localSchema0);`);
     expect(template).toContain(`export const executor = undefined;`);
     expect(template).not.toContain(`stitchSchemas`);
   });
 
-  it("stitches local and remote schemas", () => {
+  it("stitches local and remote schemas lazily", () => {
     const template = getSchemaTemplate({
       localPaths: ["/abs/server/graphql/schema-a.ts", "/abs/server/graphql/schema-b.ts"],
       remotePaths: ["./schemas/remote-2"],
@@ -35,8 +37,9 @@ describe("schema template generation", () => {
     expect(template).toContain(`import { mergeSchemas } from "@graphql-tools/schema";`);
     expect(template).toContain(`mergeSchemas({ schemas: [localSchema0, localSchema1] })`);
     expect(template).toContain(
-      `subschemas: [mergeSchemas({ schemas: [localSchema0, localSchema1] }), remoteSchema0], mergeTypes: false`,
+      `stitchSchemas({ subschemas: [mergeSchemas({ schemas: [localSchema0, localSchema1] }), remoteSchema0], mergeTypes: false })`,
     );
+    expect(template).toContain(`export const getSchema = () => (_schema ??= stitchSchemas(`);
     expect(template).toContain(`remoteSchema0`);
     expect(template).toContain(`export const executor = undefined;`);
   });
@@ -49,11 +52,13 @@ describe("schema template generation", () => {
 
     // No stitch / wrap / merge — pure re-export of the subschema's schema
     // and executor so yoga and executeSchemaOperation can forward directly.
+    // `getSchema()` is a thin pass-through so the underlying subschema's lazy
+    // buildSchema is the actual deferral point.
     expect(template).not.toContain(`stitchSchemas`);
     expect(template).not.toContain(`wrapSchema`);
     expect(template).not.toContain(`mergeSchemas`);
     expect(template).not.toContain(`extendSchemaWithZodDirectives`);
-    expect(template).toContain(`export const schema = remoteSchema0.schema;`);
+    expect(template).toContain(`export const getSchema = () => remoteSchema0.schema;`);
     expect(template).toContain(`export const executor = remoteSchema0.executor;`);
   });
 
@@ -67,12 +72,12 @@ describe("schema template generation", () => {
     // resolvers that need to run, so we still stitch.
     expect(template).toContain(`import { stitchSchemas } from "@graphql-tools/stitch";`);
     expect(template).toContain(
-      `stitchSchemas({ subschemas: [localSchema0, remoteSchema0], mergeTypes: false })`,
+      `export const getSchema = () => (_schema ??= stitchSchemas({ subschemas: [localSchema0, remoteSchema0], mergeTypes: false }));`,
     );
     expect(template).toContain(`export const executor = undefined;`);
   });
 
-  it("builds a remote subschema config without stitching", () => {
+  it("builds a remote subschema config without stitching, and defers SDL parse", () => {
     const template = getRemoteSchemaTemplate({
       endpoint: "https://example.com/graphql",
       headers: { Authorization: "Bearer token" },
@@ -85,5 +90,12 @@ describe("schema template generation", () => {
     );
     expect(template).toContain(`export const schema = {`);
     expect(template).not.toContain(`stitchSchemas`);
+
+    // `buildSchema(...)` must NOT run at module evaluation — it should sit
+    // behind a getter so the Cloudflare Workers startup-CPU budget isn't
+    // burned parsing a multi-MB SDL.
+    expect(template).toContain(`get schema(): GraphQLSchema`);
+    expect(template).toContain(`(_schema ??= buildSchema(SDL))`);
+    expect(template).not.toMatch(/schema:\s*buildSchema\(/);
   });
 });

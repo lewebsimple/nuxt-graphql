@@ -114,7 +114,7 @@ export function getRemoteSchemaTemplate({
 
   return `
 import { getRemoteExecutor } from "#graphql/runtime/remote-executor";
-import { buildSchema } from "graphql";
+import { buildSchema, type GraphQLSchema } from "graphql";
 ${hookImports.join("\n")}
 
 const executor = getRemoteExecutor({
@@ -123,8 +123,18 @@ const executor = getRemoteExecutor({
   hooks: [${hookRefs.join(", ")}],
 });
 
+// SDL is held as a string literal and only parsed on first access. This keeps
+// \`buildSchema\` out of the module-evaluation phase, which matters on
+// Cloudflare Workers where the startup CPU budget is ~200ms (free) / 400ms
+// (paid) — easy to exceed when the remote schema is large (WPGraphQL +
+// WooCommerce + ACF, etc.).
+const SDL = ${JSON.stringify(sdl)};
+let _schema: GraphQLSchema | undefined;
+
 export const schema = {
-  schema: buildSchema(${JSON.stringify(sdl)}),
+  get schema(): GraphQLSchema {
+    return (_schema ??= buildSchema(SDL));
+  },
   executor,
 };
 `.trim();
@@ -177,6 +187,11 @@ export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): str
   // Add remote schema references
   schemaRefs.push(...remoteSchemaRefs);
 
+  // The generated module exports `getSchema()` (not `schema`) so that any
+  // SDL parsing / stitching / etc. is deferred until first call. Yoga and
+  // `executeSchemaOperation` call `getSchema()` inside their handlers, not
+  // at module init, which keeps the Worker's startup-CPU budget free.
+
   // Passthrough mode: a single remote subschema with no local schema. The
   // generated module re-exports the remote subschema's `GraphQLSchema` (so
   // yoga can validate operations) and its `executor` (so yoga and
@@ -190,7 +205,7 @@ export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): str
     return [
       ...imports,
       "",
-      `export const schema = remoteSchema0.schema;`,
+      `export const getSchema = () => remoteSchema0.schema;`,
       `export const executor = remoteSchema0.executor;`,
     ].join("\n");
   }
@@ -199,10 +214,11 @@ export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): str
   let schemaRef: string;
   if (schemaRefs.length === 0) {
     // No schemas defined: use default empty schema
-    imports.unshift(`import {  buildSchema } from "graphql";`);
+    imports.unshift(`import { buildSchema, type GraphQLSchema } from "graphql";`);
     schemaRef = `buildSchema("type Query { _empty: String }")`;
   } else if (remoteSchemaRefs.length === 0) {
     // Local-only (single local, or pre-merged via mergeSchemas above): use as-is
+    imports.unshift(`import type { GraphQLSchema } from "graphql";`);
     schemaRef = schemaRefs[0]!;
   } else {
     // Multiple subschemas (or one remote alongside local resolvers): stitch.
@@ -210,15 +226,18 @@ export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): str
     // merge path; subschemas from independent endpoints have no overlapping
     // types to merge anyway.
     imports.unshift(`import { stitchSchemas } from "@graphql-tools/stitch";`);
+    imports.unshift(`import type { GraphQLSchema } from "graphql";`);
     schemaRef = `stitchSchemas({ subschemas: [${schemaRefs.join(", ")}], mergeTypes: false })`;
   }
 
   // `executor` is always exported so the runtime can destructure it
   // unconditionally; it's only populated in passthrough mode.
+  // Schema construction is deferred to first call of `getSchema()`.
   return [
     ...imports,
     "",
-    `export const schema = ${schemaRef};`,
+    `let _schema: GraphQLSchema | undefined;`,
+    `export const getSchema = () => (_schema ??= ${schemaRef});`,
     `export const executor = undefined;`,
   ].join("\n");
 }

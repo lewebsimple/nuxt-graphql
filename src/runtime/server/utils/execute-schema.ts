@@ -1,5 +1,5 @@
 import { createContext } from "#graphql/context";
-import { executor, schema } from "#graphql/schema";
+import { executor, getSchema } from "#graphql/schema";
 import { execute, type ExecutionResult } from "graphql";
 import type { H3Event } from "h3";
 
@@ -33,6 +33,9 @@ export async function executeSchemaOperation<TName extends OperationName>(
     const variableValues = parseOperationVariables(operationName, variables);
     const contextValue = await createContext(event);
 
+    // In passthrough mode the schema is never materialized here — the executor
+    // branch wins and `getSchema()` is not called. Outside passthrough,
+    // `getSchema()` lazily constructs the schema on first call and memoizes it.
     const result = executor
       ? ((await executor({
           document,
@@ -40,7 +43,13 @@ export async function executeSchemaOperation<TName extends OperationName>(
           operationName,
           context: contextValue,
         })) as ExecutionResult)
-      : await execute({ schema, document, variableValues, operationName, contextValue });
+      : await execute({
+          schema: getSchema(),
+          document,
+          variableValues,
+          operationName,
+          contextValue,
+        });
 
     if (result.errors?.length) {
       return { data: null, error: normalizeError(result.errors) };

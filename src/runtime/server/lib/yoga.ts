@@ -1,9 +1,12 @@
 import type { GraphQLContext } from "#graphql/context";
-import { executor, schema } from "#graphql/schema";
+import { executor, getSchema } from "#graphql/schema";
 import { type ExecutionResult } from "graphql";
 import { createYoga, type Plugin } from "graphql-yoga";
 
-// Singleton instance of the GraphQL Yoga server.
+// Singleton instance of the GraphQL Yoga server. Created lazily on the first
+// request so the underlying schema (which may be expensive to build for large
+// remote endpoints) doesn't run at module-evaluation time — that would count
+// against the Cloudflare Worker startup-CPU budget.
 let yoga: ReturnType<typeof createYoga<GraphQLContext>> | null = null;
 
 /**
@@ -38,7 +41,7 @@ export function getYogaInstance() {
       graphqlEndpoint: "/api/graphql",
       graphiql: import.meta.dev,
       fetchAPI: globalThis,
-      schema,
+      schema: getSchema(),
       plugins: executor ? [passthroughPlugin()] : [],
     });
     if (!yoga) {
