@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.10
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.9...v0.7.10)
+
+### 🚀 Enhancements
+
+- Implement lazy schema construction and update schema handling in Yoga server ([e53519e](https://github.com/lewebsimple/nuxt-graphql/commit/e53519e))
+
+### 🏡 Chore
+
+- **release:** V0.7.9 ([77ba245](https://github.com/lewebsimple/nuxt-graphql/commit/77ba245))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.9
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.8...v0.7.9)
