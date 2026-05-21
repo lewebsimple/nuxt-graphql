@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.11
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.10...v0.7.11)
+
+### 🚀 Enhancements
+
+- Enhance remote executor with upstream HTTP response metadata in hooks ([ef85f82](https://github.com/lewebsimple/nuxt-graphql/commit/ef85f82))
+
+### 🏡 Chore
+
+- **release:** V0.7.10 ([7f30b53](https://github.com/lewebsimple/nuxt-graphql/commit/7f30b53))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.10
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.9...v0.7.10)
