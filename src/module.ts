@@ -217,8 +217,18 @@ export default defineNuxtModule<NuxtGraphQLModuleOptions>({
           logger.warn("No GraphQL schemas loaded: using default empty schema.");
         }
         schema = buildSchema("type Query { _empty: String }");
+      } else if (schemas.length === 1) {
+        // Single schema: use as-is. `schemaLoaders` resolves to `GraphQLSchema`
+        // here (not subschema configs — those are only needed at runtime for
+        // delegation), so no stitching is required and we sidestep stitch's
+        // rewire pass that throws on some schemas at Cloudflare Workers
+        // deploy validation. See also `src/lib/schema.ts`.
+        schema = schemas[0]!;
       } else {
-        schema = stitchSchemas({ subschemas: schemas });
+        // Multiple schemas: stitch. `mergeTypes: false` keeps the build-time
+        // construction in sync with the generated runtime template and
+        // avoids the more aggressive merge path.
+        schema = stitchSchemas({ subschemas: schemas, mergeTypes: false });
         if (!schema) {
           throw new Error("Failed to load GraphQL schema");
         }

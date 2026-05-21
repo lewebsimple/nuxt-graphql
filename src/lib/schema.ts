@@ -177,25 +177,49 @@ export function getSchemaTemplate({ localPaths, remotePaths }: SchemaInput): str
   // Add remote schema references
   schemaRefs.push(...remoteSchemaRefs);
 
-  // Determine final schema reference
+  // Passthrough mode: a single remote subschema with no local schema. The
+  // generated module re-exports the remote subschema's `GraphQLSchema` (so
+  // yoga can validate operations) and its `executor` (so yoga and
+  // `executeSchemaOperation` can forward execution to the remote endpoint
+  // directly, without going through `graphql.execute` against a wrapped
+  // schema). This avoids stitch/wrap's `mapSchema → rewireTypes` pass —
+  // which throws `Unexpected schema type` at Cloudflare Workers deploy
+  // validation on some schemas (e.g. wpgraphql-acf / ACFE interfaces) —
+  // and cuts a meaningful chunk of cold-start work and bundle size.
+  if (localPaths.length === 0 && remotePaths.length === 1) {
+    return [
+      ...imports,
+      "",
+      `export const schema = remoteSchema0.schema;`,
+      `export const executor = remoteSchema0.executor;`,
+    ].join("\n");
+  }
+
+  // Determine final schema reference for non-passthrough modes
   let schemaRef: string;
   if (schemaRefs.length === 0) {
     // No schemas defined: use default empty schema
     imports.unshift(`import {  buildSchema } from "graphql";`);
     schemaRef = `buildSchema("type Query { _empty: String }")`;
   } else if (remoteSchemaRefs.length === 0) {
-    // Single local schema: use as-is
+    // Local-only (single local, or pre-merged via mergeSchemas above): use as-is
     schemaRef = schemaRefs[0]!;
   } else {
-    // Multiple schemas: stitch into a single executable schema
+    // Multiple subschemas (or one remote alongside local resolvers): stitch.
+    // `mergeTypes: false` keeps stitch from going through the more aggressive
+    // merge path; subschemas from independent endpoints have no overlapping
+    // types to merge anyway.
     imports.unshift(`import { stitchSchemas } from "@graphql-tools/stitch";`);
-    schemaRef = `stitchSchemas({ subschemas: [${schemaRefs.join(", ")}] })`;
+    schemaRef = `stitchSchemas({ subschemas: [${schemaRefs.join(", ")}], mergeTypes: false })`;
   }
 
+  // `executor` is always exported so the runtime can destructure it
+  // unconditionally; it's only populated in passthrough mode.
   return [
     ...imports,
     "",
     `export const schema = ${schemaRef};`,
+    `export const executor = undefined;`,
   ].join("\n");
 }
 

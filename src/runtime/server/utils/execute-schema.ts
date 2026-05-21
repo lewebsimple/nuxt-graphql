@@ -1,6 +1,6 @@
 import { createContext } from "#graphql/context";
-import { schema } from "#graphql/schema";
-import { execute } from "graphql";
+import { executor, schema } from "#graphql/schema";
+import { execute, type ExecutionResult } from "graphql";
 import type { H3Event } from "h3";
 
 import { normalizeError } from "../../shared/utils/error";
@@ -15,6 +15,11 @@ import {
 /**
  * Execute a typed / validated GraphQL operation against the schema.
  *
+ * In passthrough mode (single remote subschema, no local schema), execution
+ * is forwarded directly to the remote executor — `graphql.execute` is skipped
+ * along with the schema's resolver walk. Otherwise the operation runs against
+ * the local executable schema in-process.
+ *
  * @param event Current request event.
  * @param input Operation input payload.
  * @returns Typed operation result or normalized error.
@@ -28,7 +33,14 @@ export async function executeSchemaOperation<TName extends OperationName>(
     const variableValues = parseOperationVariables(operationName, variables);
     const contextValue = await createContext(event);
 
-    const result = await execute({ schema, document, variableValues, operationName, contextValue });
+    const result = executor
+      ? ((await executor({
+          document,
+          variables: variableValues,
+          operationName,
+          context: contextValue,
+        })) as ExecutionResult)
+      : await execute({ schema, document, variableValues, operationName, contextValue });
 
     if (result.errors?.length) {
       return { data: null, error: normalizeError(result.errors) };
