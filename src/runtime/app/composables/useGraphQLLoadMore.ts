@@ -1,5 +1,5 @@
 import { hash } from "ohash";
-import { computed, ref, shallowRef, toValue, watchEffect, type MaybeRefOrGetter } from "vue";
+import { computed, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from "vue";
 
 import type { QueryName, ResultOf, VariablesOf } from "../../shared/utils/registry";
 
@@ -56,26 +56,37 @@ export async function useGraphQLLoadMore<
   const hasNextPage = computed(() => connection.value?.pageInfo?.hasNextPage ?? false);
   const endCursor = computed(() => connection.value?.pageInfo?.endCursor ?? null);
 
-  // Watch for changes to handle new query inputs and update items accordingly
+  // Seed items from the initial (already-awaited) query result
+  items.value = connection.value?.nodes ?? [];
+
+  // Reset pagination when the base query inputs change; items are repopulated
+  // by the pending watcher once the new fetch resolves
   let lastInputHash = baseVariablesHash.value;
-  watchEffect(() => {
-    const newItems = connection.value?.nodes ?? [];
-
-    // If the query input has changed, reset pagination and items
-    if (baseVariablesHash.value !== lastInputHash) {
-      lastInputHash = baseVariablesHash.value;
-      reset();
-    }
-
-    // Append new items to the existing list if loading more, otherwise replace the list
-    if (after.value === null) {
-      items.value = newItems;
-    } else if (isLoadingMore.value) {
-      items.value = [...items.value, ...newItems];
-    }
-
-    isLoadingMore.value = false;
+  watch(baseVariablesHash, (newHash) => {
+    if (newHash === lastInputHash) return;
+    lastInputHash = newHash;
+    after.value = null;
+    lastRequestedCursor.value = null;
+    items.value = [];
   });
+
+  // Apply fetched nodes only when a request actually completes — otherwise
+  // the watcher would read stale `connection` data on the synchronous tick
+  // where `after`/`isLoadingMore` were just mutated, duplicating items
+  watch(
+    () => query.pending.value,
+    (pending, wasPending) => {
+      if (pending || !wasPending) return;
+      const newItems = connection.value?.nodes ?? [];
+      if (after.value === null) {
+        items.value = newItems;
+      } else if (isLoadingMore.value) {
+        items.value = [...items.value, ...newItems];
+      }
+      isLoadingMore.value = false;
+    },
+    { flush: "post" },
+  );
 
   // Load more items based on the current cursor
   function loadMore() {
