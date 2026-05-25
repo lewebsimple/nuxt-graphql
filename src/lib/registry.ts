@@ -50,7 +50,7 @@ export async function generateRegistryArtifacts({
     },
     pluginMap: {},
     plugins: [],
-    presetConfig: {},
+    presetConfig: { documentsTypes: false },
   });
 
   if (!documents.length) {
