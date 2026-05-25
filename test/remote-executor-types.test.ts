@@ -74,7 +74,6 @@ function compileFixture() {
           module: "ESNext",
           moduleResolution: "Bundler",
           target: "ESNext",
-          baseUrl: ".",
           lib: ["ESNext", "DOM"],
           skipLibCheck: true,
           types: [],
