@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.14
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.13...v0.7.14)
+
+### 🚀 Enhancements
+
+- Disable documentsTypes for graphql-codegen-zod ([070eb3c](https://github.com/lewebsimple/nuxt-graphql/commit/070eb3c))
+
+### 🏡 Chore
+
+- **release:** V0.7.13 ([c3a6b9c](https://github.com/lewebsimple/nuxt-graphql/commit/c3a6b9c))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.13
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.12...v0.7.13)
