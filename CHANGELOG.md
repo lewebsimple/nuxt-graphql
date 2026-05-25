@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.13
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.12...v0.7.13)
+
+### 🚀 Enhancements
+
+- Use "string" document mode for typedDocumentNode plugin ([697b947](https://github.com/lewebsimple/nuxt-graphql/commit/697b947))
+
+### 🏡 Chore
+
+- **release:** V0.7.12 ([c816257](https://github.com/lewebsimple/nuxt-graphql/commit/c816257))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.12
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.11...v0.7.12)
