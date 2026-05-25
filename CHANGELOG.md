@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.7.12
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.11...v0.7.12)
+
+### 🩹 Fixes
+
+- UseGraphQLLoadMore prevent duplicate nodes ([8e8c500](https://github.com/lewebsimple/nuxt-graphql/commit/8e8c500))
+- Remove baseUrl from TypeScript configuration in remote executor test ([0cf134f](https://github.com/lewebsimple/nuxt-graphql/commit/0cf134f))
+
+### 🏡 Chore
+
+- **release:** V0.7.11 ([e563b9c](https://github.com/lewebsimple/nuxt-graphql/commit/e563b9c))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.11
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.10...v0.7.11)
