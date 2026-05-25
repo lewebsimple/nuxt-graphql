@@ -1,7 +1,6 @@
-import { print } from "graphql";
-
 import { mergeHeaders, type HeadersInput } from "../lib/headers";
 
+import { printDocument } from "./document";
 import { normalizeError, type NormalizedError } from "./error";
 import {
   getOperationDocument,
@@ -61,7 +60,11 @@ export async function executeHttpOperation<TName extends OperationName>(
     const result = await $fetch<GraphQLHttpResponse>(endpoint, {
       method: "POST",
       headers: mergeHeaders({ "content-type": "application/json" }, headers),
-      body: JSON.stringify({ query: print(document), variables: parsedVariables, operationName }),
+      body: JSON.stringify({
+        query: printDocument(document),
+        variables: parsedVariables,
+        operationName,
+      }),
     });
 
     if (result.errors) {

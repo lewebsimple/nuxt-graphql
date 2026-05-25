@@ -7,12 +7,12 @@ import { loadDocuments as gqlLoadDocuments } from "@graphql-tools/load";
 import { createResolver } from "@nuxt/kit";
 import type { Nuxt } from "@nuxt/schema";
 
-const DOCUMENT_IGNORE_GLOBS = ["**/.nuxt/**", "**/.output/**", "**/dist/**", "**/node_modules/**"];
 const DEFAULT_DOCUMENT_GLOBS = [
   "app/**/*.{gql,ts,vue}",
   "server/**/*.{gql,ts}",
   "shared/**/*.{gql,ts}",
 ];
+const DOCUMENT_IGNORE_GLOBS = ["**/.nuxt/**", "**/.output/**", "**/dist/**", "**/node_modules/**"];
 const GRAPHQL_FILE_EXTENSIONS = new Set([".gql", ".graphql"]);
 const CODE_FILE_EXTENSIONS = new Set([".ts", ".mts", ".cts", ".js", ".mjs", ".cjs", ".vue"]);
 

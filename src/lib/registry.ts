@@ -135,7 +135,7 @@ export async function addRegistryArtifactTemplates(
 // Fallback for registry.ts when no documents are found.
 function getRegistryFallback(): string {
   return `
-import type { TypedDocumentNode } from "@graphql-typed-document-node/core";
+import type { DocumentTypeDecoration } from "@graphql-typed-document-node/core";
 import type * as z from "zod";
 
 type EnumEntry = { schema: z.ZodEnum<Record<string, string>> };
@@ -144,7 +144,7 @@ type FragmentEntry = { schema: z.ZodObject<z.ZodRawShape> };
 
 type OperationEntry = {
   kind: "query" | "mutation" | "subscription";
-  document: TypedDocumentNode<any, any>;
+  document: DocumentTypeDecoration<any, any>;
   resultSchema: z.ZodObject<z.ZodRawShape>;
   variablesSchema: z.ZodObject<z.ZodRawShape>;
 };

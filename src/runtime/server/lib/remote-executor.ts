@@ -1,5 +1,6 @@
 import type { GraphQLContext } from "#graphql/context";
-import { print } from "graphql";
+
+import { printDocument } from "../../shared/utils/document";
 
 /** GraphQL remote executor request. */
 export type GraphQLRemoteExecutorRequest<
@@ -91,7 +92,7 @@ export function getRemoteExecutor<TContext extends Record<string, unknown> = Gra
           ...request.extensions?.headers,
         },
         body: JSON.stringify({
-          query: print(request.document as Parameters<typeof print>[0]),
+          query: printDocument(request.document),
           variables: request.variables,
           operationName: request.operationName,
         }),

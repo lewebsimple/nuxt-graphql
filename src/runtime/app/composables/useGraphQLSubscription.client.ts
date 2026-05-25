@@ -1,7 +1,7 @@
 import { useNuxtApp } from "#app";
-import { print } from "graphql";
 import { onScopeDispose, shallowRef, type Ref } from "vue";
 
+import { printDocument } from "../../shared/utils/document";
 import { normalizeError, type NormalizedError } from "../../shared/utils/error";
 import {
   getOperationDocument,
@@ -31,7 +31,7 @@ export function useGraphQLSubscription<TName extends SubscriptionName>(
   const { $getGraphQLSSEClient } = useNuxtApp();
 
   const document = getOperationDocument(operationName);
-  const query = print(document);
+  const query = printDocument(document);
 
   const data = shallowRef<ResultOf<TName> | null>(null);
   const error = shallowRef<NormalizedError | null>(null);

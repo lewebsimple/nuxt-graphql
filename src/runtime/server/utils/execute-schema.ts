@@ -3,6 +3,7 @@ import { executor, getSchema } from "#graphql/schema";
 import { execute, type ExecutionResult } from "graphql";
 import type { H3Event } from "h3";
 
+import { parseDocument } from "../../shared/utils/document";
 import { normalizeError } from "../../shared/utils/error";
 import type { ExecuteGraphQLInput, ExecuteGraphQLResult } from "../../shared/utils/execute";
 import {
@@ -45,7 +46,7 @@ export async function executeSchemaOperation<TName extends OperationName>(
         })) as ExecutionResult)
       : await execute({
           schema: getSchema(),
-          document,
+          document: parseDocument(document),
           variableValues,
           operationName,
           contextValue,
