@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.7.15
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.14...v0.7.15)
+
+### 🩹 Fixes
+
+- UseAsyncGraphQLQuery with SWR breaks pagintion ([7798564](https://github.com/lewebsimple/nuxt-graphql/commit/7798564))
+
+### 🏡 Chore
+
+- **release:** V0.7.14 ([bef97d8](https://github.com/lewebsimple/nuxt-graphql/commit/bef97d8))
+- Update deps ([c06a2ce](https://github.com/lewebsimple/nuxt-graphql/commit/c06a2ce))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.14
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.13...v0.7.14)
