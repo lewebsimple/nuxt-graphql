@@ -3,10 +3,9 @@ import {
   type AsyncDataOptions,
   useAsyncData,
   useNuxtApp,
-  useNuxtData,
   useRuntimeConfig,
 } from "#app";
-import { computed, toValue, type MaybeRefOrGetter } from "vue";
+import { computed, type Ref, toValue, type MaybeRefOrGetter } from "vue";
 
 import type { NormalizedError } from "../../shared/utils/error";
 import type { QueryName, ResultOf, VariablesOf } from "../../shared/utils/registry";
@@ -47,7 +46,8 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
   variables: MaybeRefOrGetter<VariablesOf<TName>>,
   options?: UseAsyncGraphQLQueryOptions<TName, TTransformed>,
 ): AsyncData<TTransformed | undefined, NormalizedError | undefined> {
-  const { $executeOperation } = useNuxtApp();
+  const nuxtApp = useNuxtApp();
+  const { $executeOperation } = nuxtApp;
   const { transform, cache, scope = "global", ...asyncOptions } = options ?? {};
 
   // Resolve cache configuration
@@ -60,7 +60,31 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
     getCacheKey(cacheConfig, scope, operationName, resolvedVariables.value),
   );
 
-  const nuxtData = useNuxtData<ResultOf<TName>>(cacheKey.value);
+  // Nuxt keeps the serializable cache in `payload.data` and the reactive per-key state in
+  // `_asyncData`, both keyed by the (reactive) cache key. Capturing a single `useNuxtData(...)`
+  // ref would bind to the *initial* key forever, so once the variables change (e.g. a pagination
+  // `after` cursor) every request would read/write the first key's slot — leaking the first
+  // page's data into every subsequent page. Always resolve the cache by the current key instead.
+  const payloadData = nuxtApp.payload.data as Record<string, ResultOf<TName> | undefined>;
+  const asyncDataByKey = (
+    nuxtApp as unknown as {
+      _asyncData: Record<string, { data: Ref<ResultOf<TName> | undefined> } | undefined>;
+    }
+  )._asyncData;
+
+  // Read the cached value for an exact key (avoids `_asyncData` which Nuxt seeds with the
+  // previous key's value when a reactive key changes).
+  function readCached(key: string): ResultOf<TName> | undefined {
+    return payloadData[key];
+  }
+
+  // Persist a value for an exact key in both the serializable payload and, when present, the
+  // reactive slot so background (SWR) revalidations still update the rendered data.
+  function writeCached(key: string, value: ResultOf<TName>): void {
+    payloadData[key] = value;
+    const entry = asyncDataByKey?.[key];
+    if (entry) entry.data.value = value;
+  }
 
   // Fetch data and update the cache, returning the result
   async function fetchAndCache(): Promise<ResultOf<TName>> {
@@ -78,7 +102,7 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
         if (cacheConfig.ttl != null) {
           setPersistedEntry(key, value, cacheConfig.ttl);
         }
-        nuxtData.data.value = value;
+        writeCached(key, value);
         return value;
       },
       cacheConfig.ttl,
@@ -89,7 +113,7 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
   async function handler(): Promise<ResultOf<TName>> {
     const key = cacheKey.value;
     const meta = getCacheMeta<ResultOf<TName>>(key);
-    const cached = nuxtData.data.value;
+    const cached = readCached(key);
 
     const isCacheValid =
       cached !== undefined && !shouldBypassCache(key, meta?.createdAt) && !isExpired(meta);
