@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.7.16
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.15...v0.7.16)
+
+### 🩹 Fixes
+
+- Bind cache store to Nuxt app instance (never shared) ([5f7c92a](https://github.com/lewebsimple/nuxt-graphql/commit/5f7c92a))
+- Cache TTL in seconds, retry after failed fetch, localStorage hydration ([eeb677f](https://github.com/lewebsimple/nuxt-graphql/commit/eeb677f))
+- SSR header forwarding, error normalization, swr load-more, type checks ([780bc67](https://github.com/lewebsimple/nuxt-graphql/commit/780bc67))
+
+### 🏡 Chore
+
+- **release:** V0.7.15 ([6fb4821](https://github.com/lewebsimple/nuxt-graphql/commit/6fb4821))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.15
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.14...v0.7.15)
