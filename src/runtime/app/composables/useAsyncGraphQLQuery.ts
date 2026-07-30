@@ -1,3 +1,5 @@
+import { computed, type Ref, toValue, type MaybeRefOrGetter } from "vue";
+
 import {
   type AsyncData,
   type AsyncDataOptions,
@@ -5,7 +7,6 @@ import {
   useNuxtApp,
   useRuntimeConfig,
 } from "#app";
-import { computed, type Ref, toValue, type MaybeRefOrGetter } from "vue";
 
 import type { NormalizedError } from "../../shared/utils/error";
 import type { QueryName, ResultOf, VariablesOf } from "../../shared/utils/registry";
@@ -16,11 +17,12 @@ import {
   getOrCreatePromise,
   readCachedValue,
   resolveCacheEntry,
+  seedCacheEntry,
   shouldUseCached,
   staleWhileRevalidate,
 } from "../lib/cache";
 import { resolveCacheConfig, type CacheConfig } from "../lib/cache-config";
-import { setPersistedEntry } from "../lib/persisted";
+import { getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
 /** Options for the `useAsyncGraphQLQuery` composable based on `AsyncDataOptions` and cache configuration. */
 type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultOf<TName>> = Omit<
@@ -115,6 +117,20 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
   // Async data handler that implements the caching logic based on the cache configuration policy
   async function handler(): Promise<ResultOf<TName>> {
     const key = cacheKey.value;
+
+    // Hydrate the per-app cache from localStorage before consulting it, so persisted entries
+    // survive a reload for the policies that read the cache. The persisted timestamps are kept,
+    // so expiration and invalidation treat the hydrated entry exactly like the original.
+    if (cacheConfig.policy !== "no-cache" && cacheConfig.ttl != null) {
+      const existing = getCacheMeta<ResultOf<TName>>(store, key);
+      if (!existing?.hasValue && !existing?.promise) {
+        const persisted = await getPersistedEntry<ResultOf<TName>>(key);
+        if (persisted) {
+          seedCacheEntry(store, key, persisted.value, persisted.createdAt, persisted.expiresAt);
+        }
+      }
+    }
+
     const meta = getCacheMeta<ResultOf<TName>>(store, key);
 
     // Read the raw result from the module cache — never from `payload.data[key]`, which holds the

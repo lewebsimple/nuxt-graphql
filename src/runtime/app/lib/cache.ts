@@ -2,6 +2,7 @@ import { hash } from "ohash";
 
 import type { NuxtApp } from "#app";
 
+import { ttlToExpiresAt } from "./cache-config";
 import type { CacheConfig } from "./cache-config";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -210,7 +211,7 @@ export function readCachedValue<T>(store: CacheStore, key: string): T | undefine
  * @param store Cache store to write to.
  * @param key Cache key to resolve.
  * @param value Resolved raw data to store.
- * @param ttl Optional time-to-live in milliseconds. When omitted or `null`, the entry does not expire.
+ * @param ttl Optional time-to-live in seconds. When omitted, `null`, or `0`, the entry does not expire.
  * @returns The resolved value.
  */
 export function resolveCacheEntry<T>(
@@ -225,7 +226,7 @@ export function resolveCacheEntry<T>(
   const next: CacheMeta<T> = meta ?? { createdAt: now, expiresAt: null, hasValue: false };
 
   next.createdAt = now;
-  next.expiresAt = ttl ? now + ttl : null;
+  next.expiresAt = ttlToExpiresAt(ttl, now);
   next.promise = undefined;
   next.value = value;
   next.hasValue = true;
@@ -233,6 +234,31 @@ export function resolveCacheEntry<T>(
   store.entries.set(key, next);
 
   return value;
+}
+
+/**
+ * Seed a cache entry from a previously persisted value, keeping its original timestamps so
+ * expiration and invalidation apply to the hydrated entry exactly as they did before persisting.
+ *
+ * @param store Cache store to write to.
+ * @param key Cache key to seed.
+ * @param value Raw persisted value.
+ * @param createdAt Original creation timestamp in milliseconds.
+ * @param expiresAt Original expiration timestamp in milliseconds, or `null` when it does not expire.
+ */
+export function seedCacheEntry<T>(
+  store: CacheStore,
+  key: string,
+  value: T,
+  createdAt: number,
+  expiresAt: number | null,
+): void {
+  const meta = store.entries.get(key) as CacheMeta<T> | undefined;
+
+  // Never clobber fresher state: an in-flight fetch or an already resolved value wins.
+  if (meta?.promise || meta?.hasValue) return;
+
+  store.entries.set(key, { createdAt, expiresAt, value, hasValue: true });
 }
 
 /**
@@ -253,7 +279,7 @@ export function isExpired(meta?: CacheMeta<unknown>) {
  * @param store Cache store to operate on.
  * @param key Cache key to resolve.
  * @param create Function to create a new promise if none exists.
- * @param ttl Optional time-to-live in milliseconds. When omitted or `null`, the entry does not expire.
+ * @param ttl Optional time-to-live in seconds. When omitted, `null`, or `0`, the entry does not expire.
  * @returns A promise for the cache key.
  */
 export function getOrCreatePromise<T>(
@@ -278,6 +304,15 @@ export function getOrCreatePromise<T>(
   }
 
   meta.promise = promise;
+
+  // A rejected fetch must not poison the key: drop the in-flight promise so the next call retries
+  // instead of receiving the same rejection forever. Any previously cached value is left untouched
+  // for the policies that fall back to it.
+  promise.catch(() => {
+    const current = store.entries.get(key);
+    if (current?.promise === promise) current.promise = undefined;
+  });
+
   return promise;
 }
 

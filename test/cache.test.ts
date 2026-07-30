@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createCacheStore,
+  getCacheMeta,
   getCacheStore,
   getOrCreatePromise,
   invalidateAllCache,
   invalidateCachePrefix,
+  isExpired,
   readCachedValue,
   resolveCacheEntry,
   shouldBypassCache,
@@ -79,6 +81,65 @@ describe("in-flight request de-duplication", () => {
     expect(await promiseB).toBe("bob");
     expect(readCachedValue(requestA, key)).toBe("alice");
     expect(readCachedValue(requestB, key)).toBe("bob");
+  });
+
+  it("retries after a rejected fetch instead of reusing the rejection", async () => {
+    const store = createCacheStore();
+    const key = "gql:1:global:Profiles:x";
+
+    await expect(
+      getOrCreatePromise(store, key, () => Promise.reject(new Error("boom"))),
+    ).rejects.toThrow("boom");
+
+    // The key is not poisoned: a later call runs a fresh fetch.
+    await expect(getOrCreatePromise(store, key, async () => "ok")).resolves.toBe("ok");
+    expect(readCachedValue(store, key)).toBe("ok");
+  });
+
+  it("keeps the last resolved value when a later fetch rejects", async () => {
+    // `network-first` falls back to the cached value on error; a failed refresh must not wipe it.
+    const store = createCacheStore();
+    const key = "gql:1:global:Profiles:x";
+
+    await getOrCreatePromise(store, key, async () => "value");
+    await expect(
+      getOrCreatePromise(store, key, () => Promise.reject(new Error("boom"))),
+    ).rejects.toThrow("boom");
+
+    expect(readCachedValue(store, key)).toBe("value");
+  });
+});
+
+describe("expiration", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("expires entries after ttl seconds", () => {
+    const store = createCacheStore();
+    const key = "gql:1:global:Profiles:x";
+
+    resolveCacheEntry(store, key, "value", 60);
+
+    vi.advanceTimersByTime(59_000);
+    expect(isExpired(getCacheMeta(store, key))).toBe(false);
+
+    vi.advanceTimersByTime(2_000);
+    expect(isExpired(getCacheMeta(store, key))).toBe(true);
+  });
+
+  it("never expires entries with a ttl of 0", () => {
+    const store = createCacheStore();
+    const key = "gql:1:global:Profiles:x";
+
+    resolveCacheEntry(store, key, "value", 0);
+
+    vi.advanceTimersByTime(365 * 24 * 3_600_000);
+    expect(isExpired(getCacheMeta(store, key))).toBe(false);
   });
 });
 

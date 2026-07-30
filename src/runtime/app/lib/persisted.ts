@@ -1,3 +1,5 @@
+import { ttlToExpiresAt } from "./cache-config";
+
 type PersistedEntry<T> = {
   value: T;
   createdAt: number;
@@ -53,7 +55,7 @@ export async function getPersistedEntry<T>(key: string): Promise<PersistedEntry<
  *
  * @param key Cache key.
  * @param value Value to persist.
- * @param ttl Optional time-to-live in milliseconds.
+ * @param ttl Optional time-to-live in seconds; `0` never expires.
  * @returns Nothing.
  */
 export async function setPersistedEntry<T>(key: string, value: T, ttl?: number | null) {
@@ -66,7 +68,7 @@ export async function setPersistedEntry<T>(key: string, value: T, ttl?: number |
     const entry: PersistedEntry<T> = {
       value,
       createdAt: now,
-      expiresAt: ttl ? now + ttl : null,
+      expiresAt: ttlToExpiresAt(ttl, now),
     };
 
     storage.setItem(buildKey(key), JSON.stringify(entry));

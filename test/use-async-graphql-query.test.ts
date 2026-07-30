@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Ref } from "vue";
 
 import { useAsyncGraphQLQuery } from "../src/runtime/app/composables/useAsyncGraphQLQuery";
 import type { CacheConfig } from "../src/runtime/app/lib/cache-config";
 
+import { createLocalStorageStub } from "./stubs/local-storage";
 import { createStubNuxtApp, setActiveNuxtApp, type StubExecuteResult } from "./stubs/nuxt-app";
 
 // The composable is typed against the generated operation registry, which unit tests do not have;
@@ -37,6 +38,14 @@ function deferred<T>() {
 function flush() {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+// Shared fixtures mirroring a query with a per-query `transform`.
+const response = { data: { viewer: { members: [{ id: "1" }] } } };
+const transform = (result: { viewer?: { members?: { id: string }[] } }) => ({
+  profiles: result.viewer?.members ?? [],
+  hasMore: false,
+});
+const transformed = { profiles: [{ id: "1" }], hasMore: false };
 
 afterEach(() => {
   setActiveNuxtApp(undefined);
@@ -72,15 +81,8 @@ describe("concurrent server requests", () => {
   });
 });
 
+// Each test uses its own cache scope so a leaked entry cannot mask another test.
 describe("transformed results", () => {
-  // Each test uses its own cache scope so a leaked entry cannot mask another test.
-  const response = { data: { viewer: { members: [{ id: "1" }] } } };
-  const transform = (result: { viewer?: { members?: { id: string }[] } }) => ({
-    profiles: result.viewer?.members ?? [],
-    hasMore: false,
-  });
-  const transformed = { profiles: [{ id: "1" }], hasMore: false };
-
   it("does not transform an already transformed cached result", async () => {
     // `useAsyncData` overwrites `payload.data[key]` with the transformed value, so the query cache
     // has to keep the raw result somewhere else — otherwise `cache-first` feeds the transformed
@@ -140,5 +142,56 @@ describe("transformed results", () => {
       profiles: [{ id: "1" }, { id: "2" }],
       hasMore: false,
     });
+  });
+});
+
+describe("persisted cache", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  const options = (scope: string): QueryOptions => ({
+    scope,
+    cache: { policy: "cache-first", ttl: 60 },
+    transform: transform as QueryOptions["transform"],
+  });
+
+  it("serves a persisted entry after a reload without hitting the network", async () => {
+    vi.stubGlobal("window", { localStorage: createLocalStorageStub() });
+
+    // First visit fetches, then persists the *raw* result to localStorage.
+    const firstVisit = createStubNuxtApp(async () => response);
+    setActiveNuxtApp(firstVisit);
+    await useQuery("MemberAreaProfiles", {}, options("persisted"));
+    expect(firstVisit.calls).toBe(1);
+
+    // Reload: a fresh Nuxt app with an empty payload and cache store hydrates from localStorage —
+    // no network call, and the raw persisted value is transformed exactly once.
+    const reload = createStubNuxtApp(async () => response);
+    setActiveNuxtApp(reload);
+    const query = useQuery("MemberAreaProfiles", {}, options("persisted"));
+    await query;
+
+    expect(reload.calls).toBe(0);
+    expect(query.data.value).toEqual(transformed);
+  });
+
+  it("refetches when the persisted entry has expired", async () => {
+    vi.stubGlobal("window", { localStorage: createLocalStorageStub() });
+    vi.useFakeTimers();
+
+    const firstVisit = createStubNuxtApp(async () => response);
+    setActiveNuxtApp(firstVisit);
+    await useQuery("MemberAreaProfiles", {}, options("persisted-expired"));
+    expect(firstVisit.calls).toBe(1);
+
+    // The 60-second TTL has elapsed by the time the page is reloaded.
+    vi.advanceTimersByTime(61_000);
+
+    const reload = createStubNuxtApp(async () => response);
+    setActiveNuxtApp(reload);
+    await useQuery("MemberAreaProfiles", {}, options("persisted-expired"));
+    expect(reload.calls).toBe(1);
   });
 });

@@ -32,3 +32,14 @@ export function resolveCacheConfig(
 ): CacheConfig {
   return Object.assign({}, DEFAULT_CACHE_CONFIG, ...overrides);
 }
+
+/**
+ * Convert a cache TTL into an absolute expiration timestamp.
+ *
+ * @param ttl Time-to-live in seconds; `0`, `null`, and `undefined` produce an entry that never expires.
+ * @param now Current timestamp in milliseconds.
+ * @returns Expiration timestamp in milliseconds, or `null` when the entry never expires.
+ */
+export function ttlToExpiresAt(ttl: number | null | undefined, now: number): number | null {
+  return ttl ? now + ttl * 1000 : null;
+}

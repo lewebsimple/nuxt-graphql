@@ -262,10 +262,10 @@ import type { TheFilmFragment } from "#graphql/types";
 
 `useAsyncGraphQLQuery` can cache query results based on the global cache configuration and per-query overrides.
 
-- In-flight requests are deduplicated (same operation + variables → one network call).
+- In-flight requests are deduplicated (same operation + variables → one network call); a failed request clears the in-flight slot so the next call retries instead of reusing the rejection.
 - The in-memory cache is bound to the Nuxt app instance, so it is a singleton on the client and scoped to a single render on the server. Concurrent server requests never share cached results or in-flight requests, even when they resolve the same cache key.
 - Cached results are stored untransformed: a per-query `transform` is applied by `useAsyncData` on top of the cached value, never baked into it.
-- Persisted cache stores entries in localStorage for ttl seconds (0 = never expires).
+- Persisted cache stores entries in localStorage for ttl seconds (0 = never expires). On the client, the policies that read the cache hydrate from localStorage after a reload, keeping the original expiration.
 
 #### Cache policies
 
