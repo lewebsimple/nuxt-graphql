@@ -1,7 +1,6 @@
 import { defineNuxtPlugin, useRequestHeaders, useRuntimeConfig } from "#app";
-import { pick } from "es-toolkit/object";
-import { lowerCase } from "es-toolkit/string";
 
+import { pickHeaders } from "../../shared/lib/headers";
 import {
   executeHttpOperation,
   type ExecuteGraphQLInput,
@@ -20,9 +19,7 @@ export default defineNuxtPlugin(() => {
   async function executeOperation<TName extends OperationName>(input: ExecuteGraphQLInput<TName>) {
     return executeHttpOperation(input, {
       endpoint: "/api/graphql",
-      headers: import.meta.server
-        ? pick(useRequestHeaders(), ssrForwardHeaders.map(lowerCase))
-        : {},
+      headers: import.meta.server ? pickHeaders(useRequestHeaders(), ssrForwardHeaders) : {},
     });
   }
 

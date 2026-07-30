@@ -47,9 +47,6 @@ importers:
       defu:
         specifier: ^6.1.7
         version: 6.1.7
-      es-toolkit:
-        specifier: ^1.47.1
-        version: 1.47.1
       graphql-sse:
         specifier: ^2.6.0
         version: 2.6.0(graphql@16.14.2)

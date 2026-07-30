@@ -33,7 +33,7 @@ export function useGraphQLCache(scope: string = "global") {
    */
   function read<TName extends QueryName>(
     operationName: TName,
-    variables: VariablesOf<TName> = {},
+    variables: VariablesOf<TName> = {} as VariablesOf<TName>,
   ): ResultOf<TName> | undefined {
     const key = getCacheKey(cacheConfig, scope, operationName, variables);
 

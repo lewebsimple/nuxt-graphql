@@ -61,9 +61,20 @@ export function useNuxtApp(): StubNuxtApp {
   return activeNuxtApp;
 }
 
-/** @returns A runtime config with an empty global GraphQL cache configuration. */
+let runtimeCacheConfig: Record<string, unknown> = {};
+
+/**
+ * Set the global GraphQL cache configuration returned by `useRuntimeConfig`.
+ *
+ * @param config Partial cache configuration (empty object restores the default).
+ */
+export function setRuntimeCacheConfig(config: Record<string, unknown>): void {
+  runtimeCacheConfig = config;
+}
+
+/** @returns A runtime config with the configured global GraphQL cache configuration. */
 export function useRuntimeConfig() {
-  return { public: { graphql: { cacheConfig: {} } } };
+  return { public: { graphql: { cacheConfig: runtimeCacheConfig } } };
 }
 
 type StubAsyncDataOptions<TRaw, TTransformed> = {

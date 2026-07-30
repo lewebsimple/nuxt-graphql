@@ -1,5 +1,6 @@
-import { useNuxtApp } from "#app";
 import { onScopeDispose, shallowRef, type Ref } from "vue";
+
+import { useNuxtApp } from "#app";
 
 import { printDocument } from "../../shared/utils/document";
 import { normalizeError, type NormalizedError } from "../../shared/utils/error";
@@ -72,5 +73,5 @@ export function useGraphQLSubscription<TName extends SubscriptionName>(
   start();
   onScopeDispose(stop);
 
-  return { data, error, start, stop };
+  return { data: data as UseGraphQLSubscriptionReturn<TName>["data"], error, start, stop };
 }

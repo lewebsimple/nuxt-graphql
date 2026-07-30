@@ -47,23 +47,43 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Check whether a value looks like a GraphQL error.
+ * Check whether a value has a GraphQL-error message shape.
+ *
+ * Deliberately loose (any object with a string `message`): only used where the surrounding
+ * structure — an `errors` array — already disambiguates from plain `Error` instances.
  *
  * @param value Candidate value.
- * @returns True when value is GraphQLError-like.
+ * @returns True when value carries a string message.
  */
-function isGraphQLError(value: unknown): value is GraphQLError {
-  return isObject(value) && "message" in value;
+function isGraphQLErrorLike(value: unknown): value is GraphQLError {
+  return isObject(value) && typeof value.message === "string";
 }
 
 /**
- * Check whether a value is an array of GraphQL errors.
+ * Check whether a standalone value is a GraphQL error.
+ *
+ * Requires a GraphQL-specific marker on top of `message`: every `Error` instance has a
+ * `message`, so a message-only check would swallow network and standard errors before
+ * their own branches run.
+ *
+ * @param value Candidate value.
+ * @returns True when value is a GraphQL error.
+ */
+function isGraphQLError(value: unknown): value is GraphQLError {
+  return (
+    isGraphQLErrorLike(value) &&
+    ("extensions" in value || "locations" in value || "path" in value || "nodes" in value)
+  );
+}
+
+/**
+ * Check whether a value is a non-empty array of GraphQL errors.
  *
  * @param value Candidate value.
  * @returns True when value is a GraphQLError array.
  */
 function isGraphQLErrorArray(value: unknown): value is GraphQLError[] {
-  return Array.isArray(value) && value.every(isGraphQLError);
+  return Array.isArray(value) && value.length > 0 && value.every(isGraphQLErrorLike);
 }
 
 /**
@@ -78,6 +98,19 @@ function isGraphQLExecutionResult(value: unknown): value is { errors: GraphQLErr
     "errors" in value &&
     isGraphQLErrorArray((value as { errors: unknown }).errors)
   );
+}
+
+/**
+ * Extract an HTTP status code from a fetch-style error.
+ *
+ * @param error Error instance.
+ * @returns HTTP status when present.
+ */
+function extractStatus(error: Error): number | undefined {
+  const candidate = error as Error & { status?: unknown; statusCode?: unknown };
+  if (typeof candidate.status === "number") return candidate.status;
+  if (typeof candidate.statusCode === "number") return candidate.statusCode;
+  return undefined;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -121,24 +154,18 @@ export function normalizeError(error: unknown): NormalizedError {
 
   // GraphQL execution result { errors: [...] }
   if (isGraphQLExecutionResult(error)) {
-    const { errors } = error;
-
-    return new NormalizedError({
-      message: errors.map((e) => e.message).join("\n"),
-      errors,
-      code: extractErrorCode(errors[0]),
-    });
+    return graphQLErrorsToNormalized(error.errors);
   }
 
-  // single GraphQL error
-  if (isGraphQLError(error)) {
-    const gqlError = error as GraphQLError;
+  // Bare array of GraphQL errors (e.g. `result.errors` passed directly)
+  if (isGraphQLErrorArray(error)) {
+    return graphQLErrorsToNormalized(error);
+  }
 
-    return new NormalizedError({
-      message: gqlError.message,
-      errors: [gqlError],
-      code: extractErrorCode(gqlError),
-    });
+  // Single GraphQL error — thrown `GraphQLError` instances included, which is why this must be
+  // checked before the generic `Error` branches (GraphQLError extends Error).
+  if (isGraphQLError(error)) {
+    return graphQLErrorsToNormalized([error]);
   }
 
   // Fetch / network error
@@ -146,11 +173,21 @@ export function normalizeError(error: unknown): NormalizedError {
     return new NormalizedError({
       message: error.message,
       code: "NETWORK_ERROR",
+      status: extractStatus(error),
+      cause: error,
     });
   }
 
   // Standard Error
   if (error instanceof Error) {
+    return new NormalizedError({
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  // Plain object with a message
+  if (isGraphQLErrorLike(error)) {
     return new NormalizedError({
       message: error.message,
     });
@@ -160,5 +197,19 @@ export function normalizeError(error: unknown): NormalizedError {
   return new NormalizedError({
     message: typeof error === "string" ? error : JSON.stringify(error),
     code: "INTERNAL_ERROR",
+  });
+}
+
+/**
+ * Build a `NormalizedError` from GraphQL errors.
+ *
+ * @param errors GraphQL errors (non-empty).
+ * @returns Normalized error aggregating messages, keeping the original errors.
+ */
+function graphQLErrorsToNormalized(errors: readonly GraphQLError[]): NormalizedError {
+  return new NormalizedError({
+    message: errors.map((e) => e.message).join("\n"),
+    errors,
+    code: extractErrorCode(errors[0]),
   });
 }

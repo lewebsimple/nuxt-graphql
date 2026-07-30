@@ -39,10 +39,13 @@ export async function useGraphQLLoadMore<
   // Compute the base variables and their hash to detect changes in query inputs
   const baseVariables = computed(() => toValue(variables));
   const baseVariablesHash = computed(() => hash(baseVariables.value));
-  const queryVariables = computed<VariablesOf<TName>>(() => ({
-    ...baseVariables.value,
-    after: after.value,
-  }));
+  const queryVariables = computed<VariablesOf<TName>>(
+    () =>
+      ({
+        ...baseVariables.value,
+        after: after.value,
+      }) as VariablesOf<TName>,
+  );
 
   // State for items and loading status
   const items = shallowRef<TItem[]>([]);
@@ -70,20 +73,34 @@ export async function useGraphQLLoadMore<
     items.value = [];
   });
 
-  // Apply fetched nodes only when a request actually completes — otherwise
-  // the watcher would read stale `connection` data on the synchronous tick
-  // where `after`/`isLoadingMore` were just mutated, duplicating items
+  // Apply fetched nodes when the query data actually changes — watching `data` (not `pending`)
+  // covers background SWR revalidations, which update the data ref without ever toggling
+  // `pending`. It also avoids reading stale `connection` data on the synchronous tick where
+  // `after`/`isLoadingMore` were just mutated (the data ref has not changed yet at that point).
   watch(
-    () => query.pending.value,
-    (pending, wasPending) => {
-      if (pending || !wasPending) return;
+    () => query.data.value,
+    () => {
       const newItems = connection.value?.nodes ?? [];
       if (after.value === null) {
         items.value = newItems;
       } else if (isLoadingMore.value) {
         items.value = [...items.value, ...newItems];
+        isLoadingMore.value = false;
       }
-      isLoadingMore.value = false;
+      // else: a background revalidation of a later page — the accumulated list cannot be
+      // re-spliced reliably without tracking page boundaries, so items are left as-is.
+    },
+    { flush: "post" },
+  );
+
+  // A failed request never updates `data`, so release the load-more lock when the request
+  // settles with an error — otherwise `loadMore()` would be blocked forever.
+  watch(
+    () => query.pending.value,
+    (pending, wasPending) => {
+      if (!pending && wasPending && query.error.value) {
+        isLoadingMore.value = false;
+      }
     },
     { flush: "post" },
   );

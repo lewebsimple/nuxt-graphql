@@ -48,8 +48,9 @@ export default defineNuxtConfig({
         // Remote schema example
         {
           type: "remote",
-          url: "https://swapi-graphql.netlify.app/graphql",
-          // Optional: static headers for this remote
+          endpoint: "https://swapi-graphql.netlify.app/graphql",
+          // Optional: static headers for introspection and execution.
+          // ⚠️ These are attached to every proxied request — see "Security considerations".
           headers: {
             "X-Static-Header": "static-header-value",
           },
@@ -61,10 +62,12 @@ export default defineNuxtConfig({
 
     // GraphQL client configuration
     client: {
-      // Optional: documents globs (defaults to **/*.gql)
-      documents: ["**/*.gql"],
+      // Optional: documents globs
+      // (defaults to ["app/**/*.{gql,ts,vue}", "server/**/*.{gql,ts}", "shared/**/*.{gql,ts}"])
+      documents: ["app/graphql/**/*.gql"],
 
-      // Optional: headers forwarded from SSR to graphql-request (defaults to ["authorization", "cookie"])
+      // Optional: incoming request headers forwarded to GraphQL calls during SSR
+      // (defaults to ["authorization", "cookie"]; names are matched case-insensitively)
       ssrForwardHeaders: ["authorization", "cookie"],
 
       // Optional: query caching (client-side only, for useAsyncGraphQLQuery)
@@ -137,7 +140,9 @@ The final schema combines the all of the defined local / remote schemas.
 
 ### Define GraphQL context (optional)
 
-Context definition is optional and factories resolve in order on the server. Their return types are merged into a single `GraphQLContext` type which is exported from `#graphql/context`. You can use the auto-imported `defineGraphQLContext` helper for type-safety.
+Context definition is optional. Factories run **in parallel** (a factory cannot read another factory's context) and their results are merged **in configuration order** — when two factories return the same key, the later one wins. Their return types are merged into a single `GraphQLContext` type which is exported from `#graphql/context`. You can use the auto-imported `defineGraphQLContext` helper for type-safety.
+
+The context is created once per GraphQL execution (not per HTTP request): a server render firing several queries runs the factories once for each. Keep factories cheap, or memoize expensive lookups on `event.context`.
 
 For example, create [server/graphql/context.ts](server/graphql/context.ts):
 
@@ -154,7 +159,7 @@ export default defineGraphQLContext(async (event) => {
 
 ### Write GraphQL documents (.gql)
 
-By default, the module scans `**/*.gql` files for **named operations** and **fragments** which are converted into **types** and **typed document nodes**. The operations are exposed by name in `#graphql/registry` to allow type-safe execution with the provided **composables** and **server utils**.
+By default, the module scans `app/`, `server/`, and `shared/` for `.gql` files and for GraphQL documents embedded in `.ts` / `.vue` sources. **Named operations** and **fragments** are converted into **types** and **typed document nodes**. The operations are exposed by name in `#graphql/registry` to allow type-safe execution with the provided **composables** and **server utils**.
 
 ⚠️ Operation names are required and must be unique.
 
@@ -235,6 +240,20 @@ const { data: mutationData, error: mutationError } = await mutate({ message: "He
 const { data, error, start, stop } = useGraphQLSubscription("Time", {});
 ```
 
+### Cursor pagination with useGraphQLLoadMore
+
+`useGraphQLLoadMore` wraps `useAsyncGraphQLQuery` for Relay-style cursor pagination (`after` variable + `pageInfo { hasNextPage endCursor }`). It accumulates the nodes of every fetched page into `items`:
+
+```ts
+const { items, pending, error, hasNextPage, isLoadingMore, loadMore, reset } =
+  await useGraphQLLoadMore("FilmList", { first: 10 }, (data) => data?.allFilms);
+```
+
+- `variables` excludes `after` (managed internally); changing them resets the pagination.
+- `getConnection` extracts the connection (`{ nodes, pageInfo }`) from the query result.
+- The query uses the **global** cache configuration (no per-query cache overrides).
+- With the `swr` policy, a background revalidation of the first page replaces `items`; revalidations of later pages do not re-splice the accumulated list.
+
 ### Use the auto-imported server utils
 
 In server routes, you can execute queries and mutations directly against the stitched schema (no HTTP roundtrip):
@@ -242,13 +261,26 @@ In server routes, you can execute queries and mutations directly against the sti
 ```ts
 export default defineEventHandler(async (event) => {
   // Server-side GraphQL query example
-  const { data, error } = await executeSchemaOperation(event, "HelloWorld", {});
+  const { data, error } = await executeSchemaOperation(event, {
+    operationName: "HelloWorld",
+    variables: {},
+  });
 
   return { data, error };
 });
 ```
 
 Server helpers return a `ExecuteGraphQLResult` in the same format as some composables, i.e. `{ data: TResult, error: null } | { data: null, error: NormalizedError }`
+
+### Error handling
+
+Failures are normalized into a `NormalizedError` (an `Error` subclass) everywhere — composables, server utils, and `useAsyncGraphQLQuery`'s `error` ref:
+
+- `message`: aggregated GraphQL error messages, or the transport error message.
+- `errors`: the original GraphQL errors (empty for non-GraphQL failures).
+- `code`: typed error code — `"NETWORK_ERROR"` for fetch/transport failures, otherwise the `extensions.code` of the first GraphQL error (`"UNAUTHORIZED"`, `"FORBIDDEN"`, `"BAD_REQUEST"`, `"INTERNAL_ERROR"`). Augment the `GraphQLErrorCodeMap` interface to add your own codes.
+- `status`: HTTP status for transport failures, when available.
+
 
 ### Type-safety
 
@@ -273,6 +305,11 @@ import type { TheFilmFragment } from "#graphql/types";
 - `"cache-first"`: returns cached value when present, otherwise fetches.
 - `"network-first"`: tries the network first, falls back to cached value on error.
 - `"swr"`: returns cached value immediately and refreshes in the background.
+
+Notes on `swr`:
+
+- A revalidation happens when the query handler runs again for a cached key: an explicit `refresh()`, or reactive variables changing back to previously-seen values. Mounting a component on a hydrated key does not by itself revalidate.
+- Background revalidation errors are swallowed silently — the previously rendered data stays in place. If you need to surface them, use `network-first` or an explicit `refresh()` (whose error lands in the `error` ref).
 
 #### Per-query overrides
 
@@ -399,6 +436,22 @@ export default defineRemoteExecutorHooks({
   },
 });
 ```
+
+## Security considerations
+
+`/api/graphql` is a **public GraphQL endpoint** accepting arbitrary operations — it is not limited to the operations in the registry:
+
+- With a remote schema, the endpoint acts as a proxy: the configured static `headers` are attached to **every** proxied request. Never put privileged credentials there unless the remote data is meant to be fully public; use execution hooks to derive per-user credentials from the context instead.
+- Introspection is enabled (GraphiQL itself is dev-only). Anyone can enumerate the full stitched schema.
+- No depth, complexity, or rate limits are applied. Put the endpoint behind your own middleware if you need them.
+
+An operation-allowlist mode (restricting the endpoint to registry operations) is planned.
+
+## Known limitations
+
+- The client cache has no eviction: entries accumulate per operation + variables (e.g. pagination cursors) for the lifetime of the tab. Long-lived sessions with many distinct variable sets grow memory accordingly.
+- Subscriptions are stripped from remote schemas (local schemas only).
+- `useGraphQLCache` reads/writes raw (untransformed) results; for queries using a `transform`, prefer invalidation over manual writes.
 
 ## Contribution
 

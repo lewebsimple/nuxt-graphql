@@ -1,3 +1,8 @@
 {
-  "extends": "./.nuxt/tsconfig.json"
+  "extends": "./.nuxt/tsconfig.json",
+  // The playground program pulls in ../src/runtime/server through the module stub; the
+  // `#graphql/*` virtual modules only exist in a prepared app's Nitro, so the module's
+  // ambient stand-ins must be added explicitly ("files" adds roots without overriding
+  // the inherited "include").
+  "files": ["../types/graphql-virtual.d.ts"]
 }

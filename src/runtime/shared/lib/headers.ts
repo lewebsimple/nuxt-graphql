@@ -56,3 +56,30 @@ export function headersToObject(headers?: HeadersInput): Record<string, string> 
   if (!headers) return {};
   return Object.fromEntries(mergeHeaders(headers).entries());
 }
+
+/**
+ * Pick a subset of headers by name, case-insensitively on both sides.
+ *
+ * Header names must be compared with `toLowerCase()` — a word-splitting
+ * converter (e.g. es-toolkit's `lowerCase`) turns `"x-api-key"` into
+ * `"x api key"` and silently drops every multi-word header.
+ *
+ * @param headers Incoming headers object (keys in any case).
+ * @param names Header names to keep (any case).
+ * @returns Headers whose name matches one of `names`.
+ */
+export function pickHeaders(
+  headers: Record<string, string | undefined>,
+  names: string[],
+): Record<string, string> {
+  const wanted = new Set(names.map((name) => name.toLowerCase()));
+  const picked: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(headers)) {
+    if (value !== undefined && wanted.has(key.toLowerCase())) {
+      picked[key] = value;
+    }
+  }
+
+  return picked;
+}

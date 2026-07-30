@@ -1,5 +1,6 @@
-import { enums, fragments, operations } from "#graphql/registry";
 import type * as z from "zod";
+
+import { enums, fragments, operations } from "#graphql/registry";
 
 // ─────────────────────────────────────────────────────────────
 // Registry type helpers
@@ -90,7 +91,7 @@ function getOperationEntry<T extends OperationName>(name: T) {
  * @returns Parsed enum value.
  */
 export function parseEnum<T extends EnumName>(name: T, value: unknown): EnumOf<T> {
-  return getEnumEntry(name).schema.parse(value);
+  return getEnumEntry(name).schema.parse(value) as EnumOf<T>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ export function parseEnum<T extends EnumName>(name: T, value: unknown): EnumOf<T
  * @returns Parsed fragment value.
  */
 export function parseFragment<T extends FragmentName>(name: T, value: unknown): FragmentOf<T> {
-  return getFragmentEntry(name).schema.parse(value);
+  return getFragmentEntry(name).schema.parse(value) as FragmentOf<T>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ export function parseOperationResult<T extends OperationName>(
   name: T,
   value: unknown,
 ): ResultOf<T> {
-  return getOperationEntry(name).resultSchema.parse(value);
+  return getOperationEntry(name).resultSchema.parse(value) as ResultOf<T>;
 }
 
 /**
@@ -147,5 +148,5 @@ export function parseOperationVariables<T extends OperationName>(
   name: T,
   value: unknown,
 ): VariablesOf<T> {
-  return getOperationEntry(name).variablesSchema.parse(value);
+  return getOperationEntry(name).variablesSchema.parse(value) as VariablesOf<T>;
 }

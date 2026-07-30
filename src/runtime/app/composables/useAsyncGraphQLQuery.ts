@@ -9,7 +9,12 @@ import {
 } from "#app";
 
 import type { NormalizedError } from "../../shared/utils/error";
-import type { QueryName, ResultOf, VariablesOf } from "../../shared/utils/registry";
+import type {
+  QueryName,
+  ResultOf,
+  VariablesInputOf,
+  VariablesOf,
+} from "../../shared/utils/registry";
 import {
   getCacheKey,
   getCacheMeta,
@@ -99,7 +104,9 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
       async () => {
         const { data, error } = await $executeOperation({
           operationName,
-          variables: resolvedVariables.value,
+          // Parsed (output) variables are valid execution input; they are re-validated by the
+          // variables schema before the request is sent.
+          variables: resolvedVariables.value as VariablesInputOf<TName>,
         });
 
         if (error) throw error;

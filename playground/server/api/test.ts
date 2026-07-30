@@ -1,6 +1,6 @@
 export default defineEventHandler(async (event) => {
   const result = await executeSchemaOperation(event, {
-    operationName: "AllFilms",
+    operationName: "FilmList",
     variables: {},
   });
   return result;
