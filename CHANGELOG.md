@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.17
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.16...v0.7.17)
+
+### 🚀 Enhancements
+
+- Connection + refresh on load-more, SSR dedupe by default, stale version sweep ([c78a21d](https://github.com/lewebsimple/nuxt-graphql/commit/c78a21d))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.16
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.15...v0.7.16)
