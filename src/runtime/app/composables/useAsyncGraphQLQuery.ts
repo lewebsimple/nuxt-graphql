@@ -40,6 +40,37 @@ type UseAsyncGraphQLQueryOptions<TName extends QueryName, TTransformed = ResultO
 };
 
 /**
+ * One request per server render, however many callers share the key.
+ *
+ * Nuxt's default `getCachedData` only consults the payload during hydration; on the server it
+ * reads `nuxtApp.static.data`, which is empty outside prerendering. Every additional caller of
+ * the same key would therefore re-run the handler as soon as the previous request resolved —
+ * `getOrCreatePromise` only dedupes *concurrent* requests, not sequential ones. This default
+ * reads the payload entry the first fetch published instead.
+ *
+ * The `cause` guard is not decorative: with `granularCachedData` (Nuxt's default) this function
+ * is also consulted by `refresh()`, which must bypass the payload and hit the network — a
+ * mutation's follow-up refresh has to show what the server actually stored.
+ *
+ * Callers can still pass their own `getCachedData` to override this behavior.
+ */
+function defaultGetCachedData<T>(
+  key: string,
+  nuxtApp: ReturnType<typeof useNuxtApp>,
+  { cause }: { cause: string },
+): T | undefined {
+  const payload = nuxtApp.payload.data as Record<string, T | undefined>;
+
+  if (import.meta.server) {
+    return cause === "initial" ? payload[key] : undefined;
+  }
+
+  // Client side, Nuxt's default minus `static.data` (prerendered routes only): the payload
+  // entry during hydration, nothing afterwards.
+  return nuxtApp.isHydrating ? payload[key] : undefined;
+}
+
+/**
  * Execute a GraphQL query with integrated caching and async data handling.
  *
  * @template TName Query operation name.
@@ -56,7 +87,13 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
 ): AsyncData<TTransformed | undefined, NormalizedError | undefined> {
   const nuxtApp = useNuxtApp();
   const { $executeOperation } = nuxtApp;
-  const { transform, cache, scope = "global", ...asyncOptions } = options ?? {};
+  const {
+    transform,
+    cache,
+    scope = "global",
+    getCachedData = defaultGetCachedData,
+    ...asyncOptions
+  } = options ?? {};
 
   // Resolve the cache store eagerly: it is bound to `nuxtApp` (one per request on the server) and
   // must be captured synchronously so the async fetch path never needs the Nuxt context back.
@@ -176,5 +213,6 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
     ...asyncOptions,
     dedupe: "defer",
     transform,
+    getCachedData,
   });
 }

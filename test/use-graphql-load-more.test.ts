@@ -19,6 +19,8 @@ type LoadMoreResult = {
   isLoadingMore: Ref<boolean>;
   loadMore: () => void;
   reset: () => void;
+  connection: Ref<Result["list"] | null | undefined>;
+  refresh: () => Promise<void>;
 };
 const useLoadMore = useGraphQLLoadMore as unknown as (
   operationName: string,
@@ -51,6 +53,32 @@ function page(nodes: Item[]): { data: Result } {
 afterEach(() => {
   setActiveNuxtApp(undefined);
   setRuntimeCacheConfig({});
+});
+
+describe("useGraphQLLoadMore surface", () => {
+  it("exposes the connection with its extra metadata and a targeted refresh", async () => {
+    // Consumers used to issue a second, identical query just to read `pageInfo.total`, and to
+    // reach for `refreshNuxtData()` (re-running every async data in the app) for a retry button.
+    const withTotal = {
+      data: {
+        list: {
+          nodes: [{ id: "a" }],
+          pageInfo: { hasNextPage: false, endCursor: null, total: 42 },
+        },
+      },
+    };
+    const nuxtApp = createStubNuxtApp(() => Promise.resolve(withTotal));
+    setActiveNuxtApp(nuxtApp);
+
+    const list = await useLoadMore("Items", {}, (data) => data?.list);
+
+    const pageInfo = list.connection.value?.pageInfo as { total?: number } | undefined;
+    expect(pageInfo?.total).toBe(42);
+    expect(nuxtApp.calls).toBe(1);
+
+    await list.refresh();
+    expect(nuxtApp.calls).toBe(2);
+  });
 });
 
 describe("useGraphQLLoadMore with swr", () => {

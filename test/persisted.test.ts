@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getPersistedEntry, setPersistedEntry } from "../src/runtime/app/lib/persisted";
+import {
+  getPersistedEntry,
+  purgePersistedOtherVersions,
+  setPersistedEntry,
+} from "../src/runtime/app/lib/persisted";
 
 import { createLocalStorageStub } from "./stubs/local-storage";
 
@@ -40,5 +44,29 @@ describe("persisted entries", () => {
 
     vi.advanceTimersByTime(365 * 24 * 3_600_000);
     expect((await getPersistedEntry(KEY))?.value).toBe("value");
+  });
+});
+
+describe("purgePersistedOtherVersions", () => {
+  it("removes entries from other versions and keeps the current one", async () => {
+    await setPersistedEntry("gql:1:global:Profiles:x", "old", 0);
+    await setPersistedEntry("gql:2:global:Profiles:x", "current", 0);
+    // Same version, different operation — must survive too.
+    await setPersistedEntry("gql:2:global:Settings:y", "current", 0);
+
+    await purgePersistedOtherVersions("gql", "gql:2:");
+
+    expect(await getPersistedEntry("gql:1:global:Profiles:x")).toBeUndefined();
+    expect((await getPersistedEntry("gql:2:global:Profiles:x"))?.value).toBe("current");
+    expect((await getPersistedEntry("gql:2:global:Settings:y"))?.value).toBe("current");
+  });
+
+  it("leaves unrelated localStorage keys alone", async () => {
+    window.localStorage.setItem("app:preference", "kept");
+    await setPersistedEntry("gql:1:global:Profiles:x", "old", 0);
+
+    await purgePersistedOtherVersions("gql", "gql:2:");
+
+    expect(window.localStorage.getItem("app:preference")).toBe("kept");
   });
 });

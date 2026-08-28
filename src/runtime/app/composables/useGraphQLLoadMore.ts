@@ -128,6 +128,14 @@ export async function useGraphQLLoadMore<
     items.value = [];
   }
 
+  // Refetch the current page in place. A retry button should target this query alone;
+  // `refreshNuxtData()` would re-run every async data in the app. Wrapped with an explicit
+  // signature: exposing `query.refresh` directly leaks Nuxt's non-portable
+  // `AsyncDataExecuteOptions` type into the emitted declarations.
+  async function refresh(): Promise<void> {
+    await query.refresh();
+  }
+
   return {
     items,
     pending: query.pending,
@@ -136,5 +144,10 @@ export async function useGraphQLLoadMore<
     isLoadingMore,
     loadMore,
     reset,
+    // The full connection as returned by `getConnection`, typed with whatever extra fields the
+    // caller selected (e.g. a `pageInfo.total`) — so consumers never need a second query for
+    // metadata the connection already carries.
+    connection,
+    refresh,
   };
 }
