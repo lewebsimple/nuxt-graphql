@@ -1,6 +1,9 @@
 packages:
   - playground
 
-onlyBuiltDependencies:
-  - "@parcel/watcher"
-  - esbuild
+overrides:
+  citty: 0.2.1
+
+allowBuilds:
+  "@parcel/watcher": true
+  esbuild: true
