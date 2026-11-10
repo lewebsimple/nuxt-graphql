@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.19
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.18...v0.7.19)
+
+### 🚀 Enhancements
+
+- Per-query cache options for useGraphQLLoadMore ([f1312c7](https://github.com/lewebsimple/nuxt-graphql/commit/f1312c7))
+
+### 🤖 CI
+
+- Move to pnpm 12 ([f159ea5](https://github.com/lewebsimple/nuxt-graphql/commit/f159ea5))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.18
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.16...v0.7.18)
