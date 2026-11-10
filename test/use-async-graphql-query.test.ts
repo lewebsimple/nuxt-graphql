@@ -194,4 +194,25 @@ describe("persisted cache", () => {
     await useQuery("MemberAreaProfiles", {}, options("persisted-expired"));
     expect(reload.calls).toBe(1);
   });
+
+  it("never persists when the TTL arrives as Nuxt's empty runtime value", async () => {
+    // Nuxt serializes an unset `ttl` as `""`; read as a duration it persisted every result forever.
+    const localStorage = createLocalStorageStub();
+    vi.stubGlobal("window", { localStorage });
+
+    const app = createStubNuxtApp(async () => response);
+    setActiveNuxtApp(app);
+    await useQuery(
+      "MemberAreaProfiles",
+      {},
+      {
+        scope: "empty-ttl",
+        cache: { policy: "swr", ttl: "" as unknown as number },
+      },
+    );
+    await flush();
+
+    expect(app.calls).toBe(1);
+    expect(localStorage.length).toBe(0);
+  });
 });

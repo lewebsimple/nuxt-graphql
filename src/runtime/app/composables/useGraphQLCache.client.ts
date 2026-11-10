@@ -12,6 +12,7 @@ import {
   readCachedValue,
   resolveCacheEntry,
 } from "../lib/cache";
+import { resolveCacheConfig } from "../lib/cache-config";
 import { deletePersistedByPrefix, getPersistedEntry, setPersistedEntry } from "../lib/persisted";
 
 /**
@@ -21,7 +22,7 @@ import { deletePersistedByPrefix, getPersistedEntry, setPersistedEntry } from ".
  * @returns Cache read/write/update/invalidate helpers.
  */
 export function useGraphQLCache(scope: string = "global") {
-  const { cacheConfig } = useRuntimeConfig().public.graphql;
+  const cacheConfig = resolveCacheConfig(useRuntimeConfig().public.graphql.cacheConfig);
   const store = getCacheStore(useNuxtApp());
 
   /**

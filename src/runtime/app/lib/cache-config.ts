@@ -24,13 +24,19 @@ const DEFAULT_CACHE_CONFIG: CacheConfig = {
 /**
  * Merge cache configuration overrides with defaults.
  *
+ * A `ttl` that is not a finite number means "no persistence". Nuxt serializes an unset runtime
+ * config value (`undefined` or `null`) as `""`, so the global config reaches the client with
+ * `ttl: ""`; read as a duration, it would persist every result to localStorage without expiry.
+ *
  * @param overrides Partial cache config overrides.
  * @returns Resolved cache configuration.
  */
 export function resolveCacheConfig(
   ...overrides: Array<Partial<CacheConfig> | undefined>
 ): CacheConfig {
-  return Object.assign({}, DEFAULT_CACHE_CONFIG, ...overrides);
+  const config: CacheConfig = Object.assign({}, DEFAULT_CACHE_CONFIG, ...overrides);
+  if (typeof config.ttl !== "number" || !Number.isFinite(config.ttl)) config.ttl = undefined;
+  return config;
 }
 
 /**

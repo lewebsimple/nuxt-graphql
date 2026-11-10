@@ -165,7 +165,9 @@ export function useAsyncGraphQLQuery<TName extends QueryName, TTransformed = Res
     // Hydrate the per-app cache from localStorage before consulting it, so persisted entries
     // survive a reload for the policies that read the cache. The persisted timestamps are kept,
     // so expiration and invalidation treat the hydrated entry exactly like the original.
-    if (cacheConfig.policy !== "no-cache" && cacheConfig.ttl != null) {
+    // Client only: the server has no localStorage, and awaiting here would run the request below
+    // outside the Nuxt context, where reading the forwarded request headers throws.
+    if (!import.meta.server && cacheConfig.policy !== "no-cache" && cacheConfig.ttl != null) {
       const existing = getCacheMeta<ResultOf<TName>>(store, key);
       if (!existing?.hasValue && !existing?.promise) {
         const persisted = await getPersistedEntry<ResultOf<TName>>(key);
