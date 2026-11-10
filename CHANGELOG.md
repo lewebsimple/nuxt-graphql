@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.7.18
+
+[compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.16...v0.7.18)
+
+### 🚀 Enhancements
+
+- Connection + refresh on load-more, SSR dedupe by default, stale version sweep ([c78a21d](https://github.com/lewebsimple/nuxt-graphql/commit/c78a21d))
+
+### 🩹 Fixes
+
+- Treat an empty runtime ttl as no persistence, skip localStorage on the server ([260cf05](https://github.com/lewebsimple/nuxt-graphql/commit/260cf05))
+
+### 🏡 Chore
+
+- **release:** V0.7.17 ([693a52c](https://github.com/lewebsimple/nuxt-graphql/commit/693a52c))
+
+### ❤️ Contributors
+
+- Pascal Martineau <pascal@lewebsimple.ca>
+
 ## v0.7.17
 
 [compare changes](https://github.com/lewebsimple/nuxt-graphql/compare/v0.7.16...v0.7.17)
