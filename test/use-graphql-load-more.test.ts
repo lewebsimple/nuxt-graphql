@@ -3,6 +3,7 @@ import { nextTick, type Ref } from "vue";
 
 import { useAsyncGraphQLQuery } from "../src/runtime/app/composables/useAsyncGraphQLQuery";
 import { useGraphQLLoadMore } from "../src/runtime/app/composables/useGraphQLLoadMore";
+import { getCacheStore } from "../src/runtime/app/lib/cache";
 
 import { createStubNuxtApp, setActiveNuxtApp, setRuntimeCacheConfig } from "./stubs/nuxt-app";
 
@@ -26,6 +27,7 @@ const useLoadMore = useGraphQLLoadMore as unknown as (
   operationName: string,
   variables: unknown,
   getConnection: (data?: Result) => Result["list"],
+  options?: { cache?: Record<string, unknown>; scope?: string },
 ) => Promise<LoadMoreResult>;
 const useQuery = useAsyncGraphQLQuery as unknown as (
   operationName: string,
@@ -110,5 +112,24 @@ describe("useGraphQLLoadMore with swr", () => {
     await nextTick();
 
     expect(list.items.value).toEqual(v2);
+  });
+});
+
+describe("useGraphQLLoadMore per-query cache", () => {
+  it("applies its own policy and scope over the global no-cache default", async () => {
+    // The global config stays no-cache; the list opts into swr for itself only.
+    const nuxtApp = createStubNuxtApp(() => Promise.resolve(page([{ id: "a" }])));
+    setActiveNuxtApp(nuxtApp);
+    const options = { cache: { policy: "swr" }, scope: "public" };
+
+    const first = await useLoadMore("Items", {}, (data) => data?.list, options);
+    expect(nuxtApp.calls).toBe(1);
+
+    // A refresh under swr serves the cached page at once and revalidates in the background.
+    await first.refresh();
+    expect(first.items.value).toEqual([{ id: "a" }]);
+    expect(nuxtApp.calls).toBe(2);
+    const store = getCacheStore(nuxtApp as unknown as Parameters<typeof getCacheStore>[0]);
+    expect([...store.entries.keys()].every((key) => key.includes(":public:"))).toBe(true);
   });
 });

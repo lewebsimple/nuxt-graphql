@@ -251,7 +251,7 @@ const { items, pending, error, hasNextPage, isLoadingMore, loadMore, reset } =
 
 - `variables` excludes `after` (managed internally); changing them resets the pagination.
 - `getConnection` extracts the connection (`{ nodes, pageInfo }`) from the query result.
-- The query uses the **global** cache configuration (no per-query cache overrides).
+- An optional fourth argument takes per-query `cache` overrides and a `scope`, as `useAsyncGraphQLQuery` does; without it, the query uses the global cache configuration.
 - With the `swr` policy, a background revalidation of the first page replaces `items`; revalidations of later pages do not re-splice the accumulated list.
 
 ### Use the auto-imported server utils
@@ -280,7 +280,6 @@ Failures are normalized into a `NormalizedError` (an `Error` subclass) everywher
 - `errors`: the original GraphQL errors (empty for non-GraphQL failures).
 - `code`: typed error code — `"NETWORK_ERROR"` for fetch/transport failures, otherwise the `extensions.code` of the first GraphQL error (`"UNAUTHORIZED"`, `"FORBIDDEN"`, `"BAD_REQUEST"`, `"INTERNAL_ERROR"`). Augment the `GraphQLErrorCodeMap` interface to add your own codes.
 - `status`: HTTP status for transport failures, when available.
-
 
 ### Type-safety
 

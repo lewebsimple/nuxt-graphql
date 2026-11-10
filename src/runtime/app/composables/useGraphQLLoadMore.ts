@@ -2,6 +2,7 @@ import { hash } from "ohash";
 import { computed, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from "vue";
 
 import type { QueryName, ResultOf, VariablesOf } from "../../shared/utils/registry";
+import type { CacheConfig } from "../lib/cache-config";
 
 import { useAsyncGraphQLQuery } from "./useAsyncGraphQLQuery";
 
@@ -20,6 +21,7 @@ type Connection<TItem> = {
  * @param operationName The name of the GraphQL query operation.
  * @param variables The variables for the GraphQL query, excluding the "after" cursor.
  * @param getConnection A function to extract the connection data from the query result.
+ * @param options Per-query cache overrides and scope, as for `useAsyncGraphQLQuery`.
  * @returns An object containing the items, loading state, error state, and pagination functions.
  */
 export async function useGraphQLLoadMore<
@@ -29,6 +31,7 @@ export async function useGraphQLLoadMore<
   operationName: TName,
   variables: MaybeRefOrGetter<Omit<VariablesOf<TName>, "after">>,
   getConnection: (data?: ResultOf<TName>) => TConnection | null | undefined,
+  options?: { cache?: Partial<CacheConfig>; scope?: string },
 ) {
   type TItem = TConnection["nodes"][number];
 
@@ -52,7 +55,7 @@ export async function useGraphQLLoadMore<
   const isLoadingMore = ref(false);
 
   // Execute GraphQL query
-  const query = await useAsyncGraphQLQuery<TName>(operationName, queryVariables);
+  const query = await useAsyncGraphQLQuery<TName>(operationName, queryVariables, options);
 
   // Extract connection data and pagination info from the query result
   const connection = computed(() => getConnection(query.data.value));
